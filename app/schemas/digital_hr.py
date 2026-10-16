@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class RequestCreate(BaseModel):
@@ -46,4 +46,6 @@ class QuizSubmission(BaseModel):
 
 
 class JanaQuestion(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
     question: str = Field(min_length=3, max_length=2000)

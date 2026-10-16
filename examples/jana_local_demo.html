@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jana · локальный помощник</title>
+<style>
+body{font:16px/1.6 system-ui,sans-serif;color:#172535;background:#f4f6f9;margin:0;padding:28px}main{max-width:820px;margin:auto}h1{font-size:32px;margin-bottom:0}h2{font-size:20px}.muted{color:#596879}.card{background:white;border:1px solid #dce3eb;border-radius:14px;padding:24px;margin:20px 0}.tag{font-size:13px;color:#176847;font-weight:650}textarea{width:100%;box-sizing:border-box;border:1px solid #aab8c8;border-radius:8px;padding:12px;font:inherit;resize:vertical}button,.download{font:inherit;cursor:pointer;border-radius:8px;padding:9px 15px;border:1px solid #c8d2de;background:#fff;color:#173d72}button[type=submit],.download{background:#174c9b;color:white;border:0}.examples{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.examples button{font-size:13px}button:disabled{opacity:.5;cursor:wait}#answer{white-space:pre-wrap}#result{border-top:1px solid #e0e5ed;margin-top:20px;padding-top:15px}details{margin-top:12px}summary{cursor:pointer;color:#174c9b}.download{display:inline-block;text-decoration:none}small{display:block;margin-top:8px}
+</style>
+<main>
+<span class="tag">ЛОКАЛЬНЫЙ ПОИСК · БЕЗ ПЛАТНОГО API</span>
+<h1>Jana — HR-помощник</h1>
+<p class="muted">Демонстрация на вымышленных материалах. Это описание прототипа, а не кадровые правила JanaPost.</p>
+<section class="card">
+<h2>Задайте вопрос по базе знаний</h2>
+<form id="ask"><label for="question">Один короткий вопрос</label><textarea id="question" rows="3" minlength="3" maxlength="2000" required placeholder="Куда подать заявление на отпуск?"></textarea>
+<div class="examples"><button type="button">Хочу взять отпуск, с чего начать?</button><button type="button">За сколько дней подавать заявление?</button><button type="button">Где читать уведомления?</button></div>
+<button type="submit" id="send">Найти ответ</button></form>
+<div id="result" hidden aria-live="polite"><p id="answer"></p><div id="sources"></div></div>
+</section>
+<section class="card">
+<h2>Отпуск в Google Calendar</h2>
+<p><strong>Вымышленная одобренная заявка:</strong> 10–15 ноября 2026 года включительно.</p>
+<a class="download" href="/demo/leave.ics" download>Скачать пример .ics</a>
+<p class="muted">На компьютере: Google Calendar → Настройки → Импорт и экспорт → выберите файл и нужный календарь → Импортировать.</p>
+<small>Скачивание не создаёт событие в Google. После импорта изменения и отмена не синхронизируются; повторный импорт может создать дубликаты.</small>
+</section>
+</main>
+<script>
+const form=document.querySelector('#ask'), question=document.querySelector('#question'), send=document.querySelector('#send');
+document.querySelectorAll('.examples button').forEach(button=>button.onclick=()=>{question.value=button.textContent;question.focus()});
+form.addEventListener('submit',async event=>{
+ event.preventDefault();send.disabled=true;document.querySelector('#result').hidden=false;
+ const answer=document.querySelector('#answer'),sources=document.querySelector('#sources');
+ answer.textContent='Ищу в локальной базе…';sources.replaceChildren();
+ try{
+  const response=await fetch('/api/v1/ai/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:question.value})});
+  if(!response.ok)throw new Error(response.status===503?'Локальная модель недоступна. Выполните команду подготовки из инструкции.':'Не удалось обработать вопрос.');
+  const data=await response.json();answer.textContent=data.answer;
+  for(const [index,source] of data.sources.entries()){
+   const details=document.createElement('details'),summary=document.createElement('summary'),text=document.createElement('p');
+   summary.textContent=`[${index+1}] ${source.title}`;text.textContent=source.excerpt;details.append(summary,text);sources.append(details);
+   let loaded=false;details.addEventListener('toggle',async()=>{
+    if(!details.open||loaded)return;
+    try{const original=await fetch(source.url);if(!original.ok)throw Error();const article=await original.json();text.textContent=article.content;loaded=true;}
+    catch{text.textContent='Источник сейчас недоступен. Попробуйте ещё раз.';}
+   });
+  }
+ }catch(error){answer.textContent=error.message||'Соединение с локальным сервером потеряно.';}
+ finally{send.disabled=false;}
+});
+</script>
+</html>
