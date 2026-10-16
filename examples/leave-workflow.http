@@ -1,0 +1,254 @@
+# Run requests individually, top to bottom, against a prepared demo database.
+# See ../docs/leave-workflow.md. Keep real passwords/tokens out of version control.
+# Replace placeholders locally or use your HTTP client's private environment.
+# After each login copy access_token to the corresponding token variable.
+# After creating a request copy its id to requestId.
+# Copy a request_status_changed notification id to employeeNotificationId.
+
+@baseUrl = http://localhost:8000/api/v1
+@employeeEmail = employee@posttech.demo
+@managerEmail = manager@posttech.demo
+@hrEmail = hr@posttech.demo
+@employeePassword = replace-with-local-demo-password
+@managerPassword = replace-with-local-demo-password
+@hrPassword = replace-with-local-demo-password
+@employeeToken = replace-with-employee-access-token
+@managerToken = replace-with-manager-access-token
+@hrToken = replace-with-hr-access-token
+@requestId = replace-with-created-request-uuid
+@employeeNotificationId = replace-with-own-notification-uuid
+# Generate a NEW UUID for each NEW request; reuse this value for retries only.
+@idempotencyKey = 6e3d6480-f4ce-4791-b63e-138409431901
+@startDate = 2026-11-09
+@endDate = 2026-11-13
+# Optional negative scenario: REAL records in another fictional team, not random UUIDs.
+@foreignEmployeeId = replace-with-existing-other-team-employee-uuid
+@foreignRequestId = replace-with-existing-other-team-request-uuid
+# Optional HR scenarios use separate requests; keep requestId for the main scenario.
+@hrRejectionRequestId = replace-with-another-pending-employee-request-uuid
+@hrOwnRequestId = replace-with-hr-own-request-uuid
+@hrOwnIdempotencyKey = 35625455-38f9-45c0-87c5-81909c8dde1c
+
+### 1. Employee login — 200; copy access_token to employeeToken.
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{employeeEmail}}",
+  "password": "{{employeePassword}}"
+}
+
+### 2. Employee profile — 200, role=worker, read-only vacation balance.
+GET {{baseUrl}}/profile
+Authorization: Bearer {{employeeToken}}
+
+### 3. Manager login — 200; copy access_token to managerToken.
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+### 4. Manager profile — 200, role=manager.
+GET {{baseUrl}}/profile
+Authorization: Bearer {{managerToken}}
+
+### 5. Manager's direct reports — employee must be present.
+GET {{baseUrl}}/team
+Authorization: Bearer {{managerToken}}
+
+### 6. Employee creates leave request — 201; copy id to requestId.
+# Sending this exact request again must return the same id without duplicates.
+POST {{baseUrl}}/requests
+Authorization: Bearer {{employeeToken}}
+Idempotency-Key: {{idempotencyKey}}
+Content-Type: application/json
+
+{
+  "request_type": "leave",
+  "start_date": "{{startDate}}",
+  "end_date": "{{endDate}}",
+  "comment": "Демо-заявка на отпуск"
+}
+
+### 7. Employee lists own leave requests — 200, includes requestId.
+GET {{baseUrl}}/requests?request_type=leave&limit=20&offset=0
+Authorization: Bearer {{employeeToken}}
+
+### 8. Employee opens request — 200, pending before review.
+GET {{baseUrl}}/requests/{{requestId}}
+Authorization: Bearer {{employeeToken}}
+
+### 9. Initial history — 200, one created event for this new request.
+GET {{baseUrl}}/requests/{{requestId}}/history
+Authorization: Bearer {{employeeToken}}
+
+### 10. Manager receives request_created notification with request_id=requestId.
+GET {{baseUrl}}/notifications?request_id={{requestId}}&unread_only=false&limit=20&offset=0
+Authorization: Bearer {{managerToken}}
+
+### 11. Manager's pending leave requests — 200, includes employee request.
+GET {{baseUrl}}/requests?request_type=leave&status=pending&limit=20&offset=0
+Authorization: Bearer {{managerToken}}
+
+### 12. Manager approves — 200; repeat exact request for idempotent 200.
+PATCH {{baseUrl}}/requests/{{requestId}}/review
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "status": "approved",
+  "reviewer_comment": "Отпуск согласован"
+}
+
+### 13. Employee sees final decision — 200, approved and reviewer metadata.
+GET {{baseUrl}}/requests/{{requestId}}
+Authorization: Bearer {{employeeToken}}
+
+### 14. Final history — 200, created and approved, no duplicate retry event.
+GET {{baseUrl}}/requests/{{requestId}}/history
+Authorization: Bearer {{employeeToken}}
+
+### 15. Employee receives request_status_changed; copy its id, not request_id.
+GET {{baseUrl}}/notifications?request_id={{requestId}}&unread_only=false&limit=20&offset=0
+Authorization: Bearer {{employeeToken}}
+
+### 16. Mark employee's own notification read — 200, read_at present.
+# Repeat this exact request: 200 with the SAME first read_at.
+POST {{baseUrl}}/notifications/{{employeeNotificationId}}/read
+Authorization: Bearer {{employeeToken}}
+
+### 16a. Read notification is absent from the unread list for this request.
+GET {{baseUrl}}/notifications?request_id={{requestId}}&unread_only=true&limit=20&offset=0
+Authorization: Bearer {{employeeToken}}
+
+### 17. HR login — 200; copy access_token to hrToken.
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{hrEmail}}",
+  "password": "{{hrPassword}}"
+}
+
+### 18. HR profile — 200, role=hr_admin, derived by server.
+GET {{baseUrl}}/profile
+Authorization: Bearer {{hrToken}}
+
+### 19. HR can inspect another employee's request and history — 200.
+GET {{baseUrl}}/requests/{{requestId}}/history
+Authorization: Bearer {{hrToken}}
+
+### Optional HR rejection: create ANOTHER leave request first with a NEW key.
+# Set hrRejectionRequestId to that new PENDING request; run this block separately.
+# Expected 200, rejected event and employee notification.
+PATCH {{baseUrl}}/requests/{{hrRejectionRequestId}}/review
+Authorization: Bearer {{hrToken}}
+Content-Type: application/json
+
+{
+  "status": "rejected",
+  "reviewer_comment": "Демонстрация отклонения HR"
+}
+
+### Optional self-review setup: HR creates own leave request — 201.
+# Copy returned id to hrOwnRequestId; generate a new key for a new request.
+POST {{baseUrl}}/requests
+Authorization: Bearer {{hrToken}}
+Idempotency-Key: {{hrOwnIdempotencyKey}}
+Content-Type: application/json
+
+{
+  "request_type": "leave",
+  "start_date": "{{startDate}}",
+  "end_date": "{{endDate}}",
+  "comment": "Собственная демо-заявка HR"
+}
+
+### Negative: HR cannot review own request — 403.
+PATCH {{baseUrl}}/requests/{{hrOwnRequestId}}/review
+Authorization: Bearer {{hrToken}}
+Content-Type: application/json
+
+{
+  "status": "approved",
+  "reviewer_comment": "Попытка согласовать собственную заявку"
+}
+
+### Negative: same creation key, changed body — 409.
+# Use the key from step 6 and its original employee token.
+POST {{baseUrl}}/requests
+Authorization: Bearer {{employeeToken}}
+Idempotency-Key: {{idempotencyKey}}
+Content-Type: application/json
+
+{
+  "request_type": "leave",
+  "start_date": "{{startDate}}",
+  "end_date": "{{endDate}}",
+  "comment": "Изменённый комментарий с уже использованным ключом"
+}
+
+### Negative: employee cannot review a request — 403.
+PATCH {{baseUrl}}/requests/{{requestId}}/review
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "status": "approved",
+  "reviewer_comment": "Попытка сотрудника принять решение"
+}
+
+### Negative: another decision on the request approved in step 12 — 409.
+# requestId must still point to the approved request from step 6.
+PATCH {{baseUrl}}/requests/{{requestId}}/review
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "status": "rejected",
+  "reviewer_comment": "Попытка изменить окончательное решение"
+}
+
+### Negative: manager lists an EXISTING employee from another team — 403.
+GET {{baseUrl}}/requests?employee_id={{foreignEmployeeId}}&request_type=leave
+Authorization: Bearer {{managerToken}}
+
+### Negative: manager opens an EXISTING other-team request — 403.
+GET {{baseUrl}}/requests/{{foreignRequestId}}
+Authorization: Bearer {{managerToken}}
+
+### Negative: manager reads its history — 403.
+GET {{baseUrl}}/requests/{{foreignRequestId}}/history
+Authorization: Bearer {{managerToken}}
+
+### Negative: manager reviews an EXISTING other-team request — 403.
+PATCH {{baseUrl}}/requests/{{foreignRequestId}}/review
+Authorization: Bearer {{managerToken}}
+Content-Type: application/json
+
+{
+  "status": "approved",
+  "reviewer_comment": "Попытка рассмотреть чужую команду"
+}
+
+### Negative: manager cannot mark employee's notification read — 404.
+POST {{baseUrl}}/notifications/{{employeeNotificationId}}/read
+Authorization: Bearer {{managerToken}}
+
+### Negative: no bearer token — 401.
+GET {{baseUrl}}/requests
+
+### Negative: invalid UUID — 422.
+GET {{baseUrl}}/requests/not-a-uuid
+Authorization: Bearer {{employeeToken}}
+
+### Negative: invalid pagination — 422.
+GET {{baseUrl}}/requests?limit=101&offset=-1
+Authorization: Bearer {{employeeToken}}
+
+### Negative: invalid notification UUID — 422.
+POST {{baseUrl}}/notifications/not-a-uuid/read
+Authorization: Bearer {{employeeToken}}

@@ -7,3 +7,11 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/playwright-report/
+frontend/test-results/
+.design-reference/
+.npm-cache/
+*.tsbuildinfo

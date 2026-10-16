@@ -1,0 +1,291 @@
+import { expect, test, type Page } from '@playwright/test';
+
+type Role = 'worker' | 'manager' | 'hr_admin';
+const ids = { own: '00000000-0000-4000-8000-000000000201', teammate: '00000000-0000-4000-8000-000000000205' };
+
+async function enterDemo(page: Page, role: Role = 'worker') {
+  await page.goto('/login');
+  await page.getByRole('button', { name: 'Открыть демоверсию' }).click();
+  const labels = { worker: /^Сотрудник/, manager: /^Руководитель/, hr_admin: /^HR-администратор/ };
+  await page.getByRole('dialog').getByRole('button', { name: labels[role] }).click();
+  await expect(page.locator('.demo-banner')).toContainText('Демоверсия');
+  await expect(page.locator('#main-content h1')).toBeVisible();
+  await expect(page.locator('#main-content .loading-state')).toHaveCount(0);
+}
+
+async function navigate(page: Page, label: string) {
+  const nav = page.getByRole('navigation', { name: 'Главная навигация' });
+  await expect(nav).toBeAttached();
+  const menu = page.getByRole('button', { name: 'Открыть меню', exact: true });
+  if (await menu.isVisible() && await menu.getAttribute('aria-expanded') !== 'true') await menu.click();
+  await nav.getByRole('link', { name: new RegExp(`^${label}`) }).click();
+}
+
+async function confirmRequest(page: Page) {
+  await page.getByRole('button', { name: 'Перейти к подтверждению' }).click();
+  const submit = page.getByRole('button', { name: 'Подтвердить и отправить', exact: true });
+  await expect(submit).toBeDisabled();
+  await page.getByRole('checkbox', { name: /Подтверждаю корректность/ }).check();
+  await submit.click();
+}
+
+test('demo entry, responsive navigation and readonly profile', async ({ page }, testInfo) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  await enterDemo(page);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false);
+  await page.screenshot({ path: `test-results/dashboard-${testInfo.project.name}.png`, fullPage: true, animations: 'disabled' });
+  await navigate(page, 'Мой профиль');
+  await expect(page.getByRole('heading', { name: 'Мой профиль', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Кадровая информация' })).toBeVisible();
+  await expect(page.locator('#main-content input')).toHaveCount(0);
+  await expect(page.locator('#main-content')).toContainText('Алия Серикова');
+  await expect(page.getByRole('link', { name: 'Оформить отпуск', exact: true })).toHaveAttribute('href', '/requests/new?type=leave');
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  expect(overflow).toBe(false);
+  expect(pageErrors).toEqual([]);
+});
+
+test('advance requires confirmation, creates one request and shows its history', async ({ page }, testInfo) => {
+  await enterDemo(page);
+  await navigate(page, 'Мои заявки');
+  await expect(page.locator('.req-list-card tbody tr')).not.toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false);
+  await page.screenshot({ path: `test-results/requests-${testInfo.project.name}.png`, fullPage: true, animations: 'disabled' });
+  await page.getByRole('link', { name: 'Создать заявку' }).click();
+  await page.getByRole('button', { name: /Выплата аванса/ }).click();
+  await page.getByLabel('Сумма, ₸').fill('12345.67');
+  await page.getByLabel('Комментарий к заявке', { exact: true }).fill('Проверка оформления аванса');
+  await confirmRequest(page);
+  await expect(page.getByRole('heading', { name: 'Заявка на аванс успешно отправлена!' })).toBeVisible();
+  await page.getByRole('link', { name: 'Открыть детали заявки' }).click();
+  await expect(page.getByRole('heading', { name: 'Заявка на аванс', exact: true })).toBeVisible();
+  await expect(page.locator('.req-detail-summary')).toContainText(/12\s345,67/);
+  await expect(page.locator('.req-history')).toContainText('Заявка подана сотрудником');
+  await expect(page.getByRole('heading', { name: 'Рассмотрение заявки' })).toHaveCount(0);
+  await navigate(page, 'Мои заявки');
+  await page.getByRole('textbox', { name: 'Поиск заявок', exact: true }).fill('Проверка оформления аванса');
+  await expect(page.locator('.req-list-card tbody tr')).toHaveCount(1);
+});
+
+test('calendar navigation and range selection carry dates into request form', async ({ page }, testInfo) => {
+  await enterDemo(page);
+  await navigate(page, 'Календарь');
+  await expect(page.locator('.cal-month-grid')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false);
+  await page.screenshot({ path: `test-results/calendar-${testInfo.project.name}.png`, fullPage: true, animations: 'disabled' });
+  const month = page.locator('.cal-month-controls strong');
+  const initialMonth = (await month.textContent())!.trim();
+  await page.getByRole('button', { name: 'Следующий месяц', exact: true }).click();
+  await expect(month).not.toHaveText(initialMonth);
+  await page.getByRole('button', { name: 'Предыдущий месяц', exact: true }).click();
+  await expect(month).toHaveText(initialMonth);
+  await page.getByRole('button', { name: 'Запланировать отпуск' }).click();
+  await expect(page.getByRole('button', { name: 'Продолжить оформление' })).toBeDisabled();
+  await page.getByLabel('Дата начала', { exact: true }).fill('2030-11-03');
+  await page.getByLabel('Дата окончания', { exact: true }).fill('2030-11-06');
+  await expect(page.locator('.cal-duration')).toContainText('4');
+  await page.getByRole('button', { name: 'Продолжить оформление' }).click();
+  await expect(page).toHaveURL(/\/requests\/new\?/);
+  await expect(page.getByLabel('Дата начала', { exact: true })).toHaveValue('2030-11-03');
+  await expect(page.getByLabel('Дата окончания', { exact: true })).toHaveValue('2030-11-06');
+  await confirmRequest(page);
+  await expect(page.getByRole('heading', { name: 'Заявка на отпуск успешно отправлена!' })).toBeVisible();
+  await page.getByRole('link', { name: 'Открыть детали заявки' }).click();
+  await expect(page.locator('.req-detail-summary')).toContainText('4 календарных дней');
+  await expect(page.locator('.req-detail-summary')).toContainText(/3 нояб.*2030.*6 нояб.*2030/);
+  await expect(page.locator('.req-history')).toContainText('Заявка подана сотрудником');
+});
+
+test('assigned course records server-scored quiz completion', async ({ page }) => {
+  await enterDemo(page);
+  await navigate(page, 'Jana Academy');
+  const course = page.locator('article').filter({ has: page.getByRole('heading', { name: 'Безопасность персональных данных', exact: true }) });
+  await course.getByRole('button', { name: 'Продолжить обучение' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Бережно к данным');
+  await dialog.getByRole('button', { name: /Материал изучен/ }).click();
+  await dialog.getByRole('button', { name: 'Завершить тест', exact: true }).click();
+  await expect(dialog).not.toContainText('Обучение завершено');
+  await dialog.getByRole('radio', { name: 'Своей команды', exact: true }).check();
+  await dialog.getByRole('radio', { name: 'Обратиться в HR', exact: true }).check();
+  await dialog.getByRole('button', { name: 'Завершить тест', exact: true }).click();
+  await expect(dialog.getByRole('heading', { name: 'Обучение завершено' })).toBeVisible();
+  await expect(dialog.locator('.support-result-score')).toHaveText('100%');
+  await dialog.getByRole('button', { name: 'Вернуться к курсам' }).click();
+  await expect(course).toContainText('Завершён');
+  await expect(course.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100');
+});
+
+test('Jana cites supported answers and explicitly handles unknown questions', async ({ page }) => {
+  await enterDemo(page);
+  await navigate(page, 'AI Jana');
+  await page.getByRole('button', { name: 'Как оформить отпуск?', exact: true }).click();
+  const conversation = page.getByRole('log', { name: 'Сообщения диалога' });
+  await expect(conversation).toContainText('Демо: порядок оформления отпуска');
+  await page.getByRole('textbox', { name: 'Ваш вопрос Jana' }).fill('Какова температура поверхности Венеры?');
+  await page.getByRole('button', { name: 'Отправить вопрос' }).click();
+  await expect(conversation).toContainText('нет подтверждённой информации');
+  await expect(conversation.locator('.support-message-refusal')).toContainText('обратитесь в ваш HR-отдел');
+  await page.getByRole('button', { name: 'Новый диалог' }).click();
+  await expect(page.getByRole('heading', { name: 'С чего начнём?' })).toBeVisible();
+});
+
+test('notification read state updates and density preference survives reload', async ({ page }) => {
+  await enterDemo(page);
+  await navigate(page, 'Уведомления');
+  await page.getByRole('button', { name: 'Непрочитанные', exact: true }).click();
+  await expect(page.locator('.support-notification')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Отметить прочитанным', exact: true }).first().click();
+  await expect(page.locator('.support-notification')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Отметить прочитанным', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Все уведомления прочитаны' })).toBeVisible();
+  await navigate(page, 'Настройки');
+  await page.getByRole('switch', { name: 'Компактный интерфейс' }).check();
+  await expect(page.locator('body')).toHaveAttribute('data-density', 'compact');
+  await page.reload();
+  await expect(page.getByRole('switch', { name: 'Компактный интерфейс' })).toBeChecked();
+  await expect(page.locator('body')).toHaveAttribute('data-density', 'compact');
+  await page.locator('#main-content').getByRole('button', { name: 'Выйти', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Добро пожаловать', exact: true })).toBeVisible();
+});
+
+test('manager cannot review own request and can review a teammate request', async ({ page }) => {
+  await enterDemo(page, 'manager');
+  await page.goto(`/requests/${ids.own}`);
+  await expect(page.getByRole('heading', { name: 'Заявка на отпуск', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Рассмотрение заявки' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Согласовать заявку' })).toHaveCount(0);
+  await page.goto(`/requests/${ids.teammate}`);
+  await expect(page.getByRole('heading', { name: 'Рассмотрение заявки' })).toBeVisible();
+  await page.getByLabel('Комментарий к решению').fill('Даты согласованы, передача задач подтверждена.');
+  await page.getByRole('button', { name: 'Согласовать заявку' }).click();
+  await expect(page.locator('.req-history')).not.toContainText('Заявка согласована');
+  await page.getByRole('button', { name: 'Подтвердить решение' }).click();
+  await expect(page.locator('.req-history')).toContainText('Заявка согласована');
+  await expect(page.locator('.req-reviewer-comment')).toContainText('Даты согласованы');
+  await expect(page.getByRole('heading', { name: 'Рассмотрение заявки' })).toHaveCount(0);
+});
+
+test('manager assigns an available course and duplicate assignment stays an error', async ({ page }) => {
+  await enterDemo(page, 'manager');
+  await navigate(page, 'Моя команда');
+  const employee = page.locator('article').filter({ has: page.getByRole('heading', { name: 'Алия Серикова', exact: true }) });
+  await employee.getByRole('button', { name: 'Профиль', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('Кадровые сведения доступны только для чтения');
+  await page.getByRole('dialog').getByRole('button', { name: 'Закрыть', exact: true }).click();
+  await employee.getByRole('button', { name: 'Назначить курс' }).click();
+  await page.getByRole('dialog').getByRole('combobox').selectOption({ label: 'Эффективная работа в команде · 40 мин' });
+  await page.getByRole('dialog').getByRole('button', { name: 'Назначить курс', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('.toast')).toContainText('Курс назначен');
+  await employee.getByRole('button', { name: 'Назначить курс' }).click();
+  await page.getByRole('dialog').getByRole('combobox').selectOption({ label: 'Эффективная работа в команде · 40 мин' });
+  await page.getByRole('dialog').getByRole('button', { name: 'Назначить курс', exact: true }).click();
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('уже назначен');
+});
+
+test('live login uses bearer auth and retries an uncertain request after reload with the same idempotency key', async ({ page }) => {
+  const employeeId = '40000000-0000-4000-8000-000000000001';
+  const requestId = '40000000-0000-4000-8000-000000000002';
+  const writes: { body: Record<string, unknown>; authorization?: string; idempotency?: string }[] = [];
+  const protectedHeaders: (string | undefined)[] = [];
+  const profile = { id: employeeId, employee_code: 'TEST-01', full_name: 'Тестовый Сотрудник', email: 'employee@example.test', company: 'PostTech', job_title: 'Оператор', department: 'Хаб', manager_id: null, hired_at: '2023-01-10', vacation_days_remaining: 24, role: 'worker', external_source: 'test', created_at: '2026-01-01T10:00:00Z', updated_at: '2026-10-01T10:00:00Z' };
+  await page.route('**/api/v1/**', async route => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname.replace('/api/v1', '');
+    const respond = (body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (path === '/auth/login') return respond({ user_id: 'test-auth-user', email: profile.email, access_token: 'test-access-token', refresh_token: 'test-refresh-token', token_type: 'bearer', expires_in: 3600 });
+    protectedHeaders.push(request.headers().authorization);
+    if (path === '/profile') return respond(profile);
+    if (path === '/requests' && request.method() === 'POST') {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      writes.push({ body, authorization: request.headers().authorization, idempotency: request.headers()['idempotency-key'] });
+      // Simulate a request accepted by the service whose acknowledgement never reaches the browser.
+      if (writes.length === 1) return route.abort('failed');
+      return respond({ id: requestId, employee_id: employeeId, ...body, status: 'pending', start_date: null, end_date: null, reviewed_by: null, reviewer_comment: null, reviewed_at: null, created_at: '2026-10-16T10:00:00Z', updated_at: '2026-10-16T10:00:00Z' }, 201);
+    }
+    return respond([]);
+  });
+  await page.goto('/login');
+  await page.getByLabel('Корпоративная почта').fill(profile.email);
+  await page.locator('input[autocomplete="current-password"]').fill('TestPassword123!');
+  await page.getByRole('button', { name: 'Войти в систему' }).click();
+  await expect(page.locator('.demo-banner')).toHaveCount(0);
+  await navigate(page, 'Мои заявки');
+  await page.getByRole('link', { name: 'Создать заявку' }).click();
+  await page.getByRole('button', { name: /Выплата аванса/ }).click();
+  await page.getByLabel('Сумма, ₸').fill('25000.50');
+  await page.getByLabel('Комментарий к заявке', { exact: true }).fill('Запрос из браузера');
+  await page.getByRole('button', { name: 'Сохранить черновик', exact: true }).click();
+  await confirmRequest(page);
+  await expect(page.getByRole('alert')).toContainText('Не удалось связаться с сервером');
+  await expect(page.getByRole('heading', { name: /успешно отправлена/ })).toHaveCount(0);
+  expect(await page.evaluate(id => sessionStorage.getItem(`posttech-request-pending:live:${id}`), employeeId)).not.toBeNull();
+  await page.reload();
+  await page.getByRole('button', { name: 'Восстановить', exact: true }).click();
+  await expect(page.getByLabel('Сумма, ₸')).toHaveValue('25000.50');
+  await expect(page.getByRole('textbox', { name: 'Комментарий к заявке', exact: true })).toHaveValue('Запрос из браузера');
+  await confirmRequest(page);
+  await expect(page.getByRole('heading', { name: 'Заявка на аванс успешно отправлена!' })).toBeVisible();
+  expect(writes).toHaveLength(2);
+  expect(writes[0].body).toEqual({ request_type: 'advance', amount: 25000.5, comment: 'Запрос из браузера' });
+  expect(writes[1].body).toEqual(writes[0].body);
+  expect(writes[0].authorization).toBe('Bearer test-access-token');
+  expect(writes[0].idempotency).toMatch(/^[\da-f]{8}-[\da-f-]{27}$/i);
+  expect(writes[1].idempotency).toBe(writes[0].idempotency);
+  expect(protectedHeaders.every(header => header === 'Bearer test-access-token')).toBe(true);
+  expect(await page.evaluate(id => sessionStorage.getItem(`posttech-request-pending:live:${id}`), employeeId)).toBeNull();
+  expect(await page.evaluate(id => sessionStorage.getItem(`posttech-request-draft:live:${id}`), employeeId)).toBeNull();
+});
+
+test('unread pagination waits for pending writes and keeps older unread messages reachable', async ({ page }) => {
+  const employeeId = '50000000-0000-4000-8000-000000000001';
+  const notes = Array.from({ length: 26 }, (_, index) => ({ id: `notification-${index + 1}`, employee_id: employeeId, request_id: null, notification_type: 'test', title: `Событие ${index + 1}`, body: 'Проверка последовательного чтения', read_at: null as string | null, created_at: '2026-10-16T10:00:00Z' }));
+  const offsets: number[] = [];
+  let releaseRead!: () => void;
+  let reportReadStarted!: () => void;
+  const readGate = new Promise<void>(resolve => { releaseRead = resolve; });
+  const readStarted = new Promise<void>(resolve => { reportReadStarted = resolve; });
+  await page.addInitScript(() => sessionStorage.setItem('jana.hr.session.v1', JSON.stringify({ user_id: 'test-auth-user', email: 'test@example.test', access_token: 'test-access-token', refresh_token: 'test-refresh-token', token_type: 'bearer', expires_in: 3600, expires_at: Date.now() + 3_600_000 })));
+  await page.route('**/api/v1/**', async route => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = url.pathname.replace('/api/v1', '');
+    const respond = (body: unknown) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
+    if (path === '/profile') return respond({ id: employeeId, employee_code: 'TEST-01', full_name: 'Тестовый Сотрудник', email: 'test@example.test', company: 'PostTech', job_title: 'Оператор', department: 'Хаб', manager_id: null, hired_at: '2023-01-10', vacation_days_remaining: 24, role: 'worker', external_source: 'test', created_at: '2026-01-01T10:00:00Z', updated_at: '2026-10-01T10:00:00Z' });
+    if (path.endsWith('/read')) {
+      const id = path.split('/')[2];
+      if (id === 'notification-1') { reportReadStarted(); await readGate; }
+      const notification = notes.find(note => note.id === id)!;
+      notification.read_at = '2026-10-16T11:00:00Z';
+      return respond(notification);
+    }
+    if (path === '/notifications') {
+      const limit = Number(url.searchParams.get('limit') || 100);
+      const offset = Number(url.searchParams.get('offset') || 0);
+      if (limit === 25) offsets.push(offset);
+      const filtered = url.searchParams.get('unread_only') === 'true' ? notes.filter(note => !note.read_at) : notes;
+      return respond(filtered.slice(offset, offset + limit));
+    }
+    return respond([]);
+  });
+  await page.goto('/notifications');
+  await page.getByRole('button', { name: 'Непрочитанные', exact: true }).click();
+  await expect(page.locator('.support-notification')).toHaveCount(25);
+  await page.getByRole('button', { name: 'Отметить прочитанным', exact: true }).first().click();
+  await readStarted;
+  await expect(page.getByRole('button', { name: 'Показать ещё', exact: true })).toBeDisabled();
+  releaseRead();
+  await expect(page.locator('.support-notification')).toHaveCount(24);
+  for (let remaining = 24; remaining > 0; remaining -= 1) {
+    await page.getByRole('button', { name: 'Отметить прочитанным', exact: true }).first().click();
+    await expect(page.locator('.support-notification')).toHaveCount(remaining - 1);
+  }
+  await expect(page.getByRole('heading', { name: 'Все уведомления прочитаны' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Загрузите следующие уведомления' })).toBeVisible();
+  await page.getByRole('button', { name: 'Показать ещё', exact: true }).click();
+  await expect(page.locator('.support-notification')).toHaveCount(1);
+  await expect(page.locator('.support-notification')).toContainText('Событие 26');
+  expect(offsets.at(-1)).toBe(0);
+});

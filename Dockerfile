@@ -1,3 +1,10 @@
+FROM node:22-alpine AS portal
+WORKDIR /portal
+COPY frontend/package*.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ ./
+RUN npm run build
+
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -12,6 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && useradd --system --gid app --home-dir /app app
 
 COPY app ./app
+COPY --from=portal /portal/dist ./frontend/dist
 
 USER app
 EXPOSE 8000

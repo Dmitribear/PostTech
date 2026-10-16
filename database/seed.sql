@@ -1,4 +1,5 @@
 -- Demo content. Run the migration first.
+-- Apply both 0001_digital_hr.sql and 0002_request_workflow.sql before this seed.
 -- Create these three Supabase Auth users in Authentication -> Users before running
 -- this seed so employee profile IDs can reference real auth.users rows:
 --   hr@posttech.demo
@@ -146,3 +147,27 @@ where employee.email = 'employee@posttech.demo'
       select 1 from public.notifications n
       where n.employee_id = employee.id and n.notification_type = 'training_assigned'
   );
+
+-- Directly inserted demo requests need the same readable history as API requests.
+-- This is repeatable and does not replay notifications or create new decisions.
+insert into public.request_events (
+    request_id, actor_id, event_type, from_status, to_status, comment, created_at
+)
+select r.id, r.employee_id, 'created', null, 'pending', r.comment, r.created_at
+from public.hr_requests r
+join public.employee_profiles employee on employee.id = r.employee_id
+where employee.email = 'employee@posttech.demo'
+  and r.comment like 'Демо-заявка%'
+on conflict (request_id, event_type) do nothing;
+
+insert into public.request_events (
+    request_id, actor_id, event_type, from_status, to_status, comment, created_at
+)
+select r.id, r.reviewed_by, r.status::text, 'pending', r.status,
+       coalesce(r.reviewer_comment, ''), coalesce(r.reviewed_at, r.updated_at)
+from public.hr_requests r
+join public.employee_profiles employee on employee.id = r.employee_id
+where employee.email = 'employee@posttech.demo'
+  and r.comment like 'Демо-заявка%'
+  and r.status in ('approved', 'rejected')
+on conflict (request_id, event_type) do nothing;
