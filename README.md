@@ -53,7 +53,7 @@ With `.env` configured and demo SQL applied, run `docker compose up --build`. AP
 
 The API container can start without `.env`, but Supabase-dependent endpoints will not work until valid credentials are provided. `GET /api/v1/health/live` checks process liveness. `/api/v1/health/ready` checks whether Supabase client configuration can be initialized; it does not prove that a database query succeeds.
 
-For local development, use Python 3.12+, install `requirements-dev.txt`, and run `uvicorn app.main:app --reload`.
+For local development, use Python 3.12, install `requirements-dev.txt`, and run `uvicorn app.main:app --reload`.
 
 ## Scope and integration boundary
 
