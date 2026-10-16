@@ -1,6 +1,10 @@
 from datetime import UTC, datetime
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
+from httpx import HTTPError
+from postgrest.exceptions import APIError
 
 from app.core.permissions import (
     ensure_can_manage_employee,
@@ -12,6 +16,7 @@ from app.db.supabase import get_supabase_client
 from app.schemas.common import UserContext
 from app.schemas.digital_hr import RequestCreate, RequestReview
 from app.services.notifications import create_notification, notify_hr
+from app.services.calendar_export import CalendarExportUnavailable, leave_calendar
 
 router = APIRouter(prefix="/requests", tags=["HR requests"])
 
@@ -97,6 +102,35 @@ def request_details(
     profile = get_profile(str(request["employee_id"]))
     ensure_can_view_profile(actor, profile)
     return request
+
+
+@router.get("/{request_id}/calendar.ics", response_class=Response, responses={
+    200: {"description": "iCalendar file; import manually into Google Calendar",
+          "content": {"text/calendar": {"schema": {"type": "string", "format": "binary"}}}},
+    401: {"description": "Authentication required"},
+    403: {"description": "No access to this employee"},
+    404: {"description": "Request not found"},
+    409: {"description": "Not an approved leave or invalid dates"},
+    503: {"description": "Request storage unavailable"},
+})
+def export_request_calendar(
+    request_id: UUID,
+    actor: UserContext = Depends(get_current_user),
+) -> Response:
+    """Uses the same employee visibility rules as request_details; no writes."""
+    try:
+        request = _get_request(str(request_id))
+        profile = get_profile(str(request["employee_id"]))
+        ensure_can_view_profile(actor, profile)
+        content = leave_calendar(request)
+    except CalendarExportUnavailable as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (RuntimeError, HTTPError, APIError) as exc:
+        raise HTTPException(status_code=503, detail="Request storage is temporarily unavailable") from exc
+    return Response(content, media_type="text/calendar; charset=utf-8", headers={
+        "Content-Disposition": f'attachment; filename="leave-{request_id}.ics"',
+        "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+    })
 
 
 @router.patch("/{request_id}/review")

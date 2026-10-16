@@ -2,6 +2,10 @@
 
 FastAPI REST backend for the JanaMen Digital HR hackathon prototype. The MVP demonstrates one employee journey across profile, HR requests, Jana Academy, notifications, and AI Jana, with worker/manager/HR role enforcement.
 
+AI integration: [контракт API, демо-база и локальный mock](docs/ai-jana-api.md).
+The mock runs separately without credentials; the live AI routes retain Supabase authentication.
+Real agent: [semantic evidence selection, verification and live evaluation](docs/ai-jana-agent.md).
+
 ## Architecture
 
 - `app/main.py` creates the FastAPI application; `/api/v1` is the versioned API boundary.
@@ -41,7 +45,7 @@ Roles are `worker`, `manager`, and `hr_admin`. Official profile data is read-onl
 ## Supabase setup and demo data
 
 1. Create a Supabase project and copy `.env.example` to `.env`.
-2. Set `SUPABASE_URL`, the server-side `SUPABASE_KEY`, and the project's public `SUPABASE_ANON_KEY` in `.env`. The anon key is used only by the backend's Supabase Auth signup/login client; keep the server key private and never commit `.env`. Optionally set `OPENAI_API_KEY` and `OPENAI_MODEL` for generated Jana responses; without the key Jana returns matched source excerpts instead.
+2. Set `SUPABASE_URL`, the server-side `SUPABASE_KEY`, and the project's public `SUPABASE_ANON_KEY` in `.env`. The anon key is used only by the backend's Supabase Auth signup/login client; keep the server key private and never commit `.env`. Jana runs locally: install dependencies and run `python -m scripts.prepare_jana_local` once. No OpenAI key is used by the HTTP agent; missing local model files produce HTTP 503. The UI mock is a separate explicit process, never an automatic fallback.
 3. Run [database/migrations/0001_digital_hr.sql](database/migrations/0001_digital_hr.sql) in the Supabase SQL editor.
 4. In Supabase Auth, create fictional test users with emails `hr@posttech.demo`, `manager@posttech.demo`, and `employee@posttech.demo`. Set local demo passwords in Supabase; no credentials are stored in this repository.
 5. Run [database/seed.sql](database/seed.sql). It creates fictional profiles, two courses, knowledge articles, course assignments, and sample requests/notifications. It uses no real employee data.
@@ -111,7 +115,7 @@ REST-бэкенд на FastAPI для хакатон-прототипа JanaMen 
 ## Настройка Supabase и демонстрационные данные
 
 1. Создайте проект Supabase и скопируйте `.env.example` в `.env`.
-2. Укажите в `.env` значения `SUPABASE_URL`, серверный `SUPABASE_KEY` и публичный `SUPABASE_ANON_KEY` проекта. Anon-ключ используется только серверным клиентом Supabase Auth для регистрации и входа; храните серверный ключ в секрете и никогда не коммитьте `.env`. При необходимости задайте `OPENAI_API_KEY` и `OPENAI_MODEL` для генерации ответов Jana; без OpenAI-ключа Jana возвращает найденные фрагменты источников.
+2. Укажите в `.env` значения `SUPABASE_URL`, серверный `SUPABASE_KEY` и публичный `SUPABASE_ANON_KEY` проекта. Anon-ключ используется только серверным клиентом Supabase Auth для регистрации и входа; храните серверный ключ в секрете и никогда не коммитьте `.env`. Jana работает локально: установите зависимости и один раз выполните `python -m scripts.prepare_jana_local`. HTTP-агент не использует OpenAI-ключ; при отсутствии локальной модели возвращается HTTP 503. Mock для интерфейса запускается отдельно и не подменяет настоящий сервис при ошибке.
 3. Выполните [database/migrations/0001_digital_hr.sql](database/migrations/0001_digital_hr.sql) в SQL Editor проекта Supabase.
 4. В Supabase Auth создайте вымышленных тестовых пользователей с адресами `hr@posttech.demo`, `manager@posttech.demo` и `employee@posttech.demo`. Задайте им демонстрационные пароли в Supabase; учётные данные не хранятся в этом репозитории.
 5. Выполните [database/seed.sql](database/seed.sql). Скрипт создаёт вымышленные профили, два курса, статьи базы знаний, назначения курсов и примеры заявок/уведомлений. Реальные данные сотрудников не используются.
@@ -135,3 +139,23 @@ REST-бэкенд на FastAPI для хакатон-прототипа JanaMen 
 ## Тесты
 
 Установите зависимости из `requirements-dev.txt` и запустите `pytest`. Демонстрационные пользователи и таблицы базы нужны только для интеграционных тестов; имеющиеся тесты health-эндпоинтов не требуют учётных данных Supabase.
+
+## Локальная Jana и Google Calendar через файл
+
+Рабочий AI теперь использует локальный поиск по смыслу и короткие утверждённые
+FAQ-цитаты. Платного fallback нет. Экспорт календаря:
+`GET /api/v1/requests/{uuid}/calendar.ics` с Bearer-токеном, только одобренный отпуск.
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m scripts.prepare_jana_local
+python -m uvicorn examples.jana_local_demo:app --host 127.0.0.1 --port 8002
+```
+
+Локальная страница: http://127.0.0.1:8002. Реальная модель, вымышленные данные,
+без Supabase. Для рабочего backend нужен Supabase и обновлённый demo seed.
+Для Docker заранее подготовьте `.models/mpnet` на хосте; Compose монтирует его
+только для чтения. Модель Apache 2.0, около 288 МБ; CPU, без Docker/GPU для локального запуска.
+
+[Инструкция и результаты проверки](docs/ai-jana-agent.md) ·
+[API и подключение frontend](docs/ai-jana-api.md)

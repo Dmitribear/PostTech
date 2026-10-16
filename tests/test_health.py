@@ -5,7 +5,6 @@ from pydantic import ValidationError
 from app.main import app
 from app.api.routes import health
 from app.schemas.digital_hr import RequestCreate
-from app.services.jana import _rank_articles
 
 client = TestClient(app)
 
@@ -70,28 +69,3 @@ def test_leave_request_requires_valid_date_range() -> None:
 def test_advance_request_requires_positive_amount() -> None:
     with pytest.raises(ValidationError):
         RequestCreate(request_type="advance", amount=0)
-
-
-def test_jana_retrieval_ranks_matching_hr_article() -> None:
-    articles = [
-        {
-            "title": "Отпуск",
-            "content": "Укажите даты отпуска в заявке и следите за статусом.",
-            "keywords": ["отпуск", "заявка"],
-        },
-        {
-            "title": "Обучение",
-            "content": "Материалы доступны в Jana Academy.",
-            "keywords": ["курс"],
-        },
-    ]
-
-    ranked = _rank_articles("Как подать заявку на отпуск?", articles)
-
-    assert [article["title"] for article in ranked] == ["Отпуск"]
-
-
-def test_jana_retrieval_returns_no_source_for_unrelated_question() -> None:
-    articles = [{"title": "Отпуск", "content": "Укажите даты отпуска.", "keywords": ["отпуск"]}]
-
-    assert _rank_articles("Как сменить пароль от Wi-Fi?", articles) == []

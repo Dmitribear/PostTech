@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && useradd --system --gid app --home-dir /app app
 
 COPY app ./app
+COPY knowledge_base ./knowledge_base
 
 USER app
 EXPOSE 8000
