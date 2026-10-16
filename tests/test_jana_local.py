@@ -48,6 +48,38 @@ def test_similarly_likely_answers_ask_for_clarification_instead_of_guessing():
     assert "Уточните" in result["answer"] and "отпуск" in result["answer"] and "аванс" in result["answer"]
 
 
+@pytest.mark.parametrize("description", ["отправленной", "созданной", "оформленной"])
+def test_existing_request_description_does_not_trigger_submission_clarification(description):
+    question = f"Где найти решение по {description} заявке?"
+    card_index = next(i for i, card in enumerate(CATALOG.cards) if card.id == "request_status")
+    result = answer_from_faq(question, ARTICLES, index_with([(card_index, .91), (-1, .5)]))
+    assert result["mode"] == "excerpts"
+    assert result["answer"] == CATALOG.cards[card_index].excerpt + " [1]"
+
+
+@pytest.mark.parametrize("question", [
+    "Как подать заявку?", "Как подавать заявление?", "Как оформить заявку?",
+    "Как оформлять заявление?", "Как отправить заявку?", "Как отправлять заявление?",
+    "Как создать заявку?", "Как создавать заявления?", "Каков порядок подачи заявления?",
+    "Где инструкция по оформлению заявки?", "С чего начать отправку заявления?",
+    "Где инструкция по созданию заявки?",
+])
+def test_submission_without_request_kind_still_requires_clarification(question):
+    def unexpected(_question):
+        pytest.fail("An unspecified request kind must be clarified before search")
+    result = answer_from_faq(question, ARTICLES, SimpleNamespace(rank=unexpected))
+    assert result == {"answer": "Уточните тип заявки: на отпуск или на аванс?",
+                      "sources": [], "grounded": False,
+                      "escalation_suggested": True, "mode": "refusal"}
+
+
+def test_existing_request_description_does_not_bypass_semantic_confidence():
+    card_index = next(i for i, card in enumerate(CATALOG.cards) if card.id == "request_status")
+    result = answer_from_faq("Где найти решение по отправленной заявке?", ARTICLES,
+                             index_with([(card_index, .71), (-1, .3)]))
+    assert result["mode"] == "refusal" and not result["sources"]
+
+
 @pytest.mark.parametrize("rows", [[], [{**ARTICLES[0], "active": False}],
                                  [{**ARTICLES[0], "content": "Новая политика"}], [ARTICLES[0], ARTICLES[0]]])
 def test_source_must_still_be_active_unique_and_match_at_request_time(rows):

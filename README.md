@@ -8,6 +8,12 @@ Real agent: [semantic evidence selection, verification and live evaluation](docs
 
 Web portal: [запуск фронтенда и совместимость веток](docs/frontend.md).
 
+Для команды: [пошаговый запуск Integration с общим Supabase и локальной Jana](docs/team-integration-quickstart.md).
+Общий проект уже подготовлен; повторно выполнять миграции и seed для подключения не нужно.
+
+Сдача кейса: [архитектура с локальной Jana и будущими интеграциями](docs/architecture.md)
+и [проверка ИИ на 50 новых вопросах](docs/jana-acceptance-report.md).
+
 ## Architecture
 
 - `app/main.py` creates the FastAPI application; `/api/v1` is the versioned API boundary.
@@ -45,6 +51,9 @@ HR API routes require a Supabase Auth bearer access token; auth, health and port
 Roles are `worker`, `manager`, and `hr_admin`. Official profile data is read-only. Database row-level security is enabled; direct public-key browser access is denied by default. The backend uses the server-side Supabase key and enforces access in the API, so that key must never be exposed to a client.
 
 ## Supabase setup and demo data
+
+The steps below provision a **new database**. For the existing team project, use
+the [Integration quickstart](docs/team-integration-quickstart.md) instead.
 
 1. Create a Supabase project and copy `.env.example` to `.env`.
 2. Set `SUPABASE_URL`, the server-side `SUPABASE_KEY`, and the project's public `SUPABASE_ANON_KEY` in `.env`. The anon key is used only by the backend's Supabase Auth signup/login client; keep the server key private and never commit `.env`. Jana runs locally: install dependencies and run `python -m scripts.prepare_jana_local` once. No OpenAI key is used by the HTTP agent; missing local model files produce HTTP 503. The UI mock is a separate explicit process, never an automatic fallback.
@@ -115,6 +124,9 @@ REST-бэкенд на FastAPI для хакатон-прототипа JanaMen 
 Роли: `worker`, `manager` и `hr_admin`. Официальные данные профиля доступны только для чтения. В базе включена защита на уровне строк (RLS); прямой доступ из браузера с публичным ключом по умолчанию запрещён. Бэкенд использует серверный ключ Supabase и проверяет права на уровне API, поэтому этот ключ нельзя передавать клиенту.
 
 ## Настройка Supabase и демонстрационные данные
+
+Следующие шаги предназначены для **новой базы**. Для существующего общего проекта
+используйте [инструкцию команды](docs/team-integration-quickstart.md).
 
 1. Создайте проект Supabase и скопируйте `.env.example` в `.env`.
 2. Укажите в `.env` значения `SUPABASE_URL`, серверный `SUPABASE_KEY` и публичный `SUPABASE_ANON_KEY` проекта. Anon-ключ используется только серверным клиентом Supabase Auth для регистрации и входа; храните серверный ключ в секрете и никогда не коммитьте `.env`. Jana работает локально: установите зависимости и один раз выполните `python -m scripts.prepare_jana_local`. HTTP-агент не использует OpenAI-ключ; при отсутствии локальной модели возвращается HTTP 503. Mock для интерфейса запускается отдельно и не подменяет настоящий сервис при ошибке.

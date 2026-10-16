@@ -59,7 +59,13 @@ _UNSUPPORTED_QUALIFICATION = re.compile(
     r"|(?:за|через|на|до|после)\s+(?:\d+|один|два|три|четыре|пять|шесть|семь|десять|несколько)\s+(?:дн|день|недел|месяц)"
     r"|(?:всей|полной|всю)\s+зарплат", re.I,
 )
-_REQUEST_ACTION = re.compile(r"подать|подач|оформ|отправ|созда", re.I)
+# Match submission intent, not participles describing an existing request
+# ("отправленного", "созданной", "оформленной"). These still go through the
+# ordinary semantic threshold, negative examples and source validation.
+_REQUEST_ACTION = re.compile(
+    r"\b(?:подать|подавать|подач[а-яё]*|оформить|оформлять|оформлени[а-яё]*"
+    r"|отправить|отправлять|отправк[а-яё]*|создать|создавать|создани[а-яё]*)\b", re.I,
+)
 _REQUEST_NOUN = re.compile(r"заявк|заявлен", re.I)
 _REQUEST_KIND = re.compile(r"отпуск|отдых|аванс", re.I)
 
