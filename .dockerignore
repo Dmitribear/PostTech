@@ -7,3 +7,10 @@ __pycache__
 .pytest_cache
 .ruff_cache
 .models
+node_modules
+frontend/node_modules
+frontend/dist
+frontend/.env.local
+frontend/test-results
+frontend/playwright-report
+.npm-cache

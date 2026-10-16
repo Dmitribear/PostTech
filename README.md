@@ -6,6 +6,8 @@ AI integration: [контракт API, демо-база и локальный m
 The mock runs separately without credentials; the live AI routes retain Supabase authentication.
 Real agent: [semantic evidence selection, verification and live evaluation](docs/ai-jana-agent.md).
 
+Web portal: [запуск фронтенда и совместимость веток](docs/frontend.md).
+
 ## Architecture
 
 - `app/main.py` creates the FastAPI application; `/api/v1` is the versioned API boundary.
@@ -17,7 +19,7 @@ Real agent: [semantic evidence selection, verification and live evaluation](docs
 
 ## Implemented API
 
-All routes except `/` and `/api/v1/health/*` require a Supabase Auth bearer access token.
+HR API routes require a Supabase Auth bearer access token; auth, health and portal assets are public.
 
 | Endpoint | Purpose and access |
 | --- | --- |
@@ -46,9 +48,9 @@ Roles are `worker`, `manager`, and `hr_admin`. Official profile data is read-onl
 
 1. Create a Supabase project and copy `.env.example` to `.env`.
 2. Set `SUPABASE_URL`, the server-side `SUPABASE_KEY`, and the project's public `SUPABASE_ANON_KEY` in `.env`. The anon key is used only by the backend's Supabase Auth signup/login client; keep the server key private and never commit `.env`. Jana runs locally: install dependencies and run `python -m scripts.prepare_jana_local` once. No OpenAI key is used by the HTTP agent; missing local model files produce HTTP 503. The UI mock is a separate explicit process, never an automatic fallback.
-3. Run [database/migrations/0001_digital_hr.sql](database/migrations/0001_digital_hr.sql) in the Supabase SQL editor.
+3. In a new database run [0001_digital_hr.sql](database/migrations/0001_digital_hr.sql), then [0002_request_workflow.sql](database/migrations/0002_request_workflow.sql). Do not combine it with `ver2/0002_atomic_workflows.sql`; see [branch compatibility](docs/frontend.md#совместимость-веток).
 4. In Supabase Auth, create fictional test users with emails `hr@posttech.demo`, `manager@posttech.demo`, and `employee@posttech.demo`. Set local demo passwords in Supabase; no credentials are stored in this repository.
-5. Run [database/seed.sql](database/seed.sql). It creates fictional profiles, two courses, knowledge articles, course assignments, and sample requests/notifications. It uses no real employee data.
+5. Run [database/seed.sql](database/seed.sql). It creates fictional profiles, two courses, knowledge articles, course assignments, and sample requests/notifications. It uses no real employee data. For local Jana, apply [seed_jana_demo.sql](database/seed_jana_demo.sql) afterwards to load the articles matching the FAQ cards.
 6. Register via `POST /api/v1/auth/register`, confirm the email if Supabase requires it, then sign in via `POST /api/v1/auth/login`. Send the returned `access_token` as `Authorization: Bearer <token>` to protected API routes. HR must link `user_id` from Auth to the employee's existing `auth_user_id` profile field; public registration never accepts a role or edits official employee data. To issue a refreshed session, send its `refresh_token` to `POST /api/v1/auth/refresh`.
 
 ## Run
@@ -87,7 +89,7 @@ REST-бэкенд на FastAPI для хакатон-прототипа JanaMen 
 
 ## Реализованный API
 
-Для всех маршрутов, кроме `/` и `/api/v1/health/*`, требуется Bearer access-токен Supabase Auth.
+Для HR API требуется Bearer access-токен Supabase Auth; маршруты входа, health и статические файлы портала общедоступны.
 
 | Эндпоинт | Назначение и права доступа |
 | --- | --- |
@@ -116,9 +118,9 @@ REST-бэкенд на FastAPI для хакатон-прототипа JanaMen 
 
 1. Создайте проект Supabase и скопируйте `.env.example` в `.env`.
 2. Укажите в `.env` значения `SUPABASE_URL`, серверный `SUPABASE_KEY` и публичный `SUPABASE_ANON_KEY` проекта. Anon-ключ используется только серверным клиентом Supabase Auth для регистрации и входа; храните серверный ключ в секрете и никогда не коммитьте `.env`. Jana работает локально: установите зависимости и один раз выполните `python -m scripts.prepare_jana_local`. HTTP-агент не использует OpenAI-ключ; при отсутствии локальной модели возвращается HTTP 503. Mock для интерфейса запускается отдельно и не подменяет настоящий сервис при ошибке.
-3. Выполните [database/migrations/0001_digital_hr.sql](database/migrations/0001_digital_hr.sql) в SQL Editor проекта Supabase.
+3. В новой базе выполните [0001_digital_hr.sql](database/migrations/0001_digital_hr.sql), затем [0002_request_workflow.sql](database/migrations/0002_request_workflow.sql). Миграцию `0002_atomic_workflows.sql` из `ver2` вместе с ними применять нельзя: [совместимость веток](docs/frontend.md#совместимость-веток).
 4. В Supabase Auth создайте вымышленных тестовых пользователей с адресами `hr@posttech.demo`, `manager@posttech.demo` и `employee@posttech.demo`. Задайте им демонстрационные пароли в Supabase; учётные данные не хранятся в этом репозитории.
-5. Выполните [database/seed.sql](database/seed.sql). Скрипт создаёт вымышленные профили, два курса, статьи базы знаний, назначения курсов и примеры заявок/уведомлений. Реальные данные сотрудников не используются.
+5. Выполните [database/seed.sql](database/seed.sql). Скрипт создаёт вымышленные профили, два курса, статьи базы знаний, назначения курсов и примеры заявок/уведомлений. Реальные данные сотрудников не используются. Для локальной Jana затем выполните [seed_jana_demo.sql](database/seed_jana_demo.sql): он загружает статьи, соответствующие FAQ-карточкам.
 6. Зарегистрируйтесь через `POST /api/v1/auth/register`, при необходимости подтвердите email, затем войдите через `POST /api/v1/auth/login`. Передавайте полученный `access_token` в защищённые маршруты в заголовке `Authorization: Bearer <token>`. HR должен связать `user_id` из Auth с полем `auth_user_id` существующего профиля сотрудника. Публичная регистрация не позволяет назначать роль или изменять официальные данные сотрудника. Для обновления сессии отправьте её `refresh_token` в `POST /api/v1/auth/refresh`.
 
 ## Запуск

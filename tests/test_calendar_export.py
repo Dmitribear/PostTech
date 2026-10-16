@@ -1,11 +1,11 @@
 from datetime import date
+from types import SimpleNamespace
 
 import pytest
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from icalendar import Calendar
 
-from app.api.routes import requests
+from app.services import requests as workflow
 from app.core.security import get_current_user
 from app.main import app
 from app.schemas.common import UserContext
@@ -47,8 +47,13 @@ def test_only_approved_leave_with_valid_dates_is_exported(changes):
 def client(monkeypatch):
     old = app.dependency_overrides.copy()
     app.dependency_overrides[get_current_user] = lambda: UserContext(id="employee", auth_user_id="auth", role="worker")
-    monkeypatch.setattr(requests, "_get_request", lambda request_id: LEAVE)
-    monkeypatch.setattr(requests, "get_profile", lambda employee_id: {"id": "employee", "manager_id": "manager"})
+    class Query:
+        def select(self, *_): return self
+        def eq(self, *_): return self
+        def limit(self, *_): return self
+        def execute(self): return SimpleNamespace(data=[LEAVE])
+    monkeypatch.setattr(workflow, "get_supabase_client", lambda: SimpleNamespace(table=lambda _: Query()))
+    monkeypatch.setattr(workflow, "_profile", lambda employee_id: {"id": "employee", "manager_id": "manager"})
     try:
         with TestClient(app) as test_client:
             yield test_client
@@ -82,17 +87,33 @@ def test_same_profile_visibility_rules_apply_to_export(client, role, actor_id, e
 
 
 def test_pending_request_rejected_after_authorization(client, monkeypatch):
-    monkeypatch.setattr(requests, "_get_request", lambda _: {**LEAVE, "status": "pending"})
+    monkeypatch.setattr(workflow, "_execute", lambda _: [{**LEAVE, "status": "pending"}])
     assert client.get(PATH).status_code == 409
 
 
 def test_missing_request_and_storage_failure(client, monkeypatch):
-    def missing(_request_id):
-        raise HTTPException(404, "Request not found")
-    monkeypatch.setattr(requests, "_get_request", missing)
+    monkeypatch.setattr(workflow, "_execute", lambda _: [])
     assert client.get(PATH).status_code == 404
-    def unavailable(_request_id):
+    def unavailable():
         raise RuntimeError("database credentials")
-    monkeypatch.setattr(requests, "_get_request", unavailable)
+    monkeypatch.setattr(workflow, "get_supabase_client", unavailable)
     response = client.get(PATH)
     assert response.status_code == 503 and "credentials" not in response.text
+
+
+def test_portal_demo_export_uses_requested_dates_and_is_explicitly_fictional():
+    from examples.jana_local_demo import app as demo_app
+    with TestClient(demo_app) as demo:
+        payload = {"id": LEAVE["id"], "start_date": "2026-12-31", "end_date": "2026-12-31"}
+        response = demo.post("/demo/leave.ics", json=payload)
+        assert response.status_code == 200
+        event = Calendar.from_ical(response.content).walk("VEVENT")[0]
+        assert str(event["summary"]).startswith("Демо:")
+        assert event.decoded("dtend") == date(2027, 1, 1)
+        assert response.headers["cache-control"] == "no-store"
+        assert demo.post("/demo/leave.ics", json={**payload, "end_date": "2026-12-30"}).status_code == 422
+        assert demo.post("/demo/leave.ics", json={**payload, "comment": "private"}).status_code == 422
+    # Public demo export must never become part of the production app.
+    with TestClient(app) as production:
+        assert production.post("/demo/leave.ics", json=payload).status_code in (404, 405)
+        assert not any(getattr(route, "path", None) == "/demo/leave.ics" for route in app.routes)

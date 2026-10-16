@@ -5,16 +5,18 @@ Never mount this app in the production API or expose it to the Internet.
 """
 
 import json
+from datetime import date
 from pathlib import Path
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, Response
+from pydantic import BaseModel, ConfigDict
 
 from app.core.config import get_settings
 from app.schemas.digital_hr import JanaQuestion
 from app.schemas.jana import JanaAnswer, JanaArticle
-from app.services.calendar_export import leave_calendar
+from app.services.calendar_export import CalendarExportUnavailable, leave_calendar
 from app.services.jana_errors import JanaUnavailable
 from app.services.jana_local import answer_from_faq, get_index
 
@@ -49,6 +51,24 @@ def source(article_id: UUID):
 @app.get("/demo/leave.ics")
 def calendar():
     return Response(leave_calendar(DEMO_LEAVE, demo=True), media_type="text/calendar; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="demo-leave.ics"', "Cache-Control": "no-store"})
+
+
+class DemoLeave(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: UUID
+    start_date: date
+    end_date: date
+
+
+@app.post("/demo/leave.ics")
+def portal_calendar(payload: DemoLeave):
+    """Fictional portal dates only. Production always reads authorized DB records."""
+    try:
+        content = leave_calendar({**payload.model_dump(mode="json"), "request_type": "leave", "status": "approved"}, demo=True)
+    except CalendarExportUnavailable as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return Response(content, media_type="text/calendar; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="demo-leave.ics"', "Cache-Control": "no-store"})
 
 
