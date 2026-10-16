@@ -11,7 +11,6 @@ from app.core.security import get_current_user
 from app.db.supabase import get_supabase_client
 from app.schemas.common import UserContext
 from app.schemas.digital_hr import RequestCreate, RequestReview
-from app.services.notifications import create_notification, notify_hr
 
 router = APIRouter(prefix="/requests", tags=["HR requests"])
 
@@ -76,15 +75,7 @@ def create_request(
     if created is None:
         raise HTTPException(status_code=500, detail="Request could not be created")
 
-    employee = get_profile(actor.id)
-    title = "Новая заявка сотрудника"
-    body = f"{employee['full_name']} создал(а) заявку: {payload.request_type}."
-    if employee.get("manager_id"):
-        create_notification(
-            str(employee["manager_id"]), title, body, "request_created", str(created["id"])
-        )
-    else:
-        notify_hr(title, body, "request_created", str(created["id"]))
+    # Migration 0002 records history and notifications in this same DB transaction.
     return created
 
 
@@ -99,6 +90,25 @@ def request_details(
     return request
 
 
+@router.get("/{request_id}/history")
+def request_history(
+    request_id: str,
+    actor: UserContext = Depends(get_current_user),
+) -> list[dict]:
+    request = _get_request(request_id)
+    ensure_can_view_profile(actor, get_profile(str(request["employee_id"])))
+    result = (
+        get_supabase_client()
+        .table("hr_request_events")
+        .select("*")
+        .eq("request_id", request_id)
+        .order("created_at")
+        .order("id")
+        .execute()
+    )
+    return result.data or []
+
+
 @router.patch("/{request_id}/review")
 def review_request(
     request_id: str,
@@ -109,7 +119,7 @@ def review_request(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Reviewer role required")
 
     request = _get_request(request_id)
-    employee = ensure_can_manage_employee(actor, str(request["employee_id"]))
+    ensure_can_manage_employee(actor, str(request["employee_id"]))
     if request["status"] != "pending":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only pending requests can be reviewed")
 
@@ -132,11 +142,4 @@ def review_request(
     if updated is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Request was already reviewed")
 
-    create_notification(
-        str(employee["id"]),
-        "Статус заявки изменён",
-        f"Ваша заявка получила статус: {payload.status}.",
-        "request_status_changed",
-        request_id,
-    )
     return updated

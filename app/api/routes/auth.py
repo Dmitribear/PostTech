@@ -15,7 +15,7 @@ def _auth_client():
     except RuntimeError as exc:
         detail = str(exc)
         lowered = detail.lower()
-        if any(keyword in lowered for keyword in ("looks swapped", "looks wrong")):
+        if any(keyword in lowered for keyword in ("look swapped", "looks swapped", "looks wrong")):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=detail,
@@ -46,8 +46,9 @@ def _session_payload(session: Any) -> dict[str, Any]:
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(payload: Credentials) -> dict[str, Any]:
     """Create a Supabase Auth account; HR profile linking is an admin action."""
+    client = _auth_client()
     try:
-        response = _auth_client().auth.sign_up(
+        response = client.auth.sign_up(
             {
                 "email": payload.email,
                 "password": payload.password.get_secret_value(),

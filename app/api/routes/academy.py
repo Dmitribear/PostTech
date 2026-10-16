@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.permissions import ensure_can_manage_employee, get_profile
+from app.core.permissions import ensure_can_manage_employee
 from app.core.security import get_current_user
 from app.db.supabase import get_supabase_client
 from app.schemas.common import UserContext
@@ -11,7 +11,6 @@ from app.schemas.digital_hr import (
     CourseProgressUpdate,
     QuizSubmission,
 )
-from app.services.notifications import create_notification
 
 router = APIRouter(prefix="/academy", tags=["Jana Academy"])
 
@@ -114,7 +113,7 @@ def assign_course(
 ) -> dict:
     if actor.role not in ("manager", "hr_admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager or HR role required")
-    employee = ensure_can_manage_employee(actor, payload.employee_id)
+    ensure_can_manage_employee(actor, payload.employee_id)
     _get_course(payload.course_id)
     if _find_assignment(payload.course_id, payload.employee_id):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Course is already assigned")
@@ -134,12 +133,6 @@ def assign_course(
     assignment = (result.data or [None])[0]
     if assignment is None:
         raise HTTPException(status_code=500, detail="Course assignment failed")
-    create_notification(
-        str(employee["id"]),
-        "Назначено обучение",
-        "Вам назначен новый учебный курс Jana Academy.",
-        "course_assigned",
-    )
     return assignment
 
 
@@ -161,11 +154,16 @@ def update_progress(
         .table("course_assignments")
         .update({"progress_percent": progress, "status": "in_progress" if progress else "not_started"})
         .eq("id", assignment["id"])
+        .eq("status", assignment["status"])
+        .eq("progress_percent", assignment["progress_percent"])
         .execute()
     )
     updated = (result.data or [None])[0]
     if updated is None:
-        raise HTTPException(status_code=500, detail="Course progress could not be saved")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Course progress changed; refresh the assignment and try again",
+        )
     return updated
 
 
@@ -178,6 +176,8 @@ def complete_course(
     assignment = _find_assignment(course_id, actor.id)
     if assignment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course assignment not found")
+    if assignment["status"] == "completed":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Course is already completed")
     course = _get_course(course_id)
     quiz = course.get("quiz") or []
     if not quiz:
@@ -209,18 +209,10 @@ def complete_course(
             }
         )
         .eq("id", assignment["id"])
+        .neq("status", "completed")
         .execute()
     )
     updated = (result.data or [None])[0]
     if updated is None:
-        raise HTTPException(status_code=500, detail="Course result could not be saved")
-
-    profile = get_profile(actor.id)
-    if profile.get("manager_id"):
-        create_notification(
-            str(profile["manager_id"]),
-            "Обучение завершено",
-            f"{profile['full_name']} завершил(а) курс «{course['title']}» с результатом {score}%.",
-            "course_completed",
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Course was already completed")
     return updated
