@@ -129,3 +129,33 @@ def test_local_settings_do_not_require_an_api_key():
     settings = Settings(_env_file=None, openai_api_key=None)
     assert settings.jana_min_score == .72
     assert settings.jana_model_dir.name == "mpnet"
+
+
+def test_reviewed_typo_is_repaired_before_missing_request_type_clarification():
+    seen = []
+    def rank(question):
+        seen.append(question)
+        return [(0, .96), (-1, .3)]
+    result = answer_from_faq("Как оформить заявку на отпск?", ARTICLES,
+                             SimpleNamespace(catalog=CATALOG, rank=rank))
+    assert seen == ["Как оформить заявку на отпуск?"]
+    assert result["mode"] == "excerpts"
+
+
+def test_repaired_question_is_checked_again_for_unknown_qualifications():
+    def unexpected(_question):
+        pytest.fail("Typo correction must not bypass scope checks")
+    result = answer_from_faq("Как оформить отпск по совместительству?", ARTICLES,
+                             SimpleNamespace(rank=unexpected))
+    assert result["mode"] == "refusal" and not result["sources"]
+
+
+@pytest.mark.parametrize("question,wrong_card", [
+    ("Где посмотреть статус моей заявки на отпуск?", "leave_apply"),
+    ("Где найти решение по заявлению на аванс?", "advance_apply"),
+    ("Будет ли Google Calendar автоматически синхронизировать изменения отпуска?", "calendar_import"),
+])
+def test_confident_but_inapplicable_instruction_is_not_returned(question, wrong_card):
+    card_index = next(i for i, card in enumerate(CATALOG.cards) if card.id == wrong_card)
+    result = answer_from_faq(question, ARTICLES, index_with([(card_index, .99), (-1, .3)]))
+    assert result["mode"] == "refusal" and not result["sources"]

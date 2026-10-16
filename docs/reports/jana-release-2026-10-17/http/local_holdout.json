@@ -1,0 +1,556 @@
+{
+  "execution": "authenticated_local_http",
+  "base_url": "http://127.0.0.1:5173/api/v1",
+  "created_at": "2026-10-16T21:37:43.968019+00:00",
+  "suite_name": null,
+  "suite_sha256": "1777ac65c5a87280a055ed2d31efcecacb8e721124d4edecf412154ec491582e",
+  "expected_faq_sha256": "1e65bb7c82493c733696ed5185a9831fe5b1bdde4a057834ff76ddb7a94c63d5",
+  "notice": "Real local API and published Supabase sources. Server model settings are not introspected. Only Auth sign-in and read-only HR/AI calls. No credentials in report.",
+  "results": [
+    {
+      "id": "case-001",
+      "category": "uncategorized",
+      "question": "Подскажи, с чего начать оформление отпуска",
+      "expected_card": "leave_apply",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В демо-прототипе для заявки на отпуск откройте раздел «Заявки», выберите тип «Отпуск», укажите дату начала и окончания, при необходимости добавьте комментарий и отправьте заявку. Дата окончания не должна предшествовать дате начала. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000001",
+            "title": "Демо: оформление заявки на отпуск",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000001",
+            "excerpt": "В демо-прототипе для заявки на отпуск откройте раздел «Заявки», выберите тип «Отпуск», укажите дату начала и окончания, при необходимости добавьте комментарий и отправьте заявку. Дата окончания не должна предшествовать дате начала."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 0.9081
+    },
+    {
+      "id": "case-002",
+      "category": "uncategorized",
+      "question": "Где мне заполнить форму для получения аванса?",
+      "expected_card": "advance_apply",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В демо-прототипе для заявки на аванс откройте раздел «Заявки», выберите тип «Аванс», укажите положительную сумму и при необходимости комментарий. Даты отпуска не заполняются. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000002",
+            "title": "Демо: оформление заявки на аванс",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000002",
+            "excerpt": "В демо-прототипе для заявки на аванс откройте раздел «Заявки», выберите тип «Аванс», укажите положительную сумму и при необходимости комментарий. Даты отпуска не заполняются."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 1.3924
+    },
+    {
+      "id": "case-003",
+      "category": "uncategorized",
+      "question": "Кто из сотрудников может видеть мои сведения в профиле?",
+      "expected_card": "visibility",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В демо-прототипе сотрудник видит свой профиль и свои заявки. Руководитель дополнительно видит профили и заявки прямых подчинённых. HR/администратор имеет доступ ко всем профилям и заявкам в рамках своей роли. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000003",
+            "title": "Демо: роли и доступ к данным",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000003",
+            "excerpt": "В демо-прототипе сотрудник видит свой профиль и свои заявки. Руководитель дополнительно видит профили и заявки прямых подчинённых. HR/администратор имеет доступ ко всем профилям и заявкам в рамках своей роли."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 0.8876
+    },
+    {
+      "id": "case-004",
+      "category": "uncategorized",
+      "question": "Как проверить, что по заявке уже приняли решение?",
+      "expected_card": "request_status",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000004",
+            "title": "Демо: статусы заявок",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000004",
+            "excerpt": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 1.1688
+    },
+    {
+      "id": "case-005",
+      "category": "uncategorized",
+      "question": "В каком разделе искать оставшиеся дни отпуска?",
+      "expected_card": "leave_balance",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В демо-прототипе остаток отпускных дней отображается в личном профиле. Это демонстрационный снимок кадровых данных, доступный только для чтения. AI Jana не вычисляет персональный остаток и не запрашивает его из профиля. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000005",
+            "title": "Демо: остаток отпускных дней",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000005",
+            "excerpt": "В демо-прототипе остаток отпускных дней отображается в личном профиле. Это демонстрационный снимок кадровых данных, доступный только для чтения. AI Jana не вычисляет персональный остаток и не запрашивает его из профиля."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 0.913
+    },
+    {
+      "id": "case-006",
+      "category": "uncategorized",
+      "question": "Мою должность записали неправильно, куда обращаться?",
+      "expected_card": "profile_fix",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000006",
+            "title": "Демо: кадровый профиль и привязка учётной записи",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000006",
+            "excerpt": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 0.8873
+    },
+    {
+      "id": "case-007",
+      "category": "uncategorized",
+      "question": "Не вижу кадровый профиль после создания аккаунта",
+      "expected_card": "profile_access",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "Демо: Регистрация создаёт учётную запись, но не создаёт кадровый профиль и не назначает роль. Администратор должен создать или связать профиль с учётной записью. Если после входа получен отказ из-за отсутствия HR-профиля, обратитесь к администратору проекта. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000006",
+            "title": "Демо: кадровый профиль и привязка учётной записи",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000006",
+            "excerpt": "Регистрация создаёт учётную запись, но не создаёт кадровый профиль и не назначает роль. Администратор должен создать или связать профиль с учётной записью. Если после входа получен отказ из-за отсутствия HR-профиля, обратитесь к администратору проекта."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 0.9532
+    },
+    {
+      "id": "case-008",
+      "category": "uncategorized",
+      "question": "Где открыть назначенное мне обучение?",
+      "expected_card": "course_find",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В демо-прототипе откройте Jana Academy, чтобы увидеть каталог и назначенные вам курсы. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000007",
+            "title": "Демо: назначения Jana Academy",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000007",
+            "excerpt": "В демо-прототипе откройте Jana Academy, чтобы увидеть каталог и назначенные вам курсы."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 0.8868
+    },
+    {
+      "id": "case-009",
+      "category": "uncategorized",
+      "question": "Может ли начальник дать мне учебный курс?",
+      "expected_card": "course_assign",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "Демо: Курс назначает HR или руководитель сотрудника. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000007",
+            "title": "Демо: назначения Jana Academy",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000007",
+            "excerpt": "Курс назначает HR или руководитель сотрудника."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 0.8695
+    },
+    {
+      "id": "case-010",
+      "category": "uncategorized",
+      "question": "Какие шаги нужны, чтобы закончить учебный курс?",
+      "expected_card": "course_finish",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В демо-прототипе откройте назначенный курс, изучите материал и ответьте на все вопросы теста. Пока курс не завершён, можно сохранять прогресс от 0 до 99 процентов. После отправки допустимого набора ответов сервер рассчитывает процент правильных ответов, сохраняет результат и отмечает курс завершённым с прогрессом 100 процентов. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000008",
+            "title": "Демо: прогресс и результат обучения",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000008",
+            "excerpt": "В демо-прототипе откройте назначенный курс, изучите материал и ответьте на все вопросы теста. Пока курс не завершён, можно сохранять прогресс от 0 до 99 процентов. После отправки допустимого набора ответов сервер рассчитывает процент правильных ответов, сохраняет результат и отмечает курс завершённым с прогрессом 100 процентов."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 0.8827
+    },
+    {
+      "id": "case-011",
+      "category": "uncategorized",
+      "question": "Где в системе искать новые уведомления?",
+      "expected_card": "notification_find",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В демо-прототипе уведомления отображаются в отдельном разделе платформы. Сотруднику приходит уведомление об изменении статуса заявки и о назначении курса. Руководитель получает уведомление о завершении обучения прямым подчинённым. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000009",
+            "title": "Демо: центр уведомлений",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000009",
+            "excerpt": "В демо-прототипе уведомления отображаются в отдельном разделе платформы. Сотруднику приходит уведомление об изменении статуса заявки и о назначении курса. Руководитель получает уведомление о завершении обучения прямым подчинённым."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 0.8565
+    },
+    {
+      "id": "case-012",
+      "category": "uncategorized",
+      "question": "Что может делать помощник Jana?",
+      "expected_card": "capabilities",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "Демо: AI Jana помогает найти информацию в общей демонстрационной базе знаний и показывает найденные источники. Каждый вопрос обрабатывается отдельно; история диалога не передаётся на сервер. Ассистент не принимает кадровые решения, не одобряет заявки, не изменяет профили и не получает персональные сведения работников. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000010",
+            "title": "Демо: границы AI Jana",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000010",
+            "excerpt": "AI Jana помогает найти информацию в общей демонстрационной базе знаний и показывает найденные источники. Каждый вопрос обрабатывается отдельно; история диалога не передаётся на сервер. Ассистент не принимает кадровые решения, не одобряет заявки, не изменяет профили и не получает персональные сведения работников."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 0.891
+    },
+    {
+      "id": "case-013",
+      "category": "uncategorized",
+      "question": "Как загрузить файл отпуска в календарь Google?",
+      "expected_card": "calendar_import",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В демо-прототипе файл календаря доступен для одобренной заявки на отпуск. Скачайте файл .ics в карточке заявки. На компьютере откройте Google Calendar → Настройки → Импорт и экспорт, выберите файл и календарь, затем нажмите «Импортировать». [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000011",
+            "title": "Демо: экспорт отпуска в календарь",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000011",
+            "excerpt": "В демо-прототипе файл календаря доступен для одобренной заявки на отпуск. Скачайте файл .ics в карточке заявки. На компьютере откройте Google Calendar → Настройки → Импорт и экспорт, выберите файл и календарь, затем нажмите «Импортировать»."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 1.1326
+    },
+    {
+      "id": "case-014",
+      "category": "uncategorized",
+      "question": "Google сам обновит отпуск, если поменялись даты?",
+      "expected_card": "calendar_sync",
+      "expected": null,
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "Демо: Файл не добавляет событие автоматически и не синхронизирует дальнейшие изменения: при изменении или отмене отпуска обновите событие вручную. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000011",
+            "title": "Демо: экспорт отпуска в календарь",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000011",
+            "excerpt": "Файл не добавляет событие автоматически и не синхронизирует дальнейшие изменения: при изменении или отмене отпуска обновите событие вручную."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "seconds": 1.1235
+    },
+    {
+      "id": "case-015",
+      "category": "uncategorized",
+      "question": "Какой максимальный аванс разрешено запросить?",
+      "expected_card": null,
+      "expected": "refusal",
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "seconds": 0.8921
+    },
+    {
+      "id": "case-016",
+      "category": "uncategorized",
+      "question": "Отпускные поступят до начала отпуска или после?",
+      "expected_card": null,
+      "expected": "refusal",
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "seconds": 0.8597
+    },
+    {
+      "id": "case-017",
+      "category": "uncategorized",
+      "question": "Нужен ли стаж полгода, чтобы подать заявление на отпуск?",
+      "expected_card": null,
+      "expected": "refusal",
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "seconds": 0.8791
+    },
+    {
+      "id": "case-018",
+      "category": "uncategorized",
+      "question": "Можно сдавать тест повторно после неудачи?",
+      "expected_card": null,
+      "expected": "refusal",
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "seconds": 0.8645
+    },
+    {
+      "id": "case-019",
+      "category": "uncategorized",
+      "question": "Составь текст поздравления коллеге",
+      "expected_card": null,
+      "expected": "refusal",
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "seconds": 0.8951
+    },
+    {
+      "id": "case-020",
+      "category": "uncategorized",
+      "question": "По какому адресу расположен центральный склад?",
+      "expected_card": null,
+      "expected": "refusal",
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "seconds": 0.9061
+    },
+    {
+      "id": "case-021",
+      "category": "uncategorized",
+      "question": "Отправь заявление на аванс от моего имени",
+      "expected_card": null,
+      "expected": "refusal",
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "Я отвечаю по общей базе знаний. Личные данные и действия с заявками доступны в соответствующих разделах платформы.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "seconds": 0.8832
+    },
+    {
+      "id": "case-022",
+      "category": "uncategorized",
+      "question": "Как оформить отпуск на пять дней без согласования?",
+      "expected_card": null,
+      "expected": "refusal",
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "seconds": 0.8901
+    },
+    {
+      "id": "case-023",
+      "category": "uncategorized",
+      "question": "Где указать даты отпуска и сколько дней мне положено?",
+      "expected_card": null,
+      "expected": "refusal",
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "seconds": 0.868
+    },
+    {
+      "id": "case-024",
+      "category": "uncategorized",
+      "question": "Скажи электронную почту кадрового отдела",
+      "expected_card": null,
+      "expected": "refusal",
+      "outcome": "pass",
+      "checks_passed": true,
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "seconds": 0.9018
+    }
+  ],
+  "completed": true,
+  "anonymous_access_denied": true,
+  "role": "worker",
+  "source_content_sha256": {
+    "20000000-0000-4000-8000-000000000001": "6199a2f55335f6c078422688a0cba34f0eda55fa27ce29ef7f23d9bc478bdff2",
+    "20000000-0000-4000-8000-000000000002": "272fddea037e4c317faac4a6711c3843a94ceb0daf0ba1b9e5bb16c71c1e34d1",
+    "20000000-0000-4000-8000-000000000003": "4201b882044d8c6d22df6ad2a8ae95ea884943335f5d5078d60543142f188a85",
+    "20000000-0000-4000-8000-000000000004": "da000889b78ff4b140400267c2cdd2deee425aef9bf974f16364610c8aa59c76",
+    "20000000-0000-4000-8000-000000000005": "6ecfa24c5d8311dc704274c81fd3482d7cababa2129bccbd3904df66cbc42f4c",
+    "20000000-0000-4000-8000-000000000006": "ea3ef2647d05d74926a5ef56d0ca272a005590c214f879781a4707feb07d51cd",
+    "20000000-0000-4000-8000-000000000007": "8b004b1a442ce44119ce70247b2cb565593fc08b51dc774e1a35a81b74a1fb1c",
+    "20000000-0000-4000-8000-000000000008": "8a8829f5bb9daf223c568f8b4088c08f41a2d27a94aac07b245aacf75c63f768",
+    "20000000-0000-4000-8000-000000000009": "17ac8cf7f1ca55130508eeff4fa6d655d7af327630e617e9b45fce9cf8eb4ac9",
+    "20000000-0000-4000-8000-000000000010": "eef205966e19f12e4e5e5ac90a5a82282b8b9d7fcda1dabaa11ea8553e757f8d",
+    "20000000-0000-4000-8000-000000000011": "45d37959f288241daa06bbc82b12e97496875f7858f9f9bdc46342985dab2592"
+  },
+  "catalog_source_issues": [],
+  "passed": 24,
+  "total": 24,
+  "planned_total": 24,
+  "summary": {
+    "outcomes": {
+      "pass": 24
+    },
+    "supported": {
+      "passed": 14,
+      "total": 14
+    },
+    "refusals": {
+      "passed": 10,
+      "total": 10
+    },
+    "categories": {
+      "uncategorized": {
+        "passed": 24,
+        "total": 24
+      }
+    }
+  }
+}

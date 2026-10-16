@@ -224,6 +224,7 @@ npm.cmd ci
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider
+.\.venv\Scripts\python.exe -m scripts.check_jana_release --output-dir .venv/jana-check-1
 ```
 
 В папке `frontend`:
@@ -236,4 +237,9 @@ npm.cmd run build
 Эти проверки дополняют ручной сценарий выше. Отдельные PostgreSQL-тесты требуют
 изолированной тестовой базы; общий Supabase команды для них не используйте.
 Не запускайте `scripts.evaluate_jana`: это прежний эксперимент с платным OpenAI.
-Локальная проверка ИИ называется `scripts.evaluate_jana_local`.
+Полная локальная проверка ИИ называется `scripts.check_jana_release`: девять
+наборов, 285 вопросов, без платных вызовов и без Supabase. Выбирайте новую папку
+результатов на каждый запуск; код выхода 0 означает полный успешный прогон,
+1 — несовпадения ответов, 2 — ошибку или неполный прогон.
+Одиночный набор можно проверить через `scripts.evaluate_jana_local`.
+Результаты текущей версии и ограничения описаны в [отчёте](jana-release-report.md).

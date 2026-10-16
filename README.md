@@ -173,3 +173,14 @@ python -m uvicorn examples.jana_local_demo:app --host 127.0.0.1 --port 8002
 
 [Инструкция и результаты проверки](docs/ai-jana-agent.md) ·
 [API и подключение frontend](docs/ai-jana-api.md)
+
+После изменения Jana запускайте все девять наборов с настоящей локальной моделью:
+
+```powershell
+python -m scripts.check_jana_release --output-dir .venv/jana-check-1
+```
+
+Выбирайте новую папку для каждого прогона. Команда проверяет 285 вопросов,
+сохраняет ответы и хеши входных файлов, возвращает ненулевой код при ошибке
+или незавершённой проверке. Supabase и платные AI API не вызываются.
+Текущие результаты и границы проверки — в [отчёте Jana](docs/jana-release-report.md).

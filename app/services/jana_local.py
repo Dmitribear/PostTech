@@ -1,7 +1,6 @@
 """Conservative local FAQ retrieval. Every factual answer is a curated quote."""
 
 import hashlib
-import re
 from functools import lru_cache
 from pathlib import Path
 from threading import Lock
@@ -10,6 +9,8 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.services.jana_errors import JanaUnavailable
+from app.services.jana_guardrails import card_is_applicable, refusal_reason
+from app.services.jana_text import normalize_question
 from app.services.local_embeddings import LocalEmbedder
 
 MAX_ARTICLES = 100
@@ -37,37 +38,6 @@ class FAQCatalog(BaseModel):
 def refuse(message: str = "В базе нет подтверждённого ответа. Уточните у HR.") -> dict:
     return {"answer": message, "sources": [], "grounded": False,
             "escalation_suggested": True, "mode": "refusal"}
-
-
-_RESTRICTED = re.compile(
-    r"(?:игнорируй|забудь|ignore|disregard).{0,100}(?:инструк|правил|system|previous)"
-    r"|(?:придумай|выдумай|сочини).{0,80}(?:правил|политик|ответ|срок)"
-    r"|(?:одобри|отклони|измени|назначь|удали|оформи|отправь|создай|запиши|переведи|исправь|добавь|напомни|approve|delete)\b"
-    r"|(?:парол|токен|api.?key|system prompt|системн\w* промпт)"
-    r"|(?:покажи|назови|скажи|узнай|выведи).{0,80}(?:зарплат|оклад|чуж|коллег|подчин)"
-    r"|(?:сколько|какой|каков).{0,60}(?:у меня|мой|моя).{0,50}(?:остат|зарплат|оклад|отпуск)"
-    r"|(?:сколько).{0,50}(?:дней|отпуск).{0,50}(?:у меня|мне|остал)",
-    re.IGNORECASE | re.DOTALL,
-)
-_MULTI = re.compile(r"\?\s*\S|\b(?:и|а также|а ещё|а еще|и ещё|и еще)\s+(?:какой|какая|какие|когда|сколько|кто|где|как|за сколько)\b", re.I)
-# These qualifications change the policy being asked about. The demo catalog
-# does not cover them; a similar general procedure must not imply permission.
-_UNSUPPORTED_QUALIFICATION = re.compile(
-    r"за свой сч[её]т|неоплачиваем|без сохранения|испытательн|задним числом"
-    r"|(?:без|обойти).{0,35}(?:соглас|разреш|одобрен|руковод|начальств)"
-    r"|декрет|больнич|беремен|увольнен|компенсац|празднич|расписан|график"
-    r"|(?:за|через|на|до|после)\s+(?:\d+|один|два|три|четыре|пять|шесть|семь|десять|несколько)\s+(?:дн|день|недел|месяц)"
-    r"|(?:всей|полной|всю)\s+зарплат", re.I,
-)
-# Match submission intent, not participles describing an existing request
-# ("отправленного", "созданной", "оформленной"). These still go through the
-# ordinary semantic threshold, negative examples and source validation.
-_REQUEST_ACTION = re.compile(
-    r"\b(?:подать|подавать|подач[а-яё]*|оформить|оформлять|оформлени[а-яё]*"
-    r"|отправить|отправлять|отправк[а-яё]*|создать|создавать|создани[а-яё]*)\b", re.I,
-)
-_REQUEST_NOUN = re.compile(r"заявк|заявлен", re.I)
-_REQUEST_KIND = re.compile(r"отпуск|отдых|аванс", re.I)
 
 
 class FAQIndex:
@@ -115,16 +85,13 @@ def answer_from_faq(question: str, articles: list[dict], index: FAQIndex,
                     min_score: float = 0.72, margin: float = 0.045) -> dict:
     if len(articles) > MAX_ARTICLES:
         raise JanaUnavailable("Knowledge base exceeds the supported article limit")
-    if _RESTRICTED.search(question):
-        return refuse("Я отвечаю по общей базе знаний. Личные данные и действия с заявками доступны в соответствующих разделах платформы.")
-    if len(question) > 500 or _MULTI.search(question):
-        return refuse("Задайте один короткий вопрос, чтобы я мог подобрать точный ответ.")
-    if _UNSUPPORTED_QUALIFICATION.search(question):
-        return refuse()
-    if _REQUEST_ACTION.search(question) and _REQUEST_NOUN.search(question) and not _REQUEST_KIND.search(question):
-        return refuse("Уточните тип заявки: на отпуск или на аванс?")
-    if re.search(r"календар|google|\.ics", question, re.I) and re.search(r"отклон|неодобр|не согласован|pending", question, re.I):
-        return refuse("Файл календаря доступен только в карточке одобренной заявки на отпуск.")
+    if reason := refusal_reason(question, clarify_request_kind=False):
+        return refuse(reason)
+    question = normalize_question(question)
+    # Repairing a typo must never remove a scope restriction. The original
+    # question and the conservatively repaired text both pass the same checks.
+    if reason := refusal_reason(question):
+        return refuse(reason)
     try:
         ranked = index.rank(question)
     except ValueError:
@@ -141,6 +108,10 @@ def answer_from_faq(question: str, articles: list[dict], index: FAQIndex,
         return refuse()
 
     card = index.catalog.cards[winner]
+    if not card_is_applicable(question, card.id):
+        # Similar wording cannot turn a status/sync question into an instruction
+        # for submitting a request/importing a file. Do not pick a fallback card.
+        return refuse()
     matches = [a for a in articles if str(a["id"]) == str(card.article_id) and a.get("active") is not False]
     if len(matches) != 1 or card.excerpt not in matches[0].get("content", ""):
         # An outdated/unpublished source invalidates the card, not a license

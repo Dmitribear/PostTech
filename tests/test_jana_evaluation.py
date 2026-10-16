@@ -88,6 +88,19 @@ def test_duplicate_case_ids_and_questions_are_rejected():
         validate_cases([case, {**case, "id": "two"}], CATALOG)
 
 
+@pytest.mark.parametrize("name,count", [("acceptance_v2", 60), ("acceptance_v3", 30), ("safety_v1", 35)])
+def test_release_questions_are_not_copied_into_search_examples(name, count):
+    suite = json.loads((ROOT / f"knowledge_base/demo/{name}.json").read_text(encoding="utf-8"))["cases"]
+    validate_cases(suite, CATALOG)
+    normalize = lambda text: " ".join(text.split()).casefold()
+    indexed = {normalize(q) for card in CATALOG.cards for q in card.questions}
+    indexed.update(normalize(q) for q in CATALOG.unsupported_questions)
+    assert len(suite) == count
+    assert all(normalize(case["question"]) not in indexed for case in suite)
+    if name.startswith("acceptance_"):
+        assert {case["card"] for case in suite if "card" in case} == {card.id for card in CATALOG.cards}
+
+
 @pytest.mark.parametrize("suite_name,expected_cards,refusals", [
     ("request_status_v1", {"request_status": 8}, 12),
     ("profile_fix_v1", {"profile_fix": 8, "profile_access": 1}, 11),
