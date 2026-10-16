@@ -88,15 +88,20 @@ def test_duplicate_case_ids_and_questions_are_rejected():
         validate_cases([case, {**case, "id": "two"}], CATALOG)
 
 
-def test_status_regression_questions_are_not_search_examples():
-    suite = json.loads((ROOT / "knowledge_base/demo/request_status_v1.json").read_text(encoding="utf-8"))["cases"]
+@pytest.mark.parametrize("suite_name,expected_cards,refusals", [
+    ("request_status_v1", {"request_status": 8}, 12),
+    ("profile_fix_v1", {"profile_fix": 8, "profile_access": 1}, 11),
+])
+def test_topic_regression_questions_are_not_search_examples(suite_name, expected_cards, refusals):
+    suite = json.loads((ROOT / f"knowledge_base/demo/{suite_name}.json").read_text(encoding="utf-8"))["cases"]
     validate_cases(suite, CATALOG)
     normalize = lambda text: " ".join(text.split()).casefold()
     indexed = {normalize(q) for card in CATALOG.cards for q in card.questions}
     indexed.update(normalize(q) for q in CATALOG.unsupported_questions)
     assert len(suite) == 20
-    assert sum(case.get("card") == "request_status" for case in suite) == 8
-    assert sum(case.get("expected") == "refusal" for case in suite) == 12
+    for card_id, count in expected_cards.items():
+        assert sum(case.get("card") == card_id for case in suite) == count
+    assert sum(case.get("expected") == "refusal" for case in suite) == refusals
     assert all(normalize(case["question"]) not in indexed for case in suite)
 
 
