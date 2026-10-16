@@ -31,3 +31,13 @@ export function pluralDays(count: number): string {
   const plural = new Intl.PluralRules('ru-RU').select(count);
   return `${count} ${plural === 'one' ? 'день' : plural === 'few' ? 'дня' : 'дней'}`;
 }
+
+export function calendarDayLabel(count: number): string {
+  const plural = new Intl.PluralRules('ru-RU').select(count);
+  return plural === 'one' ? 'календарный день' : plural === 'few' ? 'календарных дня' : 'календарных дней';
+}
+
+export function pluralRequests(count: number): string {
+  const plural = new Intl.PluralRules('ru-RU').select(count);
+  return `${count} ${plural === 'one' ? 'заявка' : plural === 'few' ? 'заявки' : 'заявок'}`;
+}
