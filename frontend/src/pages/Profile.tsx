@@ -1,3 +1,5 @@
+import { t, tx } from '../lib/i18n';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePortal } from '../context';
 import { Avatar, Icon, PageHeader } from '../components/ui';
@@ -5,22 +7,46 @@ import { formatDate, roleLabels } from '../lib/format';
 import type { EmployeeProfile } from '../lib/types';
 import './support.css';
 
-export function ProfileFields({ profile }: { profile: EmployeeProfile }) {
-  const fields = [
+export function ProfileFields({ profile, section }: { profile: EmployeeProfile; section?: 'personal' | 'work' }) {
+  const personal = [
     ['ФИО', profile.full_name], ['Табельный номер', profile.employee_code],
-    ['Рабочая почта', profile.email], ['Компания', profile.company],
+    ['Рабочая почта', profile.email],
+  ];
+  const work = [
+    ['Компания', profile.company],
     ['Должность', profile.job_title], ['Подразделение', profile.department],
+    ['Руководитель', profile.manager_name || (profile.manager_id ? 'Указан в кадровой системе' : 'Не назначен · согласует HR')],
     ['Дата приёма', formatDate(profile.hired_at)], ['Роль в портале', roleLabels[profile.role]],
   ];
-  return <dl className="support-details-grid">{fields.map(([title, value]) => <div key={title}><dt>{title}</dt><dd>{value || 'Не указано'}</dd></div>)}</dl>;
+  const fields = section === 'personal' ? personal : section === 'work' ? work : [...personal, ...work];
+  return <dl className="support-details-grid">{tx(fields.map(([title, value]) => <div key={title}><dt>{tx(title)}</dt><dd>{tx(value || 'Не указано')}</dd></div>))}</dl>;
 }
 
 export default function Profile() {
-  const { profile, mode } = usePortal();
-  return <div className="support-page">
-    <PageHeader title="Мой профиль" description="Ваши кадровые данные и информация о работе" eyebrow="Личный кабинет" actions={<span className="support-profile-role"><Icon name="lock" size={13} />Только для чтения</span>} />
-    <div className="support-profile-layout"><section className="card support-profile-summary"><Avatar name={profile.full_name} size={76} /><h2>{profile.full_name}</h2><p>{profile.job_title}<br />{profile.department}</p><span className="support-profile-role"><Icon name="user" size={13} />{roleLabels[profile.role]}</span><div className="support-profile-divider" /><span className="support-profile-stat">{Number(profile.vacation_days_remaining).toLocaleString('ru-RU')}</span><p>дней отпуска доступно</p><Link className="btn btn-primary" to="/requests/new?type=leave"><Icon name="plane" size={16} />Оформить отпуск</Link><div className="support-profile-divider" /><p style={{ marginBottom: 0 }}>В команде {profile.company}<br />с {formatDate(profile.hired_at)}</p></section>
-      <div className="stack"><section className="card support-profile-info"><h2>Кадровая информация</h2><p>Сведения из учётной системы компании</p><ProfileFields profile={profile} /><div className="support-source" style={{ marginTop: 20 }}><Icon name="activity" size={14} /><span>Источник: <b>{profile.external_source || 'Не указан'}</b> · обновлено {formatDate(profile.updated_at, { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Qyzylorda' })}</span></div></section><div className="support-note"><Icon name="lock" size={18} /><p>Официальные кадровые сведения доступны для просмотра. Если вы заметили неточность в имени, должности или подразделении, обратитесь в HR-отдел для исправления в учётной системе.</p></div>{mode === 'demo' && <div className="support-note warning"><Icon name="info" size={17} /><p>Вы просматриваете демонстрационный профиль. Эти данные не связаны с кадровой системой компании.</p></div>}</div>
+  const { profile } = usePortal();
+  const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 900px)').matches);
+  const [expanded, setExpanded] = useState<'personal' | 'work' | null>(null);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 900px)');
+    const update = () => setCompact(query.matches);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  return <div className="support-page support-profile-page">
+    <PageHeader title={t("Мой профиль")} actions={<Link className="btn btn-secondary" to="/settings"><Icon name="settings" size={17} />{t("Настройки")}</Link>} />
+    <div className="support-profile-layout">
+      <div className="support-profile-side">
+        <section className="card support-profile-summary"><div className="support-profile-person"><Avatar name={profile.full_name} size={72} /><div><h2>{profile.full_name}</h2><span className="support-profile-role">{tx(roleLabels[profile.role])}</span><p>{tx(profile.job_title || profile.department)}</p></div></div><div className="support-profile-leave"><div><span className="support-profile-stat">{tx(Number(profile.vacation_days_remaining).toLocaleString('ru-RU'))}</span><span>{t("Доступно дней отпуска")}</span></div><span className="support-profile-leave-icon"><Icon name="plane" size={27} /></span></div><Link className="btn btn-primary" to="/requests/new?type=leave">{t("Оформить отпуск")}<Icon name="arrow-right" size={16} /></Link></section>
+        <nav className="card support-profile-links" aria-label={t("Личные разделы")}><Link to="/requests?scope=mine"><Icon name="clipboard" size={19} /><span>{t("Мои заявки")}</span><Icon name="chevron-right" size={16} /></Link><Link to="/academy"><Icon name="graduation" size={19} /><span>{t("Моё обучение")}</span><Icon name="chevron-right" size={16} /></Link><Link to="/notifications"><Icon name="bell" size={19} /><span>{t("Уведомления")}</span><Icon name="chevron-right" size={16} /></Link></nav>
+      </div>
+      <div className="support-profile-data">
+        {tx((['personal', 'work'] as const).map(section => <section className="card support-profile-info" key={section}>
+          {tx(compact ? <h2><button className="support-profile-section-toggle" aria-expanded={expanded === section} aria-controls={`profile-${section}`} onClick={() => setExpanded(value => value === section ? null : section)}><Icon name={section === 'personal' ? 'user' : 'briefcase'} size={19} /><span>{tx(section === 'personal' ? 'Личные данные' : 'Данные о работе')}</span><Icon name={expanded === section ? 'chevron-down' : 'chevron-right'} size={17} /></button></h2> : <h2><Icon name={section === 'personal' ? 'user' : 'briefcase'} size={19} />{tx(section === 'personal' ? 'Личные данные' : 'Данные о работе')}</h2>)}
+          <div id={`profile-${section}`} hidden={compact && expanded !== section}><ProfileFields profile={profile} section={section} /></div>
+        </section>))}
+        <nav className="support-profile-mobile-links" aria-label={t("Профиль")}><Link to="/activity"><Icon name="clock" size={19} /><span>{t("История")}</span><Icon name="chevron-right" size={17} /></Link><Link to="/settings"><Icon name="settings" size={19} /><span>{t("Настройки")}</span><Icon name="chevron-right" size={17} /></Link></nav>
+        <details className="support-profile-source"><summary><Icon name="lock" size={14} />{t("Данные обновляет HR")}<Icon name="chevron-down" size={14} /></summary><p>{t("Если заметили ошибку, обратитесь в HR.")}</p><div className="support-source"><span>{t("Источник: ")}<b>{tx(profile.external_source || 'Не указан')}</b> · {tx(formatDate(profile.updated_at, { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Qyzylorda' }))}</span></div></details>
+      </div>
     </div>
   </div>;
 }

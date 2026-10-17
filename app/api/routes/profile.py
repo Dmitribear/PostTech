@@ -12,12 +12,24 @@ def _public_profile(profile: dict) -> dict:
     return {key: value for key, value in profile.items() if key != "auth_user_id"}
 
 
+def _with_manager(profile: dict) -> dict:
+    """Only the reporting line is public; never return a manager's HR record."""
+    result = _public_profile(profile)
+    result["manager_name"] = None
+    if profile.get("manager_id"):
+        managers = (get_supabase_client().table("employee_profiles")
+                    .select("full_name").eq("id", profile["manager_id"])
+                    .limit(1).execute()).data or []
+        result["manager_name"] = managers[0]["full_name"] if managers else None
+    return result
+
+
 @router.get("/profile")
 def my_profile(actor: UserContext = Depends(get_current_user)) -> dict:
     """Return the signed-in employee's read-only HR profile."""
     profile = get_profile(actor.id)
     ensure_can_view_profile(actor, profile)
-    return _public_profile(profile)
+    return _with_manager(profile)
 
 
 @router.get("/employees/{employee_id}")
@@ -27,7 +39,7 @@ def employee_profile(
 ) -> dict:
     profile = get_profile(employee_id)
     ensure_can_view_profile(actor, profile)
-    return _public_profile(profile)
+    return _with_manager(profile)
 
 
 @router.get("/team")

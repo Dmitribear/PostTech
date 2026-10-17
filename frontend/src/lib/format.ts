@@ -1,4 +1,14 @@
-import type { AppRole, CourseStatus, RequestStatus, RequestType } from './types';
+import { getLocale, localizedDate } from './i18n';
+import type { AppRole, CourseStatus, RequestStatus, RequestType, Notification } from './types';
+
+export function notificationHref(item: Notification): string {
+  if (item.ticket_id) return `/support?ticket=${encodeURIComponent(item.ticket_id)}`;
+  if (item.notification_type === 'delegation_assigned') return '/requests?scope=review';
+  if (item.request_id) return `/requests/${item.request_id}`;
+  if (item.notification_type === 'team_course_completed') return `/academy?tab=team${item.course_id ? `&courseFilter=${item.course_id}` : ''}`;
+  if (item.course_id) return `/academy?course=${item.course_id}`;
+  return item.notification_type.includes('course') || item.notification_type.includes('training') ? '/academy' : '/notifications';
+}
 
 export const roleLabels: Record<AppRole, string> = { worker: 'Сотрудник', manager: 'Руководитель', hr_admin: 'HR-администратор' };
 export const requestTypeLabels: Record<RequestType, string> = { leave: 'Отпуск', advance: 'Аванс' };
@@ -14,11 +24,11 @@ export function formatDate(value: string | null | undefined, options: Intl.DateT
   const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
   const date = new Date(dateOnly ? `${value}T12:00:00` : value);
   if (Number.isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', ...options }).format(date);
+  return localizedDate(date, { day: 'numeric', month: 'short', year: 'numeric', ...options });
 }
 
 export function formatMoney(value: number | null | undefined): string {
-  return value == null ? '—' : new Intl.NumberFormat('ru-KZ', { style: 'currency', currency: 'KZT', maximumFractionDigits: Number.isInteger(value) ? 0 : 2 }).format(value);
+  return value == null ? '—' : new Intl.NumberFormat(getLocale() === 'kk' ? 'kk-KZ' : 'ru-KZ', { style: 'currency', currency: 'KZT', maximumFractionDigits: Number.isInteger(value) ? 0 : 2 }).format(value);
 }
 
 export function daysBetween(start: string, end: string): number {
@@ -28,6 +38,7 @@ export function daysBetween(start: string, end: string): number {
 }
 
 export function pluralDays(count: number): string {
+  if (getLocale() === 'kk') return `${count} күн`;
   const plural = new Intl.PluralRules('ru-RU').select(count);
   return `${count} ${plural === 'one' ? 'день' : plural === 'few' ? 'дня' : 'дней'}`;
 }

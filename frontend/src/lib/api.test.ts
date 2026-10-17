@@ -124,8 +124,89 @@ describe('live API authentication', () => {
   it('handles email confirmation registration without inventing an authenticated session', async () => {
     const transport = vi.fn(async () => json({ user_id: 'user-1', email: auth.email, email_confirmation_required: true, message: 'Confirm email' }, 201));
     const api = createLiveApi({ fetch: transport, storage: memoryStorage(null) });
-    const response = await api.register(auth.email, 'password123');
+    const response = await api.register({ invitation_code: 'JP-TEST', first_name: 'Алексей', last_name: 'Ким', password: 'Password123' });
     expect(response.email_confirmation_required).toBe(true);
+    expect(api.getSession()).toBeNull();
+  });
+
+  it('never sends an existing bearer token when checking or confirming an invitation', async () => {
+    const calls: { path: string; headers: Headers; body: unknown }[] = [];
+    const transport = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      calls.push({ path, headers: new Headers(init?.headers), body: JSON.parse(String(init?.body)) });
+      return json(path.endsWith('/check') ? { email: auth.email, role: 'worker', department: 'Логистика', expires_at: '2026-12-01T00:00:00Z' } : auth);
+    });
+    const api = createLiveApi({ fetch: transport, storage: memoryStorage() });
+    const invitation = await api.checkInvitation('JP-INVITE');
+    expect(invitation.role).toBe('worker');
+    await api.verifyRegistration({ invitation_code: 'JP-INVITE', token: '472916' });
+    expect(calls.every(call => !call.headers.has('Authorization'))).toBe(true);
+    expect(calls[1].body).toEqual({ invitation_code: 'JP-INVITE', token: '472916' });
+    expect(api.getSession()?.user_id).toBe(auth.user_id);
+  });
+
+  it('keeps invalid OTP and invitation failures unauthenticated and does not refresh them', async () => {
+    const transport = vi.fn(async () => json({ detail: 'Invalid or expired verification code' }, 400));
+    const api = createLiveApi({ fetch: transport, storage: memoryStorage(null) });
+    await expect(api.verifyRegistration({ invitation_code: 'JP-INVITE', token: '000000' })).rejects.toMatchObject({ status: 400 });
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(api.getSession()).toBeNull();
+  });
+
+  it('resends without a session and accepts recovery only with a valid authenticated result', async () => {
+    const transport = vi.fn(async (input: RequestInfo | URL) => String(input).endsWith('/resend-registration') ? json({ message: 'Sent', retry_after: 60 }) : json(auth));
+    const api = createLiveApi({ fetch: transport, storage: memoryStorage(null) });
+    expect(await api.resendRegistration('JP-INVITE')).toEqual({ message: 'Sent', retry_after: 60 });
+    expect(api.getSession()).toBeNull();
+    await api.completeInvitation({ invitation_code: 'JP-INVITE', email: auth.email, password: 'Password123' });
+    expect(api.getSession()?.access_token).toBe(auth.access_token);
+  });
+
+  it('requests and confirms password recovery without creating a portal session', async () => {
+    const calls: { path: string; headers: Headers; body: unknown }[] = [];
+    const storage = memoryStorage(null);
+    const onSessionChange = vi.fn();
+    const api = createLiveApi({ storage, onSessionChange, fetch: vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      calls.push({ path, headers: new Headers(init?.headers), body: JSON.parse(String(init?.body)) });
+      return json(path.endsWith('/confirm') ? { message: 'Password updated. Sign in with your new password', ...auth } : { message: 'If an account exists, a code will be sent', retry_after: 60 });
+    }) });
+    const request = await api.requestPasswordReset(auth.email);
+    expect(request.retry_after).toBe(60);
+    await api.confirmPasswordReset({ email: auth.email, token: '12345678', password: 'NewPassword123' });
+    expect(calls.map(call => call.path)).toEqual(['/api/v1/auth/password-reset', '/api/v1/auth/password-reset/confirm']);
+    expect(calls[0].body).toEqual({ email: auth.email });
+    expect(calls[1].body).toEqual({ email: auth.email, token: '12345678', password: 'NewPassword123' });
+    expect(calls.every(call => !call.headers.has('Authorization'))).toBe(true);
+    expect(api.getSession()).toBeNull();
+    expect(storage.getItem(SESSION_KEY)).toBeNull();
+    expect(onSessionChange).not.toHaveBeenCalled();
+  });
+
+  it('does not attach or refresh an existing session during failed password recovery', async () => {
+    const calls: { path: string; headers: Headers }[] = [];
+    const api = createLiveApi({ storage: memoryStorage(), fetch: vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      calls.push({ path, headers: new Headers(init?.headers) });
+      return json(path.endsWith('/confirm') ? { detail: 'Reset code is invalid or expired. Request a new code' } : { message: 'If an account exists, a code will be sent', retry_after: 60 }, path.endsWith('/confirm') ? 401 : 200);
+    }) });
+    await api.requestPasswordReset(auth.email);
+    await expect(api.confirmPasswordReset({ email: auth.email, token: '000000', password: 'NewPassword123' })).rejects.toMatchObject({ status: 401, message: 'Код неверный или истёк. Запросите новый код.' });
+    expect(calls).toHaveLength(2);
+    expect(calls.every(call => !call.headers.has('Authorization'))).toBe(true);
+    expect(api.getSession()?.access_token).toBe(auth.access_token);
+  });
+
+  it('preserves the server cooldown for password recovery', async () => {
+    const api = createLiveApi({ storage: memoryStorage(null), fetch: vi.fn(async () => new Response(JSON.stringify({ detail: 'Please wait before requesting another reset code' }), { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '42' } })) });
+    await expect(api.requestPasswordReset(auth.email)).rejects.toMatchObject({ status: 429, retryAfterSeconds: 42, message: 'Подождите перед повторной отправкой кода.' });
+    expect(api.getSession()).toBeNull();
+  });
+
+  it('rejects malformed successful password recovery responses', async () => {
+    const api = createLiveApi({ storage: memoryStorage(null), fetch: vi.fn(async () => json({})) });
+    await expect(api.requestPasswordReset(auth.email)).rejects.toMatchObject({ status: 502 });
+    await expect(api.confirmPasswordReset({ email: auth.email, token: '123456', password: 'NewPassword123' })).rejects.toMatchObject({ status: 502 });
     expect(api.getSession()).toBeNull();
   });
 
@@ -183,6 +264,13 @@ describe('HTTP request contract', () => {
     const html = createLiveApi({ storage: memoryStorage(), fetch: vi.fn(async () => new Response('<html>App fallback</html>')) });
     await expect(html.getProfile()).rejects.toMatchObject({ status: 502 });
   });
+
+  it('preserves non-JSON HTTP failures instead of reporting an incorrect API address', async () => {
+    const serverFailure = createLiveApi({ storage: memoryStorage(), fetch: vi.fn(async () => new Response('Internal Server Error', { status: 500, headers: { 'Content-Type': 'text/plain' } })) });
+    await expect(serverFailure.getCourses()).rejects.toMatchObject({ status: 500, message: 'Сервис временно недоступен. Попробуйте позже.' });
+    const gatewayFailure = createLiveApi({ storage: memoryStorage(), fetch: vi.fn(async () => new Response('<html>Upstream error</html>', { status: 503 })) });
+    await expect(gatewayFailure.getNotifications()).rejects.toMatchObject({ status: 503, message: 'Сервис временно недоступен. Попробуйте позже.' });
+  });
 });
 
 describe('explicit demo mode', () => {
@@ -219,14 +307,22 @@ describe('explicit demo mode', () => {
     const details = await api.getCourse(course.id);
     expect(details).not.toHaveProperty('correctAnswers');
     expect(details.quiz[0]).not.toHaveProperty('answer_index');
-    await expect(api.completeCourse(course.id, {})).rejects.toMatchObject({ status: 422 });
+    await expect(api.completeCourse(course.id, {})).rejects.toMatchObject({ status: 409 });
     const advanced = await api.updateCourseProgress(course.id, 80);
     const unchanged = await api.updateCourseProgress(course.id, 20);
     expect(unchanged.progress_percent).toBe(advanced.progress_percent);
+    await api.updateCourseProgress(course.id, 90);
+    await expect(api.completeCourse(course.id, {})).rejects.toMatchObject({ status: 422 });
+    const failed = await api.completeCourse(course.id, Object.fromEntries(details.quiz.map(question => [question.id, 0])), requestKey);
+    expect(failed).toMatchObject({ status: 'in_progress', score_percent: 0, attempt_count: 1 });
+    await api.completeCourse(course.id, Object.fromEntries(details.quiz.map(question => [question.id, 0])), requestKey);
+    expect(await api.getCourseAttempts(course.id)).toHaveLength(1);
     const result = await api.completeCourse(course.id, Object.fromEntries(details.quiz.map(question => [question.id, 1])));
     expect(result.status).toBe('completed');
     expect(result.score_percent).toBe(100);
-    await expect(api.updateCourseProgress(course.id, 99)).rejects.toMatchObject({ status: 409 });
+    expect(await api.updateCourseProgress(course.id, 20)).toEqual(result);
+    expect(await api.completeCourse(course.id, {})).toEqual(result);
+    expect(await api.getCourseAttempts(course.id)).toHaveLength(2);
   });
 
   it('marks notifications read idempotently and distinguishes unsupported AI questions', async () => {

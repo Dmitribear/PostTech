@@ -1,11 +1,49 @@
+import { t, tx } from '../lib/i18n';
+import { Deadline } from '../components/Deadline';
+import { businessToday } from './Workspace';
 import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { usePortal } from '../context';
-import { Avatar, EmptyState, ErrorState, Icon, LoadingState, Modal, PageHeader } from '../components/ui';
+import { Avatar, EmptyState, ErrorState, Icon, LoadingState, Modal, PageHeader, StatusBadge } from '../components/ui';
 import { errorMessage } from '../lib/api';
-import { roleLabels } from '../lib/format';
-import type { Course, EmployeeProfile } from '../lib/types';
+import { formatDate, roleLabels } from '../lib/format';
+import type { Course, EmployeeProfile, TeamCourseAssignment } from '../lib/types';
 import { ProfileFields } from './Profile';
 import './support.css';
+import Invitations from './Invitations';
+
+export function TeamLearning({ employeeId, onResetEmployee, courseId, onResetCourse }: { employeeId?: string; onResetEmployee?: () => void; courseId?: string; onResetCourse?: () => void }) {
+  const { api, profile, refreshKey } = usePortal();
+  const allowed = profile.role === 'manager' || profile.role === 'hr_admin';
+  const [rows, setRows] = useState<TeamCourseAssignment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
+  const [retry, setRetry] = useState(0);
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState('all');
+  useEffect(() => {
+    if (!allowed) return;
+    let active = true; setLoading(true); setError(null);
+    api.getTeamCourses({ ...(employeeId ? { employee_id: employeeId } : {}), ...(courseId ? { course_id: courseId } : {}) })
+      .then(value => { if (active) setRows(value); })
+      .catch(err => { if (active) setError(err); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [api, allowed, employeeId, courseId, refreshKey, retry]);
+  if (!allowed) return <EmptyState title={t("Обучение команды доступно руководителю и HR")} />;
+  if (loading) return <LoadingState />;
+  if (error) return <ErrorState error={error} retry={() => setRetry(value => value + 1)} />;
+  const visible = rows.filter(row => (status === 'all' || (status === 'retry' ? row.status !== 'completed' && row.score_percent != null : row.status === status)) && `${row.employee.full_name} ${row.employee.department} ${row.course?.title || ''}`.toLocaleLowerCase('ru').includes(query.toLocaleLowerCase('ru')));
+  const completed = rows.filter(row => row.status === 'completed').length;
+  const needRetry = rows.filter(row => row.status !== 'completed' && row.score_percent != null).length;
+  return <section className="academy-team-view">
+    {tx(courseId && <div className="support-note"><Icon name="book" size={16} /><p>{t("Показаны назначения курса: ")}<strong>{tx(rows[0]?.course?.title || 'выбранный курс')}</strong>.</p>{tx(onResetCourse && <button className="btn btn-ghost" onClick={onResetCourse}>{t("Все курсы")}</button>)}</div>)}
+    <div className="support-toolbar"><div><h2>{t("Обучение команды")}</h2><p className="muted">{tx(employeeId ? 'Курсы сотрудника' : profile.role === 'hr_admin' ? 'Все сотрудники' : 'Ваша команда')}</p></div>{tx(employeeId && onResetEmployee ? <button className="btn btn-secondary" onClick={onResetEmployee}>{t("Все сотрудники")}</button> : <Link className="btn btn-secondary" to="/team"><Icon name="users" size={15} />{t("Назначить обучение")}</Link>)}</div>
+    <div className="support-metrics"><div className="support-metric"><span><Icon name="book" /></span><div><strong>{tx(rows.length)}</strong><small>{t("Назначений")}</small></div></div><div className="support-metric"><span><Icon name="check-circle" /></span><div><strong>{tx(completed)}</strong><small>{t("Завершено")}</small></div></div><div className="support-metric"><span><Icon name="refresh" /></span><div><strong>{tx(needRetry)}</strong><small>{t("Нужен повтор")}</small></div></div></div>
+    <div className="support-toolbar"><label className="academy-filter"><span>{t("Статус")}</span><select className="input" aria-label={t("Статус обучения команды")} value={status} onChange={event => setStatus(event.target.value)}><option value="all">{t("Все назначения")}</option><option value="not_started">{t("Не начаты")}</option><option value="in_progress">{t("В процессе")}</option><option value="completed">{t("Завершены")}</option><option value="retry">{t("Нужен повтор")}</option></select></label><label className="support-search"><Icon name="search" size={15} /><input className="input" value={query} onChange={event => setQuery(event.target.value)} aria-label={t("Поиск обучения команды")} placeholder={t("Сотрудник, отдел или курс")} /></label></div>
+    {visible.length ? <div className="card academy-team-list"><div className="academy-team-head"><span>{t("Сотрудник / курс")}</span><span>{t("Прогресс")}</span><span>{t("Результат")}</span><span>{t("Статус")}</span></div>{visible.map(row => <article className="academy-team-row" key={row.id}><div className="academy-team-person"><Avatar name={row.employee.full_name} size={34} /><div><strong>{row.employee.full_name}</strong><small>{tx(row.employee.department)}</small><Link to={`/academy?tab=team&course=${encodeURIComponent(row.course_id)}`}>{tx(row.course?.title || 'Курс недоступен')}</Link></div></div><div><div className="support-progress" role="progressbar" aria-label={`Прогресс ${row.employee.full_name}: ${row.course?.title || 'курс'}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={row.progress_percent}><span style={{ width: `${row.progress_percent}%` }} /></div><div className="support-progress-label"><strong>{tx(row.progress_percent)}%</strong><span>{tx(row.material_completed_at ? 'Материал изучен' : row.progress_percent > 0 ? 'Изучает материал' : 'Не начат')}</span></div></div><div className="academy-team-score"><strong>{tx(row.score_percent == null ? '—' : `${row.score_percent}%`)}</strong><small>{t("Попыток: ")}{tx(row.attempt_count ?? 0)}{tx(row.course?.passing_score != null ? ` · порог ${row.course.passing_score}%` : '')}</small><small>{tx(row.last_attempt_at ? formatDate(row.last_attempt_at) : `Назначен ${formatDate(row.assigned_at)}`)}</small></div><div><StatusBadge status={row.status} /><Deadline id={row.id} due={row.due_on} status={row.status} editable /></div></article>)}</div> : <EmptyState title={rows.length ? 'Назначения не найдены' : 'Назначенных курсов пока нет'} description={rows.length ? 'Измените статус или поисковый запрос.' : 'Назначьте курс сотруднику из раздела команды.'} />}
+  </section>;
+}
 
 function EmployeeDetails({ id, onClose }: { id: string; onClose: () => void }) {
   const { api } = usePortal();
@@ -17,24 +55,25 @@ function EmployeeDetails({ id, onClose }: { id: string; onClose: () => void }) {
     api.getEmployee(id).then(value => { if (active) setEmployee(value); }).catch(err => { if (active) setError(err); });
     return () => { active = false; };
   }, [api, id, retry]);
-  return <Modal title="Профиль сотрудника" onClose={onClose} wide>{error ? <ErrorState error={error} retry={() => setRetry(value => value + 1)} /> : !employee ? <LoadingState /> : <><div className="support-team-detail-heading"><Avatar name={employee.full_name} size={52} /><div><h3>{employee.full_name}</h3><p>{employee.job_title} · {employee.department}</p></div></div><ProfileFields profile={employee} /><div className="support-note" style={{ marginTop: 20 }}><Icon name="plane" size={18} /><p>Доступно дней отпуска: <strong>{employee.vacation_days_remaining}</strong>. Кадровые сведения доступны только для чтения.</p></div></>}</Modal>;
+  return <Modal title={t("Профиль сотрудника")} onClose={onClose} wide>{error ? <ErrorState error={error} retry={() => setRetry(value => value + 1)} /> : !employee ? <LoadingState /> : <><div className="support-team-detail-heading"><Avatar name={employee.full_name} size={52} /><div><h3>{employee.full_name}</h3><p>{tx(employee.job_title)} · {tx(employee.department)}</p></div></div><ProfileFields profile={employee} /><div className="support-note" style={{ marginTop: 20 }}><Icon name="plane" size={18} /><p><strong>{tx(employee.vacation_days_remaining)}{t(" дней")}</strong>{t(" отпуска · данные обновляет HR.")}</p></div></>}</Modal>;
 }
 
 function AssignCourse({ employee, courses, onClose }: { employee: EmployeeProfile; courses: Course[]; onClose: () => void }) {
   const { api, notify, refresh } = usePortal();
   const [courseId, setCourseId] = useState('');
+  const [dueOn, setDueOn] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   async function submit(event: FormEvent) {
     event.preventDefault(); if (!courseId || busy) return;
     setBusy(true); setError('');
     try {
-      await api.assignCourse(employee.id, courseId);
+      await api.assignCourse(employee.id, courseId, dueOn);
       refresh(); notify(`Курс назначен: ${employee.full_name}.`); onClose();
     } catch (err) { setError(errorMessage(err)); }
     finally { setBusy(false); }
   }
-  return <Modal title="Назначить обучение" onClose={() => { if (!busy) onClose(); }}><form className="support-assign-form" onSubmit={submit}><div className="support-team-detail-heading"><Avatar name={employee.full_name} size={42} /><div><h3>{employee.full_name}</h3><p>{employee.job_title}</p></div></div>{courses.length ? <label className="field"><span className="field-label">Курс Jana Academy</span><select className="input" value={courseId} onChange={event => setCourseId(event.target.value)} disabled={busy} required><option value="">Выберите курс</option>{courses.map(course => <option key={course.id} value={course.id}>{course.title} · {course.duration_minutes} мин</option>)}</select></label> : <EmptyState title="Доступных курсов пока нет" description="Курсы появятся после публикации учебных материалов." />}{courseId && <p className="muted" style={{ fontSize: 12 }}>{courses.find(course => course.id === courseId)?.description}</p>}<div className="support-note"><Icon name="bell" size={17} /><p>После назначения курс появится у сотрудника в Jana Academy. Система отправит уведомление о новом обучении.</p></div>{error && <p className="support-inline-error" role="alert">{error}</p>}<div className="support-reader-actions"><button className="btn btn-secondary" type="button" disabled={busy} onClick={onClose}>Отмена</button><button className="btn btn-primary" disabled={busy || !courseId}>{busy ? 'Назначаем…' : 'Назначить курс'}<Icon name="graduation" size={16} /></button></div></form></Modal>;
+  return <Modal title={t("Назначить обучение")} onClose={() => { if (!busy) onClose(); }}><form className="support-assign-form" onSubmit={submit}><div className="support-team-detail-heading"><Avatar name={employee.full_name} size={42} /><div><h3>{employee.full_name}</h3><p>{tx(employee.job_title)}</p></div></div>{tx(courses.length ? <label className="field"><span className="field-label">{t("Курс Jana Academy")}</span><select className="input" value={courseId} onChange={event => setCourseId(event.target.value)} disabled={busy} required><option value="">{t("Выберите курс")}</option>{tx(courses.map(course => <option key={course.id} value={course.id}>{tx(course.title)} · {tx(course.duration_minutes)}{t(" мин")}</option>))}</select></label> : <EmptyState title={t("Доступных курсов пока нет")} description={t("Курсы появятся после публикации учебных материалов.")} />)}{tx(courseId && <p className="muted" style={{ fontSize: 12 }}>{tx(courses.find(course => course.id === courseId)?.description)}</p>)}<label className="field">{t("Пройти до")}<input className="input" type="date" min={businessToday()} value={dueOn} onChange={e=>setDueOn(e.target.value)} disabled={busy}/></label><div className="support-note"><Icon name="bell" size={17} /><p>{t("Сотрудник получит курс и уведомление.")}</p></div>{tx(error && <p className="support-inline-error" role="alert">{tx(error)}</p>)}<div className="support-reader-actions"><button className="btn btn-secondary" type="button" disabled={busy} onClick={onClose}>{t("Отмена")}</button><button className="btn btn-primary" disabled={busy || !courseId}>{tx(busy ? 'Назначаем…' : 'Назначить курс')}<Icon name="graduation" size={16} /></button></div></form></Modal>;
 }
 
 export default function Team() {
@@ -48,6 +87,15 @@ export default function Team() {
   const [search, setSearch] = useState('');
   const [details, setDetails] = useState<string | null>(null);
   const [assign, setAssign] = useState<EmployeeProfile | null>(null);
+  const [params, setParams] = useSearchParams();
+  const [invitations, setInvitations] = useState(false);
+  const tab = params.get('tab') === 'learning' ? 'learning' : 'people';
+  const learningEmployee = params.get('employee') || undefined;
+  function showLearning(employeeId?: string) {
+    const next = new URLSearchParams(params); next.set('tab', 'learning');
+    if (employeeId) next.set('employee', employeeId); else next.delete('employee');
+    setParams(next);
+  }
   useEffect(() => {
     if (!allowed) { setLoading(false); return; }
     let active = true; setLoading(true); setError(null);
@@ -55,14 +103,16 @@ export default function Team() {
     return () => { active = false; };
   }, [api, allowed, refreshKey, retry]);
   const visible = employees.filter(employee => `${employee.full_name} ${employee.job_title} ${employee.department} ${employee.employee_code}`.toLocaleLowerCase('ru').includes(search.toLocaleLowerCase('ru')));
-  return <div className="support-page"><PageHeader title={profile.role === 'hr_admin' ? 'Сотрудники компании' : 'Моя команда'} description="Профили сотрудников и назначение обучения" eyebrow={profile.role === 'hr_admin' ? 'HR-пространство' : 'Пространство руководителя'} />
-    {!allowed ? <EmptyState title="Раздел доступен руководителям и HR" description="В вашем личном кабинете доступны собственный профиль, заявки и обучение." /> : loading ? <LoadingState /> : error ? <ErrorState error={error} retry={() => setRetry(value => value + 1)} /> : <>
-      <div className="support-metrics"><div className="support-metric"><span><Icon name="users" /></span><div><strong>{employees.length}</strong><small>{profile.role === 'hr_admin' ? 'Сотрудников компании' : 'Сотрудников в команде'}</small></div></div><div className="support-metric"><span><Icon name="building" /></span><div><strong>{new Set(employees.map(employee => employee.department)).size}</strong><small>Подразделений</small></div></div><div className="support-metric"><span><Icon name="graduation" /></span><div><strong>{courses.length}</strong><small>Курсов для назначения</small></div></div></div>
-      <div className="support-toolbar"><h2 style={{ margin: 0 }}>Сотрудники <span className="muted" style={{ fontSize: 12, fontWeight: 400 }}>· {visible.length}</span></h2><label className="support-search"><Icon name="search" size={16} /><input className="input" value={search} onChange={event => setSearch(event.target.value)} placeholder="Имя, отдел или должность" aria-label="Поиск сотрудника" /></label></div>
-      {visible.length ? <div className="support-team-grid">{visible.map(employee => <article className="card support-team-member" key={employee.id}><div className="support-team-person"><Avatar name={employee.full_name} size={43} /><div><h3>{employee.full_name}</h3><p>{employee.job_title}</p></div></div><span className="support-profile-role">{roleLabels[employee.role]}</span><div className="support-team-line"><Icon name="building" size={14} />{employee.department}</div><div className="support-team-line"><Icon name="mail" size={14} />{employee.email}</div><div className="support-team-line"><Icon name="user" size={14} />{employee.employee_code}</div><div className="support-team-actions"><button className="btn btn-secondary" onClick={() => setDetails(employee.id)}>Профиль<Icon name="arrow-right" size={13} /></button><button className="btn btn-primary" onClick={() => setAssign(employee)}><Icon name="graduation" size={14} />Назначить курс</button></div></article>)}</div> : <EmptyState title={search ? 'Сотрудники не найдены' : 'В вашей команде пока нет сотрудников'} description={search ? 'Попробуйте другое имя, должность или подразделение.' : 'Состав команды определяется кадровой системой.'} />}
-      <div className="support-note"><Icon name="shield" size={18} /><p>{profile.role === 'hr_admin' ? 'Вам доступны профили сотрудников компании в рамках роли HR.' : 'Вам доступны только сотрудники, для которых вы назначены руководителем.'} Для изменения кадровых данных обратитесь в HR.</p></div>
+  return <div className="support-page"><PageHeader actions={profile.role === 'hr_admin' ? <button className="btn btn-primary" onClick={() => setInvitations(true)}><Icon name="plus" size={17} />{t("Пригласить сотрудника")}</button> : undefined} title={profile.role === 'hr_admin' ? 'Сотрудники' : 'Моя команда'} description={t("Люди и развитие")} />
+    {tx(allowed && <div className="support-tabs" role="group" aria-label={t("Разделы команды")}><button className="support-tab" aria-pressed={tab === 'people'} onClick={() => { const next = new URLSearchParams(params); next.delete('tab'); next.delete('employee'); setParams(next); }}>{t("Сотрудники")}</button><button className="support-tab" aria-pressed={tab === 'learning'} onClick={() => showLearning()}>{t("Обучение команды")}</button></div>)}
+    {!allowed ? <EmptyState title={t("Раздел доступен руководителям и HR")} description={t("В вашем личном кабинете доступны собственный профиль, заявки и обучение.")} /> : tab === 'learning' ? <TeamLearning employeeId={learningEmployee} onResetEmployee={() => showLearning()} /> : loading ? <LoadingState /> : error ? <ErrorState error={error} retry={() => setRetry(value => value + 1)} /> : <>
+      <div className="support-metrics"><div className="support-metric"><span><Icon name="users" /></span><div><strong>{tx(employees.length)}</strong><small>{tx(profile.role === 'hr_admin' ? 'Сотрудников компании' : 'Сотрудников в команде')}</small></div></div><div className="support-metric"><span><Icon name="building" /></span><div><strong>{tx(new Set(employees.map(employee => employee.department)).size)}</strong><small>{t("Подразделений")}</small></div></div><div className="support-metric"><span><Icon name="graduation" /></span><div><strong>{tx(courses.length)}</strong><small>{t("Курсов в каталоге")}</small></div></div></div>
+      <div className="support-toolbar"><h2 style={{ margin: 0 }}>{t("Сотрудники ")}<span className="muted" style={{ fontSize: 12, fontWeight: 400 }}>· {tx(visible.length)}</span></h2><label className="support-search"><Icon name="search" size={16} /><input className="input" value={search} onChange={event => setSearch(event.target.value)} placeholder={t("Имя, отдел или должность")} aria-label={t("Поиск сотрудника")} /></label></div>
+      {visible.length ? <div className="support-team-grid">{visible.map(employee => <article className="card support-team-member" key={employee.id}><div className="support-team-person"><Avatar name={employee.full_name} size={43} /><div><h3>{employee.full_name}</h3><p>{tx(employee.job_title)}</p></div></div><span className="support-profile-role">{tx(roleLabels[employee.role])}</span><div className="support-team-line"><Icon name="building" size={14} />{tx(employee.department)}</div><div className="support-team-actions"><button className="btn btn-ghost" onClick={() => { showLearning(employee.id); }}><Icon name="book" size={13} />{t("Обучение")}</button><button className="btn btn-secondary" onClick={() => setDetails(employee.id)}>{t("Профиль")}<Icon name="arrow-right" size={13} /></button><button className="btn btn-primary" onClick={() => setAssign(employee)}><Icon name="graduation" size={14} />{t("Назначить курс")}</button></div></article>)}</div> : <EmptyState title={search ? 'Сотрудники не найдены' : 'В вашей команде пока нет сотрудников'} description={search ? 'Попробуйте другое имя, должность или подразделение.' : 'Состав команды определяется кадровой системой.'} />}
+
     </>}
-    {allowed && details && <EmployeeDetails key={details} id={details} onClose={() => setDetails(null)} />}
-    {allowed && assign && <AssignCourse key={assign.id} employee={assign} courses={courses} onClose={() => setAssign(null)} />}
+    {tx(profile.role === 'hr_admin' && invitations && <Invitations employees={employees} onClose={() => setInvitations(false)} />)}
+    {tx(allowed && details && <EmployeeDetails key={details} id={details} onClose={() => setDetails(null)} />)}
+    {tx(allowed && assign && <AssignCourse key={assign.id} employee={assign} courses={courses} onClose={() => setAssign(null)} />)}
   </div>;
 }

@@ -6,13 +6,13 @@ from the validated Auth session, never from request bodies.
 """
 
 import logging
+from typing import Literal
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from httpx import HTTPError
 from postgrest.exceptions import APIError
 
-from app.core.permissions import ensure_can_view_profile
 from app.db.supabase import get_supabase_client
 from app.schemas.common import UserContext
 from app.schemas.digital_hr import RequestCreate, RequestReview, RequestStatus, RequestType
@@ -21,9 +21,10 @@ logger = logging.getLogger(__name__)
 
 REQUEST_COLUMNS = (
     "id,employee_id,request_type,status,start_date,end_date,amount,comment,"
-    "reviewer_comment,reviewed_by,reviewed_at,created_at,updated_at"
+    "reviewer_comment,reviewed_by,reviewed_at,created_at,updated_at,"
+    "approval_route,approver_ids,approvers,cancelled_at"
 )
-EVENT_COLUMNS = "id,request_id,actor_id,event_type,from_status,to_status,comment,created_at"
+EVENT_COLUMNS = "delegation_id,id,request_id,actor_id,event_type,from_status,to_status,comment,created_at"
 
 
 def _client():
@@ -59,6 +60,21 @@ def _profile(employee_id: str) -> dict:
     return rows[0]
 
 
+def _principals(actor: UserContext) -> list[str]:
+    if actor.role != "manager":
+        return []
+    result = _execute(_client().rpc("active_delegation_principals", {"p_actor_id": actor.id}))
+    if not isinstance(result, list):
+        raise HTTPException(503, "Unexpected delegation response")
+    return result
+
+
+def _reviewable(actor: UserContext, record: dict, principals: list[str]) -> bool:
+    return record["status"] == "pending" and record["employee_id"] != actor.id and (
+        actor.role == "hr_admin" or actor.role == "manager" and (
+        actor.id in record.get("approver_ids", []) or bool(set(principals) & set(record.get("approver_ids", [])))))
+
+
 def list_requests(
     actor: UserContext,
     *,
@@ -67,26 +83,36 @@ def list_requests(
     request_type: RequestType | None = None,
     limit: int = 50,
     offset: int = 0,
+    scope: Literal["all", "mine", "review"] = "all",
 ) -> list[dict]:
     client = _client()
+    principals = _principals(actor)
+    delegated = f",and(status.eq.pending,employee_id.neq.{actor.id},approver_ids.ov.{{{','.join(principals)}}})" if principals else ""
     query = client.table("hr_requests").select(REQUEST_COLUMNS)
-    if employee_id is not None:
-        ensure_can_view_profile(actor, _profile(str(employee_id)))
-        query = query.eq("employee_id", str(employee_id))
-    elif actor.role == "worker":
+    if scope == "review":
+        if actor.role not in ("manager", "hr_admin"):
+            raise HTTPException(status_code=403, detail="Reviewer role required")
+        query = query.neq("employee_id", actor.id)
+        if actor.role == "manager":
+            query = query.or_(f"approver_ids.cs.{{{actor.id}}},reviewed_by.eq.{actor.id}{delegated}") if principals else query.or_(f"approver_ids.cs.{{{actor.id}}},reviewed_by.eq.{actor.id}")
+    elif scope == "mine" or actor.role == "worker":
+        if employee_id is not None and str(employee_id) != actor.id:
+            raise HTTPException(status_code=403, detail="Access to this employee is forbidden")
         query = query.eq("employee_id", actor.id)
     elif actor.role == "manager":
-        team = _execute(
-            client.table("employee_profiles").select("id").eq("manager_id", actor.id)
-        ) or []
-        query = query.in_("employee_id", [actor.id, *(str(row["id"]) for row in team)])
+        # Snapshot assignment survives a reporting-line change. A new manager
+        # does not silently acquire old requests merely by becoming manager_id.
+        query = query.or_(f"employee_id.eq.{actor.id},approver_ids.cs.{{{actor.id}}},reviewed_by.eq.{actor.id}{delegated}")
+    if employee_id is not None:
+        query = query.eq("employee_id", str(employee_id))
     if request_status is not None:
         query = query.eq("status", request_status)
     if request_type is not None:
         query = query.eq("request_type", request_type)
-    return _execute(
+    records = _execute(
         query.order("created_at", desc=True).order("id", desc=True).range(offset, offset + limit - 1)
     ) or []
+    return [{**r, "can_review": _reviewable(actor,r,principals)} for r in records]
 
 
 def get_request(actor: UserContext, request_id: UUID) -> dict:
@@ -96,8 +122,12 @@ def get_request(actor: UserContext, request_id: UUID) -> dict:
     if not rows:
         raise HTTPException(status_code=404, detail="Request not found")
     request = rows[0]
-    ensure_can_view_profile(actor, _profile(str(request["employee_id"])))
-    return request
+    principals = _principals(actor)
+    if not (actor.role == "hr_admin" or request["employee_id"] == actor.id or (
+        actor.role == "manager" and (actor.id in request.get("approver_ids", []) or request.get("reviewed_by") == actor.id or _reviewable(actor, request, principals))
+    )):
+        raise HTTPException(status_code=403, detail="Access to this request is forbidden")
+    return {**request, "can_review": _reviewable(actor,request,principals)}
 
 
 def request_history(actor: UserContext, request_id: UUID) -> list[dict]:
@@ -116,6 +146,22 @@ def create_request(actor: UserContext, payload: RequestCreate, key: UUID | None)
     params = {f"p_{name}": value for name, value in payload.model_dump(mode="json").items()}
     params.update(p_actor_id=actor.id, p_idempotency_key=str(key or uuid4()))
     result = _execute(_client().rpc("create_hr_request", params))
+    if not isinstance(result, dict):
+        raise HTTPException(status_code=503, detail="Unexpected request workflow response")
+    return result
+
+
+def request_routing(actor: UserContext) -> dict:
+    result = _execute(_client().rpc("get_hr_request_routing", {"p_actor_id": actor.id}))
+    if not isinstance(result, dict):
+        raise HTTPException(status_code=503, detail="Unexpected request workflow response")
+    return result
+
+
+def cancel_request(actor: UserContext, request_id: UUID) -> dict:
+    result = _execute(_client().rpc("cancel_hr_request", {
+        "p_actor_id": actor.id, "p_request_id": str(request_id),
+    }))
     if not isinstance(result, dict):
         raise HTTPException(status_code=503, detail="Unexpected request workflow response")
     return result

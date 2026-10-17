@@ -1,4 +1,5 @@
 from uuid import UUID
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Header, Query, status
 
@@ -9,6 +10,7 @@ from app.schemas.digital_hr import (
     RequestEventResponse,
     RequestResponse,
     RequestReview,
+    RequestRoutingResponse,
     RequestStatus,
     RequestType,
 )
@@ -24,13 +26,20 @@ def list_requests(
     request_type: RequestType | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    scope: Literal["all", "mine", "review"] = Query(default="all"),
     actor: UserContext = Depends(get_current_user),
 ) -> list[dict]:
     """Own requests, the manager's team, or all requests for HR; newest first."""
     return workflow.list_requests(
         actor, employee_id=employee_id, request_status=request_status,
-        request_type=request_type, limit=limit, offset=offset,
+        request_type=request_type, limit=limit, offset=offset, scope=scope,
     )
+
+
+@router.get("/routing", response_model=RequestRoutingResponse)
+def request_routing(actor: UserContext = Depends(get_current_user)) -> dict:
+    """Preview the caller's own route and the MVP leave policy before submitting."""
+    return workflow.request_routing(actor)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=RequestResponse)
@@ -76,3 +85,12 @@ def review_request(
     A different decision/reviewer/comment after a decision returns 409.
     """
     return workflow.review_request(actor, request_id, payload)
+
+
+@router.post("/{request_id}/cancel", response_model=RequestResponse)
+def cancel_request(
+    request_id: UUID,
+    actor: UserContext = Depends(get_current_user),
+) -> dict:
+    """Owner withdraws a pending request; identical retries have no side effects."""
+    return workflow.cancel_request(actor, request_id)

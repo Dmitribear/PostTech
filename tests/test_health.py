@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
+from unittest.mock import MagicMock
 
 from app.main import app
 from app.api.routes import health
@@ -20,12 +21,23 @@ def test_liveness_reports_alive() -> None:
 def test_readiness_reports_ready_when_supabase_client_is_available(
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr(health, "get_supabase_client", lambda: object())
+    database = MagicMock()
+    monkeypatch.setattr(health, "get_supabase_client", lambda: database)
 
     response = client.get("/api/v1/health/ready")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ready", "dependency": "supabase"}
+    database.table.return_value.select.return_value.limit.return_value.execute.assert_called_once()
+
+
+def test_readiness_catches_database_outage_without_exposing_diagnostics(monkeypatch):
+    database = MagicMock()
+    database.table.return_value.select.return_value.limit.return_value.execute.side_effect = RuntimeError("private-provider-diagnostic")
+    monkeypatch.setattr(health, "get_supabase_client", lambda: database)
+    response = client.get("/api/v1/health/ready")
+    assert response.status_code == 503
+    assert "private-provider-diagnostic" not in response.text
 
 
 def test_readiness_reports_unavailable_when_supabase_setup_fails(

@@ -18,3 +18,17 @@ if not mount_portal(app, Path(__file__).resolve().parent.parent / "frontend" / "
     @app.get("/", include_in_schema=False)
     def root() -> dict[str, str]:
         return {"name": "PostTech API", "docs": "/docs"}
+
+from app.core.locale import locale
+
+@app.middleware("http")
+async def content_locale(request, call_next):
+    language=request.headers.get("accept-language", "ru").split(",")[0].split("-")[0].lower()
+    token=locale.set("kk" if language in ("kk","kz") else "ru")
+    try:
+        response=await call_next(request)
+        response.headers["Content-Language"]=locale.get()
+        response.headers["Vary"]="Accept-Language"
+        return response
+    finally:
+        locale.reset(token)

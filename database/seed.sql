@@ -160,6 +160,52 @@ where employee.email = 'employee@posttech.demo'
   and r.comment like 'Демо-заявка%'
 on conflict (request_id, event_type) do nothing;
 
+-- With the lifecycle migration installed, demo inserts need an approval snapshot.
+-- The guard keeps this seed usable by the isolated 0002 compatibility tests.
+-- Only our two identified demo records are eligible; existing snapshots are immutable.
+do $$
+begin
+    if to_regprocedure('public.get_hr_request_routing(uuid)') is not null then
+        update public.hr_requests r
+        set approval_route = routing.value->>'route',
+            approvers = routing.value->'approvers',
+            approver_ids = array(
+                select (person->>'id')::uuid
+                from jsonb_array_elements(routing.value->'approvers') person
+            )
+        from public.employee_profiles employee
+        cross join lateral (
+            select public.get_hr_request_routing(employee.id) as value
+        ) routing
+        where employee.id = r.employee_id
+          and employee.email = 'employee@posttech.demo'
+          and employee.role = 'worker'
+          and r.comment = 'Демо-заявка на отпуск: ожидает решения руководителя.'
+          and r.status = 'pending'
+          and r.approval_route = 'unassigned'
+          and cardinality(r.approver_ids) = 0;
+
+        update public.hr_requests r
+        set approval_route = case when reviewer.role = 'hr_admin' then 'hr' else 'manager' end,
+            approver_ids = array[reviewer.id],
+            approvers = jsonb_build_array(jsonb_build_object(
+                'id', reviewer.id, 'full_name', reviewer.full_name, 'role', reviewer.role
+            ))
+        from public.employee_profiles employee, public.employee_profiles reviewer
+        where employee.id = r.employee_id
+          and employee.email = 'employee@posttech.demo'
+          and employee.role = 'worker'
+          and r.comment = 'Демо-заявка на аванс: одобрена.'
+          and r.status = 'approved'
+          and r.reviewed_by = reviewer.id
+          and reviewer.id <> r.employee_id
+          and reviewer.role in ('manager', 'hr_admin')
+          and r.approval_route = 'unassigned'
+          and cardinality(r.approver_ids) = 0;
+    end if;
+end;
+$$;
+
 insert into public.request_events (
     request_id, actor_id, event_type, from_status, to_status, comment, created_at
 )

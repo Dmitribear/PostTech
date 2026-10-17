@@ -14,9 +14,9 @@ def liveness() -> dict[str, str]:
 
 @router.get("/ready", response_model=None)
 def readiness() -> dict[str, str] | JSONResponse:
-    """Confirm that required Supabase configuration can create a client."""
+    """Read one public knowledge row to check connectivity and the current schema."""
     try:
-        get_supabase_client()
+        get_supabase_client().table("knowledge_articles").select("id,version,reviewed_at,review_due_at").limit(1).execute()
     except Exception:
         return JSONResponse(
             status_code=503,

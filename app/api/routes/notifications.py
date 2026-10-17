@@ -1,3 +1,4 @@
+from app.core.locale import notification_content
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -30,7 +31,7 @@ def list_notifications(
     if unread_only:
         query = query.is_("read_at", "null")
     response = query.order("created_at", desc=True).order("id", desc=True).range(offset, offset + limit - 1).execute()
-    return response.data or []
+    return [notification_content(n) for n in response.data or []]
 
 
 @router.post("/{notification_id}/read", response_model=NotificationResponse)
@@ -58,4 +59,4 @@ def mark_notification_read(
         notification = (result.data or [None])[0]
     if notification is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
-    return notification
+    return notification_content(notification)

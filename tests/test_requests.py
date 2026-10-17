@@ -26,6 +26,9 @@ def request_row(employee_id=WORKER, request_id=REQUEST, **overrides):
         "id": request_id, "employee_id": employee_id, **LEAVE, "status": "pending",
         "amount": None, "reviewer_comment": None, "reviewed_by": None,
         "reviewed_at": None, "created_at": NOW, "updated_at": NOW, **overrides,
+        "approval_route": "manager", "approver_ids": [MANAGER],
+        "approvers": [{"id": MANAGER, "full_name": "Manager", "role": "manager"}],
+        "cancelled_at": None,
     }
 
 
@@ -47,6 +50,35 @@ class Query:
 
     def in_(self, name, values):
         self.filters.append(lambda row: row.get(name) in values)
+        return self
+
+    def neq(self, name, value):
+        self.filters.append(lambda row: row.get(name) != value)
+        return self
+
+    def contains(self, name, values):
+        self.filters.append(lambda row: all(value in row.get(name, []) for value in values))
+        return self
+
+    def or_(self, expression):
+        def matches(row, expression):
+            import re
+            parts=re.split(r",(?![^()]*\))(?![^{}]*\})",expression)
+            for part in parts:
+                if part.startswith("and("):
+                    inner=part[4:-1]
+                    checks=re.split(r",(?![^{}]*\})",inner)
+                    if all(single(row,x) for x in checks):return True
+                elif single(row,part):return True
+            return False
+        def single(row,part):
+            field,op,value=part.split(".",2)
+            if op=="eq":return row.get(field)==value
+            if op=="neq":return row.get(field)!=value
+            if op=="cs":return set(value.strip("{}").split(","))<=set(row.get(field,[]))
+            if op=="ov":return bool(set(value.strip("{}").split(","))&set(row.get(field,[])))
+            raise AssertionError(part)
+        self.filters.append(lambda row:matches(row,expression))
         return self
 
     def is_(self, name, value):
@@ -79,7 +111,7 @@ class Query:
             for row in rows:
                 row.update(self.values)
         if self.columns != "*":
-            rows = [{key: row[key] for key in self.columns.split(",")} for row in rows]
+            rows = [{key: row.get(key) for key in self.columns.split(",")} for row in rows]
         return SimpleNamespace(data=deepcopy(rows))
 
 
@@ -103,6 +135,8 @@ class Database:
         return Query(self, name)
 
     def rpc(self, name, params):
+        if name == "active_delegation_principals":
+            return SimpleNamespace(execute=lambda:SimpleNamespace(data=getattr(self,"principals",[])))
         self.rpc_calls.append((name, params))
 
         def execute():
@@ -129,6 +163,22 @@ def api(monkeypatch):
 
 def as_user(actor, employee_id, role):
     actor["user"] = UserContext(id=employee_id, auth_user_id=str(uuid4()), role=role)
+
+
+def test_deputy_reads_only_pending_assigned_requests_and_own_decisions(api):
+    client,database,actor=api
+    database.principals=[MANAGER]
+    as_user(actor,OTHER,"manager")
+    response=client.get('/api/v1/requests?scope=review')
+    assert [r['id'] for r in response.json()]==[REQUEST]
+    assert response.json()[0]['can_review'] is True
+    assert client.get(f'/api/v1/requests/{REQUEST}').status_code==200
+    database.principals=[]
+    assert client.get(f'/api/v1/requests/{REQUEST}').status_code==403
+    assert client.get('/api/v1/requests?scope=review').json()==[]
+    database.tables['hr_requests'][0].update(status='approved',reviewed_by=OTHER)
+    assert client.get(f'/api/v1/requests/{REQUEST}').json()['can_review'] is False
+    assert len(client.get('/api/v1/requests?scope=review').json())==1
 
 
 def test_create_uses_authenticated_employee_and_idempotency_header(api):
@@ -186,7 +236,9 @@ def test_invalid_idempotency_key_does_not_submit(api):
 ])
 def test_list_enforces_role_scope(api, user, role, visible):
     client, database, actor = api
-    database.tables["hr_requests"] += [request_row(OTHER, str(uuid4())), request_row(MANAGER, str(uuid4()))]
+    foreign = request_row(OTHER, str(uuid4()))
+    foreign["approver_ids"] = []
+    database.tables["hr_requests"] += [foreign, request_row(MANAGER, str(uuid4()))]
     as_user(actor, user, role)
     response = client.get("/api/v1/requests")
     assert response.status_code == 200
@@ -299,3 +351,82 @@ def test_notifications_filter_ownership_and_idempotent_read(api):
 def test_new_workflow_endpoints_require_authentication(method, path, body):
     with TestClient(app) as client:
         assert client.request(method, "/api/v1" + path, json=body).status_code == 401
+
+
+def test_routing_endpoint_precedes_uuid_route_and_uses_session_identity(api):
+    client, database, _ = api
+    database.rpc_result = {
+        "can_submit": True, "route": "manager",
+        "approvers": [{"id": MANAGER, "full_name": "Manager", "role": "manager"}],
+        "message": None, "today": "2026-10-16", "policy": "Calendar days",
+    }
+    response = client.get("/api/v1/requests/routing")
+    assert response.status_code == 200
+    assert response.json()["approvers"][0]["id"] == MANAGER
+    assert database.rpc_calls == [("get_hr_request_routing", {"p_actor_id": WORKER})]
+
+
+def test_routing_reports_missing_approver_without_creating_request(api):
+    client, database, _ = api
+    database.rpc_result = {
+        "can_submit": False, "route": "unassigned", "approvers": [],
+        "message": "No eligible approver is configured; contact HR", "today": "2026-10-16", "policy": "Calendar days",
+    }
+    response = client.get("/api/v1/requests/routing")
+    assert response.status_code == 200
+    assert response.json()["can_submit"] is False
+    assert len(database.tables["hr_requests"]) == 1
+
+
+@pytest.mark.parametrize("reason", [None, "", " \n\t ", "\u00a0"])
+def test_rejected_without_visible_reason_never_reaches_database(api, reason):
+    client, database, actor = api
+    as_user(actor, MANAGER, "manager")
+    response = client.patch(f"/api/v1/requests/{REQUEST}/review", json={"status": "rejected", "reviewer_comment": reason})
+    assert response.status_code == 422
+    assert not database.rpc_calls
+
+
+def test_cancel_uses_authenticated_owner_and_hides_internal_snapshot_ids(api):
+    client, database, _ = api
+    database.rpc_result.update(status="cancelled", cancelled_at=NOW)
+    response = client.post(f"/api/v1/requests/{REQUEST}/cancel")
+    assert response.status_code == 200
+    assert response.json()["status"] == "cancelled"
+    assert response.json()["cancelled_at"]
+    assert "approver_ids" not in response.json()
+    assert database.rpc_calls == [("cancel_hr_request", {"p_actor_id": WORKER, "p_request_id": REQUEST})]
+
+
+def test_review_inbox_excludes_own_requests_for_all_reviewer_roles(api):
+    client, database, actor = api
+    database.tables["hr_requests"] += [request_row(MANAGER, str(UUID(int=30))), request_row(HR, str(UUID(int=31)))]
+    for person, role in [(MANAGER, "manager"), (HR, "hr_admin")]:
+        as_user(actor, person, role)
+        response = client.get("/api/v1/requests?scope=review")
+        assert response.status_code == 200
+        assert all(row["employee_id"] != person for row in response.json())
+        own = client.get("/api/v1/requests?scope=mine").json()
+        assert {row["employee_id"] for row in own} == {person}
+
+
+def test_worker_cannot_access_review_inbox(api):
+    client, _, _ = api
+    assert client.get("/api/v1/requests?scope=review").status_code == 403
+
+
+def test_snapshot_access_survives_manager_reassignment(api):
+    client, database, actor = api
+    database.tables["employee_profiles"][0]["manager_id"] = OTHER
+    as_user(actor, MANAGER, "manager")
+    assert client.get(f"/api/v1/requests/{REQUEST}").status_code == 200
+    assert client.get("/api/v1/requests?scope=review").json()[0]["id"] == REQUEST
+    as_user(actor, OTHER, "manager")
+    assert client.get(f"/api/v1/requests/{REQUEST}").status_code == 403
+    assert client.get("/api/v1/requests?scope=review").json() == []
+
+
+@pytest.mark.parametrize(("method", "path"), [("GET", "/requests/routing"), ("POST", f"/requests/{REQUEST}/cancel")])
+def test_lifecycle_endpoints_require_authentication(method, path):
+    with TestClient(app) as client:
+        assert client.request(method, "/api/v1" + path).status_code == 401
