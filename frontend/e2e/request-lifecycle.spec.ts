@@ -26,6 +26,7 @@ async function mockPortal(page: Page, options: { role?: EmployeeProfile['role'];
     const url = new URL(req.url());
     const path = url.pathname.replace('/api/v1', '');
     const respond = (body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (path === '/workspace/leave-balance') return respond({employee_id:ownId,official_days:24,pending_days:4,approved_unreconciled_days:0,available_days:20,request_days:4,holds:[]});
     if (path === '/profile') return respond(profile);
     if (path === '/requests/routing') return respond(options.routing || { can_submit: true, route: 'hr', approvers: [hr], message: null, today: '2026-10-16', policy: 'Calendar days; official balance read only' });
     if (path === '/team') return options.teamUnavailable ? respond({ detail: 'Forbidden' }, 403) : respond([{ ...profile, id: employeeId, role: 'worker', full_name: 'Сотрудник команды', manager_id: ownId }]);
@@ -61,6 +62,8 @@ test('owner sees saved HR route and cancels only after confirmation', async ({ p
   await page.goto(`/requests/${requestId}`);
   await expect(page.locator('.req-routing-card')).toContainText('Тестовый HR');
   await expect(page.getByRole('heading', { name: 'Рассмотрение заявки' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Состояние заявки' })).toContainText('Согласует: Тестовый HR');
+  await expect(page.getByRole('link', { name: 'Перейти к решению' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Отозвать заявку', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('Возобновить эту заявку нельзя');
@@ -93,6 +96,8 @@ test('review inbox excludes own request and rejection requires a reason even if 
   expect(scopes).toContain('review');
   await page.locator('.req-table-title').click();
   await expect(page.getByRole('heading', { name: 'Рассмотрение заявки' })).toBeVisible();
+  await page.getByRole('link', { name: 'Перейти к решению' }).click();
+  await expect(page.locator('#request-decision')).toBeFocused();
   await expect(page.getByRole('button', { name: 'Отозвать заявку', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Отклонить', exact: true })).toBeDisabled();
   await page.getByLabel('Комментарий к решению').fill('  Нужен другой период  ');
@@ -117,7 +122,15 @@ test('calendar refuses past and overlapping leave ranges, then passes a free ran
   await expect(proceed).toBeDisabled();
   await start.fill('2030-11-06'); await end.fill('2030-11-08');
   await expect(page.getByRole('alert')).toContainText('пересекается');
+  await expect(page.locator('.req-conflict')).toContainText('На согласовании');
+  await expect(page.locator('.req-conflict')).toContainText('Согласует: Тестовый HR');
+  await expect(page.locator('.req-conflict')).toContainText('3 нояб. 2030');
+  await expect(page.locator('.req-conflict').getByRole('link', { name: 'Открыть заявку' })).toHaveAttribute('href', `/requests/${requestId}`);
   await expect(proceed).toBeDisabled();
+  await page.getByRole('button', { name: 'Выбрать другие даты' }).click();
+  await expect(start).toHaveValue('');
+  await expect(end).toHaveValue('');
+  await expect(page.locator('.req-conflict')).toHaveCount(0);
   await start.fill('2030-11-07'); await end.fill('2030-11-08');
   await expect(proceed).toBeEnabled();
   await proceed.click();
@@ -129,4 +142,65 @@ test('calendar refuses past and overlapping leave ranges, then passes a free ran
   await expect(page.getByRole('checkbox', { name: 'Данные верны, можно отправлять' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Изменить', exact: true }).click();
   await expect(page.getByLabel('Дата начала', { exact: true })).toHaveValue('2030-11-07');
+});
+
+test('all conflicting requests remain discoverable on a narrow screen', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 780 });
+  await mockPortal(page, { role: 'worker', records: [request(), request({ id: otherRequestId, status: 'approved', start_date: '2030-11-10', end_date: '2030-11-12' })] });
+  await page.goto('/calendar?select=1&start=2030-11-05&end=2030-11-11');
+  await expect(page.locator('.req-conflict-list>li')).toHaveCount(2);
+  await expect(page.locator('.req-conflict')).toContainText('Одобрено');
+  await expect(page.getByRole('button', { name: 'Продолжить' })).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('.req-conflict-list>li').last().getByRole('link', { name: 'Открыть заявку' }).click();
+  await expect(page.getByRole('region', { name: 'Состояние заявки' })).toContainText('Повторно отправлять заявку не нужно.');
+  await expect(page.getByRole('button', { name: 'Согласовать заявку' })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('manager mobile navigation opens the review inbox and personal leave stays separate', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockPortal(page, { records: [request(), request({ id: otherRequestId, employee_id: employeeId, approvers: [approver], can_review: true })] });
+  await page.goto('/requests');
+  await page.locator('.workspace-switch-mobile').getByRole('button', { name: 'Команда', exact: true }).click();
+  await expect(page).toHaveURL(/scope=review/);
+  await expect(page.locator('.req-table tbody tr')).toHaveCount(1);
+  await expect(page.locator('.req-table')).toContainText('Ждёт вашего решения');
+  await page.locator('.req-open-link').click();
+  await expect(page.locator('.req-workflow-summary')).toContainText('Заявка ждёт вашего решения');
+  await page.locator('.req-back').click();
+  await expect(page).toHaveURL(/scope=review/);
+  await page.locator('.workspace-switch-mobile').getByRole('button', { name: 'Личное', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Быстрая навигация' }).getByRole('link', { name: 'Заявки', exact: true }).click();
+  await page.locator('.req-open-link').click();
+  await expect(page.getByRole('button', { name: 'Согласовать заявку' })).toHaveCount(0);
+});
+
+test('server overlap during submission opens the existing request instead of a dead-end error', async ({ page }) => {
+  await mockPortal(page, { role: 'worker', records: [request()] });
+  await page.route('**/api/v1/requests', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ detail: 'Leave overlaps an existing pending or approved request' }) });
+  });
+  await page.goto('/requests/new?type=leave&start=2030-11-03&end=2030-11-06&review=1');
+  await page.getByRole('button', { name: 'Отправить заявку', exact: true }).click();
+  await expect(page.locator('.req-conflict')).toContainText('Тестовый HR');
+  await expect(page.getByRole('button', { name: 'Отправить заявку', exact: true })).toBeDisabled();
+  await page.locator('.req-conflict').getByRole('link', { name: 'Открыть заявку' }).click();
+  await expect(page).toHaveURL(new RegExp(`/requests/${requestId}$`));
+  await expect(page.locator('.req-workflow-summary')).toContainText('Ожидает согласования');
+});
+
+test('capture request states for visual review', async ({ page }, testInfo) => {
+  test.skip(!process.env.POSTTECH_CAPTURE_UI, 'Optional screenshots of synthetic fixtures');
+  await mockPortal(page, { records: [request(), request({ id: otherRequestId, employee_id: employeeId, approvers: [approver], can_review: true })] });
+  await page.goto('/calendar?select=1&start=2030-11-05&end=2030-11-08');
+  await expect(page.locator('.req-conflict')).toBeVisible();
+  await page.screenshot({ path: `../docs/design/conflict-${testInfo.project.name}.png`, fullPage: true, animations: 'disabled' });
+  await page.goto(`/requests/${otherRequestId}`);
+  await expect(page.locator('.req-workflow-summary')).toBeVisible();
+  await page.screenshot({ path: `../docs/design/approval-${testInfo.project.name}.png`, fullPage: true, animations: 'disabled' });
+  await page.goto('/requests?scope=review');
+  await expect(page.locator('.req-table tbody tr')).toHaveCount(1);
+  await page.screenshot({ path: `../docs/design/inbox-${testInfo.project.name}.png`, fullPage: true, animations: 'disabled' });
 });

@@ -70,11 +70,18 @@ class EditorQuestion(Payload):
         return self
 
 
+class Lesson(Payload):
+    id: str = Field(min_length=1, max_length=80, pattern=r"^[a-zA-Z0-9_-]+$")
+    title: str = Field(min_length=3, max_length=200)
+    material_markdown: str = Field(min_length=3, max_length=60000)
+
+
 class CourseTranslation(Payload):
     title: str = Field(min_length=3, max_length=200)
     description: str = Field(max_length=2000)
     material_markdown: str = Field(min_length=3, max_length=60000)
     quiz: list[EditorQuestion] = Field(min_length=1, max_length=50)
+    lessons: list[Lesson] = Field(default_factory=list, max_length=50)
 
 
 class CourseData(CourseTranslation):
@@ -87,9 +94,13 @@ class CourseData(CourseTranslation):
 
     @model_validator(mode="after")
     def matching_quiz(self):
+        if len({lesson.id for lesson in self.lessons}) != len(self.lessons):
+            raise ValueError("Lesson IDs must be unique")
         if len({q.id for q in self.quiz}) != len(self.quiz):
             raise ValueError("Question IDs must be unique")
         for translated in self.translations.values():
+            if [x.id for x in translated.lessons] != [x.id for x in self.lessons]:
+                raise ValueError("Translations must preserve lesson IDs and order")
             if [(q.id,len(q.options),q.answer_index) for q in translated.quiz] != [(q.id,len(q.options),q.answer_index) for q in self.quiz]:
                 raise ValueError("Translations must preserve question IDs, option order and correct answers")
         return self

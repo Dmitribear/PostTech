@@ -7,7 +7,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { usePortal } from '../context';
 import { Avatar, EmptyState, ErrorState, Icon, LoadingState, Modal, PageHeader, StatusBadge } from '../components/ui';
 import { errorMessage } from '../lib/api';
-import { formatDate, roleLabels } from '../lib/format';
+import { formatDate } from '../lib/format';
 import type { Course, EmployeeProfile, TeamCourseAssignment } from '../lib/types';
 import { ProfileFields } from './Profile';
 import './support.css';
@@ -49,7 +49,7 @@ export function TeamLearning({ employeeId, onResetEmployee, courseId, onResetCou
   </section>;
 }
 
-function EmployeeDetails({ id, onClose }: { id: string; onClose: () => void }) {
+function EmployeeDetails({ id, onClose, onAssign, onLearning }: { id: string; onClose: () => void; onAssign: () => void; onLearning: () => void }) {
   const { api } = usePortal();
   const [employee, setEmployee] = useState<EmployeeProfile | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -59,7 +59,7 @@ function EmployeeDetails({ id, onClose }: { id: string; onClose: () => void }) {
     api.getEmployee(id).then(value => { if (active) setEmployee(value); }).catch(err => { if (active) setError(err); });
     return () => { active = false; };
   }, [api, id, retry]);
-  return <Modal title={t("Профиль сотрудника")} onClose={onClose} wide>{error ? <ErrorState error={error} retry={() => setRetry(value => value + 1)} /> : !employee ? <LoadingState /> : <><div className="support-team-detail-heading"><Avatar name={employee.full_name} size={52} /><div><h3>{employee.full_name}</h3><p>{tx(employee.job_title)} · {tx(employee.department)}</p></div></div><ProfileFields profile={employee} /><div className="support-note" style={{ marginTop: 20 }}><Icon name="plane" size={18} /><p><strong>{tx(employee.vacation_days_remaining)}{t(" дней")}</strong>{t(" отпуска · данные обновляет HR.")}</p></div></>}</Modal>;
+  return <Modal title={t("Профиль сотрудника")} onClose={onClose} wide>{error ? <ErrorState error={error} retry={() => setRetry(value => value + 1)} /> : !employee ? <LoadingState /> : <><div className="support-team-detail-heading"><Avatar name={employee.full_name} size={52} /><div><h3>{employee.full_name}</h3><p>{tx(employee.job_title)} · {tx(employee.department)}</p></div></div><div className="employee-detail-actions"><button className="btn btn-primary" onClick={onAssign}>{t("Назначить курс")}</button><button className="btn btn-secondary" onClick={onLearning}>{t("Обучение")}</button></div><ProfileFields profile={employee} /><div className="support-note" style={{ marginTop: 20 }}><Icon name="plane" size={18} /><p><strong>{tx(employee.vacation_days_remaining)}{t(" дней")}</strong>{t(" отпуска · данные обновляет HR.")}</p></div></>}</Modal>;
 }
 
 function AssignCourse({ employee, courses, onClose }: { employee: EmployeeProfile; courses: Course[]; onClose: () => void }) {
@@ -108,16 +108,14 @@ export default function Team() {
   }, [api, allowed, refreshKey, retry]);
   const visible = employees.filter(employee => `${employee.full_name} ${employee.job_title} ${employee.department} ${employee.employee_code}`.toLocaleLowerCase('ru').includes(search.toLocaleLowerCase('ru')));
   const paging = useListPage(visible, search);
-  return <div className="support-page"><PageHeader actions={profile.role === 'hr_admin' ? <button className="btn btn-primary" onClick={() => setInvitations(true)}><Icon name="plus" size={17} />{t("Пригласить сотрудника")}</button> : undefined} title={profile.role === 'hr_admin' ? 'Сотрудники' : 'Моя команда'} description={t("Люди и развитие")} />
-    {tx(allowed && <div className="support-tabs" role="group" aria-label={t("Разделы команды")}><button className="support-tab" aria-pressed={tab === 'people'} onClick={() => { const next = new URLSearchParams(params); next.delete('tab'); next.delete('employee'); setParams(next); }}>{t("Сотрудники")}</button><button className="support-tab" aria-pressed={tab === 'learning'} onClick={() => showLearning()}>{t("Обучение команды")}</button></div>)}
+  return <div className="support-page people-page"><PageHeader actions={profile.role === 'hr_admin' ? <button className="btn btn-primary" onClick={() => setInvitations(true)}><Icon name="plus" size={17} />{t("Пригласить сотрудника")}</button> : undefined} title={profile.role === 'hr_admin' ? 'Сотрудники' : 'Моя команда'} description={loading ? undefined : `${employees.length} ${t("сотрудников")}`} />
     {!allowed ? <EmptyState title={t("Раздел доступен руководителям и HR")} description={t("В вашем личном кабинете доступны собственный профиль, заявки и обучение.")} /> : tab === 'learning' ? <TeamLearning employeeId={learningEmployee} onResetEmployee={() => showLearning()} /> : loading ? <LoadingState /> : error ? <ErrorState error={error} retry={() => setRetry(value => value + 1)} /> : <>
-      <div className="support-metrics"><div className="support-metric"><span><Icon name="users" /></span><div><strong>{tx(employees.length)}</strong><small>{tx(profile.role === 'hr_admin' ? 'Сотрудников компании' : 'Сотрудников в команде')}</small></div></div><div className="support-metric"><span><Icon name="building" /></span><div><strong>{tx(new Set(employees.map(employee => employee.department)).size)}</strong><small>{t("Подразделений")}</small></div></div><div className="support-metric"><span><Icon name="graduation" /></span><div><strong>{tx(courses.length)}</strong><small>{t("Курсов в каталоге")}</small></div></div></div>
       <div className="support-toolbar list-anchor" ref={paging.anchor}><h2 style={{ margin: 0 }}>{t("Сотрудники ")}<span className="muted" style={{ fontSize: 12, fontWeight: 400 }}>· {tx(visible.length)}</span></h2><label className="support-search"><Icon name="search" size={16} /><input className="input" value={search} onChange={event => setSearch(event.target.value)} placeholder={t("Имя, отдел или должность")} aria-label={t("Поиск сотрудника")} /></label></div>
-      {visible.length ? <div className="support-team-grid">{paging.items.map(employee => <article className="card support-team-member" key={employee.id}><div className="support-team-person"><Avatar name={employee.full_name} size={43} /><div><h3>{employee.full_name}</h3><p>{tx(employee.job_title)}</p></div></div><span className="support-profile-role">{tx(roleLabels[employee.role])}</span><div className="support-team-line"><Icon name="building" size={14} />{tx(employee.department)}</div><div className="support-team-actions"><button className="btn btn-ghost" onClick={() => { showLearning(employee.id); }}><Icon name="book" size={13} />{t("Обучение")}</button><button className="btn btn-secondary" onClick={() => setDetails(employee.id)}>{t("Профиль")}<Icon name="arrow-right" size={13} /></button><button className="btn btn-primary" onClick={() => setAssign(employee)}><Icon name="graduation" size={14} />{t("Назначить курс")}</button></div></article>)}</div> : <EmptyState title={search ? 'Сотрудники не найдены' : 'В вашей команде пока нет сотрудников'} description={search ? 'Попробуйте другое имя, должность или подразделение.' : 'Состав команды определяется кадровой системой.'} />}
+      {visible.length ? <div className="people-list">{paging.items.map(employee => <article className="people-row" key={employee.id}><button className="people-person" onClick={() => setDetails(employee.id)} aria-label={`${t('Профиль')}: ${employee.full_name}`}><Avatar name={employee.full_name} size={40} /><span><strong>{employee.full_name}</strong><small>{tx(employee.department)}{employee.job_title ? ` · ${tx(employee.job_title)}` : ''}</small></span><Icon name="chevron-right" size={17} /></button><div className="people-actions"><button className="btn btn-ghost" onClick={() => showLearning(employee.id)}>{t('Обучение')}</button><button className="btn btn-secondary" onClick={() => setAssign(employee)}>{t('Назначить курс')}</button></div></article>)}</div> : <EmptyState title={search ? 'Сотрудники не найдены' : 'В вашей команде пока нет сотрудников'} description={search ? 'Попробуйте другое имя, должность или подразделение.' : 'Состав команды определяется кадровой системой.'} />}
       <ListPager {...paging} />
     </>}
     {tx(profile.role === 'hr_admin' && invitations && <Invitations employees={employees} onClose={() => setInvitations(false)} />)}
-    {tx(allowed && details && <EmployeeDetails key={details} id={details} onClose={() => setDetails(null)} />)}
+    {tx(allowed && details && <EmployeeDetails key={details} id={details} onClose={() => setDetails(null)} onAssign={() => { const person = employees.find(e => e.id === details); if (person) { setDetails(null); setAssign(person); } }} onLearning={() => { showLearning(details); setDetails(null); }} />)}
     {tx(allowed && assign && <AssignCourse key={assign.id} employee={assign} courses={courses} onClose={() => setAssign(null)} />)}
   </div>;
 }

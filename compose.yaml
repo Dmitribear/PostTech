@@ -12,6 +12,12 @@ services:
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      INTEGRATION_1C_ENABLED: ${INTEGRATION_1C_ENABLED:-false}
+      INTEGRATION_1C_URL: ${INTEGRATION_1C_URL:-}
+      INTEGRATION_1C_SECRET: ${INTEGRATION_1C_SECRET:-}
+      INTEGRATION_DOCUMENTOLOG_ENABLED: ${INTEGRATION_DOCUMENTOLOG_ENABLED:-false}
+      INTEGRATION_DOCUMENTOLOG_URL: ${INTEGRATION_DOCUMENTOLOG_URL:-}
+      INTEGRATION_DOCUMENTOLOG_SECRET: ${INTEGRATION_DOCUMENTOLOG_SECRET:-}
     ports:
       - "8000:8000"
     restart: unless-stopped
@@ -25,3 +31,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+  integration-worker:
+    profiles: [integrations]
+    build: .
+    command: [python, -m, scripts.integration_worker]
+    env_file: .env
+    restart: unless-stopped
+    healthcheck:
+      disable: true

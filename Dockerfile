@@ -19,6 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && useradd --system --gid app --home-dir /app app
 
 COPY app ./app
+COPY scripts/integration_worker.py ./scripts/integration_worker.py
 COPY --from=portal /portal/dist ./frontend/dist
 
 USER app

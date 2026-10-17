@@ -10,7 +10,7 @@ def course_content(course:dict) -> dict:
     translated=translations.get(locale.get())
     result["content_language"]="kk" if translated else "ru"
     if translated:
-        for key in ("title","description","material_markdown","quiz"):
+        for key in ("title","description","material_markdown","quiz","lessons"):
             if key in result and key in translated:
                 result[key]=translated[key]
     return result

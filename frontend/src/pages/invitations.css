@@ -2,12 +2,12 @@
 .invite-form > p { margin: 0; font-size: 13px; }
 .invite-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
 .invite-fields .field { min-width: 0; }
-.invite-note { display: flex; align-items: flex-start; gap: 10px; padding: 13px 15px; color: #46637b; background: #f0f7fc; border-radius: 12px; font-size: 12px; line-height: 1.6; }
+.invite-note { display: flex; align-items: flex-start; gap: 10px; padding: 13px 15px; color: #46637b; background: #f0f7fc; border-radius:var(--radius); font-size: 12px; line-height: 1.6; }
 .invite-note svg { flex: 0 0 auto; margin-top: 2px; }
 .invite-result { display: flex; flex-direction: column; gap: 16px; margin-top: 18px; }
 .invite-result h3 { font-size: 20px; overflow-wrap: anywhere; margin: 0; }
 .invite-result p { margin: 0; color: var(--muted); font-size: 13px; }
-.invite-result-icon { display: grid; place-items: center; width: 64px; height: 64px; color: var(--primary); background: #eaf8f0; border-radius: 20px; }
+.invite-result-icon { display: grid; place-items: center; width: 64px; height: 64px; color: var(--primary); background: #eaf8f0; border-radius:var(--radius); }
 .invite-code { font-family: ui-monospace,monospace; font-size: 14px; }
 .invite-list { display: flex; flex-direction: column; gap: 0; margin-top: 18px; max-height: 55dvh; overflow: auto; }
 .invite-list article { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 0; border-bottom: 1px solid var(--border); }

@@ -166,7 +166,7 @@ def _safe_source_url(value: str | None) -> str | None:
         return None
 
 
-def get_source(source_id: UUID) -> dict:
+def get_source(source_id: UUID, version: str | None = None) -> dict:
     """Published knowledge is shared by all signed-in roles; no HR records enter it."""
     rows = (
         get_supabase_client().table("knowledge_articles")
@@ -176,6 +176,8 @@ def get_source(source_id: UUID) -> dict:
     if not rows:
         raise HTTPException(status_code=404, detail="Knowledge source not found")
     source = dict(rows[0])
+    if version is not None and str(source.get('version')) != version:
+        raise HTTPException(409, 'Источник обновлён. Задайте вопрос заново, чтобы получить ответ по новой версии.')
     source.pop("keywords", None)
     source["source_url"] = _safe_source_url(source.get("source_url"))
     source.update(_source_freshness(source))

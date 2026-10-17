@@ -1,7 +1,7 @@
 import { t, tx } from './lib/i18n';
 import { LanguageSwitch, useLocale } from './lib/i18n';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { createLiveApi } from './lib/api';
 import Auth from './pages/Auth';
 import { Brand } from './components/Brand';
@@ -10,6 +10,7 @@ import type { AppRole, EmployeeProfile, HrApi } from './lib/types';
 import { PortalContext, usePortal } from './context';
 import { Avatar, ErrorState, Icon, LoadingState } from './components/ui';
 import Dashboard, { Services, ActivityPage } from './pages/Dashboard';
+import { Help, HrTools } from './pages/WorkspaceLinks';
 const Requests = lazy(() => import('./pages/Requests'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const Academy = lazy(() => import('./pages/Academy'));
@@ -19,11 +20,12 @@ const Notifications = lazy(() => import('./pages/Notifications'));
 const Team = lazy(() => import('./pages/Team'));
 const Support = lazy(() => import('./pages/Workspace'));
 const Delegations = lazy(() => import('./pages/Workspace').then(m => ({ default: m.Delegations })));
+const Operations = lazy(() => import('./pages/Operations'));
 const CourseEditor = lazy(() => import('./pages/CourseEditor'));
 const Settings = lazy(() => import('./pages/Settings'));
 
 const live = createLiveApi({ baseUrl: import.meta.env.VITE_API_BASE_URL || '/api/v1' });
-const roleNames: Record<AppRole, string> = { worker: 'Сотрудник', manager: 'Руководитель', hr_admin: 'HR-администратор' };
+
 function savedDemoRole(): AppRole | null {
   try { const role = sessionStorage.getItem('posttech.demo-role'); return role === 'worker' || role === 'manager' || role === 'hr_admin' ? role : null; } catch { return null; }
 }
@@ -66,20 +68,25 @@ export default function App() {
 }
 
 
-const nav = [
-  ['/', 'home', 'Главная'], ['/requests', 'clipboard', 'Заявки'], ['/calendar', 'calendar', 'Календарь'], ['/academy', 'book', 'Обучение'], ['/jana', 'bot', 'AI Jana'], ['/notifications', 'bell', 'Уведомления'], ['/profile', 'user', 'Профиль'], ['/support', 'message', 'Обращения в HR'],
-];
-const mobileNav = [nav[0], nav[1], nav[2], nav[6]];
+const personalNav = [['/', 'home', 'Главная'], ['/requests', 'clipboard', 'Заявки'], ['/academy', 'graduation', 'Обучение']];
+const helpNav = ['/help', 'help', 'Помощь'];
 function Shell() {
   const { profile, api, mode, logout, refreshKey } = usePortal();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
-  const [search, setSearch] = useState('');
+  const [workspace, setWorkspace] = useState<'personal' | 'team'>(() => { try { return sessionStorage.getItem(`posttech.workspace:${profile.id}`) === 'team' ? 'team' : 'personal'; } catch { return 'personal'; } });
+  const account = useRef<HTMLDetailsElement>(null);
   const sidebar = useRef<HTMLElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  useEffect(() => { setOpen(false); window.scrollTo(0, 0); }, [location.pathname, location.search]);
+  useEffect(() => { setOpen(false); if (account.current) account.current.open = false; window.scrollTo(0, 0); }, [location.pathname, location.search]);
+  useEffect(() => {
+    const dismiss = (event: PointerEvent) => { if (account.current && !account.current.contains(event.target as Node)) account.current.open = false; };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && account.current?.open) { account.current.open = false; account.current.querySelector('summary')?.focus(); } };
+    document.addEventListener('pointerdown', dismiss); document.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('pointerdown', dismiss); document.removeEventListener('keydown', escape); };
+  }, []);
   useEffect(() => {
     if (!open) return;
     const before = document.body.style.overflow;
@@ -101,33 +108,46 @@ function Shell() {
   useEffect(() => { let active = true; api.getNotifications({ unread_only: true, limit: 100 }).then(n => { if (active) setUnread(n.length); }).catch(() => {}); return () => { active = false; }; }, [api, refreshKey, location.pathname]);
   const review = location.pathname === '/requests' && location.search.includes('scope=review');
   const teamLearning = location.pathname === '/academy' && location.search.includes('tab=team');
-  const current = review ? 'На согласование' : teamLearning ? 'Обучение команды' : nav.find(([path]) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path))?.[2] || (location.pathname === '/team' ? 'Команда' : location.pathname === '/delegations' ? 'Замещение' : location.pathname === '/course-editor' ? 'Редактор курсов' : 'Настройки');
+  const teamRoute = review || teamLearning || ['/team', '/operations', '/hr-tools', '/delegations', '/course-editor'].some(path => location.pathname.startsWith(path));
+  const personalRoute = ['/', '/requests', '/requests/new', '/academy', '/calendar', '/profile'].includes(location.pathname) && !teamRoute;
+  const inTeam = profile.role !== 'worker' && (teamRoute || (!personalRoute && workspace === 'team'));
+  useEffect(() => { if (teamRoute) setWorkspace('team'); else if (personalRoute) setWorkspace('personal'); }, [teamRoute, personalRoute]);
+  useEffect(() => { try { sessionStorage.setItem(`posttech.workspace:${profile.id}`, inTeam ? 'team' : 'personal'); } catch {} }, [inTeam, profile.id]);
+  const teamNav = profile.role === 'hr_admin'
+    ? [['/team', 'users', 'Сотрудники'], ['/requests?scope=review', 'clipboard', 'Заявки'], ['/academy?tab=team', 'graduation', 'Обучение']]
+    : [['/requests?scope=review', 'check-circle', 'Согласования'], ['/team', 'users', 'Команда'], ['/academy?tab=team', 'graduation', 'Обучение']];
+  const nav = inTeam ? teamNav : personalNav;
+  const mobileNav = [...nav, helpNav];
+  const activePath = (path: string) => path === '/help' ? ['/help', '/jana', '/support'].includes(location.pathname)
+    : path.includes('scope=review') ? review || (inTeam && location.pathname.startsWith('/requests/'))
+    : path.includes('tab=team') ? teamLearning
+    : path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
+  const workspaceSwitch = (className: string) => profile.role !== 'worker' && <div className={`workspace-switch ${className}`} role="group" aria-label={t('Рабочее пространство')}><button aria-pressed={!inTeam} onClick={() => { setWorkspace('personal'); navigate('/'); }}>{t('Личное')}</button><button aria-pressed={inTeam} onClick={() => { setWorkspace('team'); navigate(profile.role === 'hr_admin' ? '/team' : '/requests?scope=review'); }}>{t(profile.role === 'hr_admin' ? 'HR' : 'Команда')}</button></div>;
   const closeMenu = () => { setOpen(false); menuButton.current?.focus(); };
-  return <div className="portal">
+  return <div className="portal quiet-workspace">
     <a className="skip-link" href="#main-content">{t("Перейти к содержимому")}</a>
     {tx(open && <button className="sidebar-overlay" aria-label={t("Закрыть меню")} onClick={closeMenu} tabIndex={-1} />)}
     <aside id="workspace-navigation" ref={sidebar} className={`sidebar ${open ? 'is-open' : ''}`}>
       <div className="sidebar-heading"><Link to="/" className="brand-link" aria-label={t("PostTech — главная")}><Brand /></Link><button className="icon-btn sidebar-close" aria-label={t("Закрыть меню")} onClick={closeMenu}><Icon name="x" /></button></div>
-      <nav aria-label={t("Главная навигация")}>{tx(nav.map(([path, icon, label]) => <NavLink key={path} to={path} end={path === '/'} className={({ isActive }) => `nav-item ${isActive && !(path === '/requests' && review) && !(path === '/academy' && teamLearning) ? 'active' : ''}`}><Icon name={icon} /><span>{tx(label)}</span>{tx(path === '/notifications' && unread > 0 && <span className="nav-count">{tx(unread === 100 ? '99+' : unread)}</span>)}</NavLink>))}
-        {tx(profile.role !== 'worker' && <><div className="nav-label team-nav-label">{tx(profile.role === 'hr_admin' ? 'HR-пространство' : 'Моя команда')}</div><Link to="/requests?scope=review" aria-current={review ? 'page' : undefined} className={`nav-item ${review ? 'active' : ''}`}><Icon name="check-circle" /><span>{t("На согласование")}</span></Link><Link to="/academy?tab=team" aria-current={teamLearning ? 'page' : undefined} className={`nav-item ${teamLearning ? 'active' : ''}`}><Icon name="graduation" /><span>{t("Обучение команды")}</span></Link><NavLink to="/team" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}><Icon name="users" /><span>{t("Сотрудники")}</span></NavLink></>)}
-        {tx(profile.role === 'hr_admin' && <><NavLink to="/delegations" className="nav-item"><Icon name="users" /><span>{t("Замещение")}</span></NavLink><NavLink to="/course-editor" className="nav-item"><Icon name="book" /><span>{t("Редактор курсов")}</span></NavLink></>)}
-      </nav>
-      <div className="sidebar-bottom"><Link className="sidebar-settings" to="/settings"><Icon name="settings" size={18} /><span>{t("Настройки")}</span></Link><button className="logout-button" onClick={logout}><Icon name="logout" size={18} />{tx(mode === 'demo' ? 'Сменить роль' : 'Выйти')}</button></div>
+      {workspaceSwitch('workspace-switch-desktop')}
+      <nav aria-label={t("Главная навигация")}>{nav.map(([path, icon, label]) => <Link key={path} to={path} aria-current={activePath(path) ? 'page' : undefined} className={`nav-item ${activePath(path) ? 'active' : ''}`}><Icon name={icon} /><span>{t(label)}</span></Link>)}</nav>
+      <div className="sidebar-bottom">{inTeam && profile.role === 'hr_admin' && <Link className={`nav-item ${location.pathname === '/hr-tools' ? 'active' : ''}`} to="/hr-tools"><Icon name="settings" /><span>{t('Инструменты HR')}</span></Link>}<Link className={`nav-item ${activePath('/help') ? 'active' : ''}`} to="/help"><Icon name="help" /><span>{t('Помощь')}</span></Link></div>
     </aside>
     <div className="main-shell">
       <header className="topbar">
-        <div className="topbar-left"><button ref={menuButton} className="icon-btn menu-toggle" aria-label={t("Открыть меню")} aria-controls="workspace-navigation" aria-expanded={open} onClick={() => setOpen(v => !v)}><Icon name="menu" /></button><Link to="/" className="mobile-brand" aria-label={t("PostTech — главная")}><Brand /></Link><span className="sr-only">{tx(current)}</span><form className="global-search" role="search" onSubmit={e => { e.preventDefault(); navigate(`/requests?q=${encodeURIComponent(search.trim())}`); setSearch(''); }}><Icon name="search" size={19} /><input aria-label={t("Поиск по заявкам")} placeholder={t("Найти заявку…")} value={search} onChange={e => setSearch(e.target.value)} /><kbd>↵</kbd></form></div>
-        <div className="topbar-right"><LanguageSwitch /><Link className="icon-btn notification-button" aria-label={`Уведомления: ${unread} непрочитанных`} to="/notifications"><Icon name="bell" size={23} />{tx(unread > 0 && <span>{tx(unread > 9 ? '9+' : unread)}</span>)}</Link><Link to="/profile" className="user-menu" aria-label={`Профиль: ${profile.full_name}`}><Avatar name={profile.full_name} size={38} /><span className="user-copy"><strong>{profile.full_name}</strong><small>{tx(roleNames[profile.role])}</small></span><Icon name="chevron-down" size={17} /></Link></div>
+        <div className="topbar-left"><button ref={menuButton} className="icon-btn menu-toggle" aria-label={t("Открыть меню")} aria-controls="workspace-navigation" aria-expanded={open} onClick={() => setOpen(v => !v)}><Icon name="menu" /></button><Link to="/" className="mobile-brand" aria-label={t("PostTech — главная")}><Brand /></Link><span className="workspace-label">{t(inTeam ? profile.role === 'hr_admin' ? 'HR' : 'Моя команда' : 'Личный кабинет')}</span></div>
+        <div className="topbar-right"><Link className="icon-btn notification-button" aria-label={`Уведомления: ${unread} непрочитанных`} to="/notifications"><Icon name="bell" size={22} />{unread > 0 && <span className="unread-dot" />}</Link><details ref={account} className="account-menu"><summary className="user-menu" aria-label={t('Меню профиля')}><Avatar name={profile.full_name} size={36} /><span className="user-copy"><strong>{profile.full_name}</strong></span><Icon name="chevron-down" size={16} /></summary><div className="account-popover"><p>{profile.full_name}</p><Link to="/profile"><Icon name="user" size={18} />{t('Мой профиль')}</Link><Link to="/calendar"><Icon name="calendar" size={18} />{t('Календарь')}</Link><Link to="/settings"><Icon name="settings" size={18} />{t('Настройки')}</Link>{profile.role === 'hr_admin' && <Link to="/hr-tools"><Icon name="briefcase" size={18} />{t('Инструменты HR')}</Link>}<div className="account-language"><span>{t('Язык')}</span><LanguageSwitch /></div><button onClick={logout}><Icon name="logout" size={18} />{t(mode === 'demo' ? 'Сменить роль' : 'Выйти')}</button></div></details></div>
       </header>
       {tx(mode === 'demo' && <div className="demo-banner"><span><span className="dot dot-amber" />{t("Демоверсия")}</span><button onClick={logout}>{t("Сменить роль")}<Icon name="arrow-right" size={14} /></button></div>)}
+      {workspaceSwitch('workspace-switch-mobile')}
       <main id="main-content" className="main-content"><Suspense fallback={<LoadingState />}><Routes>
-        <Route path="/" element={<Dashboard />} /><Route path="/services" element={<Services />} /><Route path="/activity" element={<ActivityPage />} />
+        <Route path="/" element={<Dashboard />} /><Route path="/help" element={<Help />} /><Route path="/hr-tools" element={profile.role === 'hr_admin' ? <HrTools /> : <Navigate to="/" replace />} /><Route path="/services" element={<Services />} /><Route path="/activity" element={<ActivityPage />} />
         <Route path="/requests/*" element={<Requests />} /><Route path="/calendar" element={<Calendar />} /><Route path="/academy/*" element={<Academy />} /><Route path="/jana" element={<Jana />} /><Route path="/profile/*" element={<Profile />} /><Route path="/notifications" element={<Notifications />} />
         <Route path="/team/*" element={profile.role === 'worker' ? <Navigate to="/" replace /> : <Team />} /><Route path="/settings" element={<Settings />} /><Route path="/login" element={<Navigate to="/" replace />} />
-        <Route path="/support" element={<Support />} /><Route path="/delegations" element={profile.role === 'hr_admin' ? <Delegations /> : <Navigate to="/" />} /><Route path="/course-editor" element={profile.role === 'hr_admin' ? <CourseEditor /> : <Navigate to="/" />} />
+        <Route path="/operations" element={profile.role === 'hr_admin' ? <Operations /> : <Navigate to="/" />} /><Route path="/support" element={<Support />} /><Route path="/delegations" element={profile.role === 'hr_admin' ? <Delegations /> : <Navigate to="/" />} /><Route path="/course-editor" element={profile.role === 'hr_admin' ? <CourseEditor /> : <Navigate to="/" />} />
         <Route path="*" element={<div className="empty-state"><h1>{t("Страница не найдена")}</h1><Link to="/" className="btn btn-primary">{t("На главную")}</Link></div>} />
       </Routes></Suspense></main>
-      <nav className="mobile-bottom-nav" aria-label={t("Быстрая навигация")}>{tx(mobileNav.map(([path, icon, label]) => <NavLink key={path} to={path} end={path === '/'} className={({isActive}) => isActive ? 'active' : ''}><Icon name={icon} size={22} /><span>{tx(label)}</span></NavLink>))}</nav>
+      <nav className="mobile-bottom-nav" aria-label={t("Быстрая навигация")}>{mobileNav.map(([path, icon, label]) => <Link key={path} to={path} aria-current={activePath(path) ? 'page' : undefined} className={activePath(path) ? 'active' : ''}><Icon name={icon} size={21} /><span>{t(label)}</span></Link>)}</nav>
     </div>
   </div>;
 }

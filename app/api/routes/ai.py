@@ -33,7 +33,8 @@ def ask_jana(
 @router.get("/sources/{source_id}")
 def knowledge_source(
     source_id: UUID,
+    version: str | None = None,
     actor: UserContext = Depends(get_current_user),
 ) -> dict:
     """Read an active published source with the same authentication as Jana."""
-    return get_source(source_id)
+    return get_source(source_id, version) if version is not None else get_source(source_id)

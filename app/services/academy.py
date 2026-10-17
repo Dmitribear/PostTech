@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 COURSE_COLUMNS = "id,title,description,duration_minutes,category,audience,passing_score,translations"
 ASSIGNMENT_COLUMNS = (
     "id,course_id,employee_id,assigned_by,status,progress_percent,score_percent,"
-    "assigned_at,completed_at,attempt_count,material_completed_at,last_attempt_at,due_on"
+    "assigned_at,completed_at,attempt_count,material_completed_at,last_attempt_at,due_on,completed_lesson_ids"
 )
 ATTEMPT_COLUMNS = "id,assignment_id,attempt_number,score_percent,passed,submitted_at"
 EMPLOYEE_COLUMNS = "id,full_name,department,job_title"
@@ -80,7 +80,7 @@ def my_courses(actor: UserContext) -> list[dict]:
 
 def course_details(actor: UserContext, course_id: UUID) -> dict:
     client = _client()
-    rows = _execute(client.table("courses").select(f"{COURSE_COLUMNS},material_markdown,quiz,active,created_at")
+    rows = _execute(client.table("courses").select(f"{COURSE_COLUMNS},material_markdown,quiz,active,created_at,lessons")
                     .eq("id", str(course_id)).limit(1)) or []
     if not rows:
         raise HTTPException(status_code=404, detail="Course not found")

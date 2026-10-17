@@ -1,0 +1,78 @@
+{
+  "at": "2026-10-17T11:08:50.184Z",
+  "backend": "Docker + Supabase, synthetic jury accounts",
+  "results": [
+    {
+      "role": "employee",
+      "width": 320,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "width": 768,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "manager",
+      "width": 320,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "manager",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "manager",
+      "width": 768,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "manager",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "width": 320,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "width": 768,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    }
+  ]
+}
