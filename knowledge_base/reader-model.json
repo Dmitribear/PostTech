@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "model": {
+    "repository": "bartowski/Qwen_Qwen3.5-9B-GGUF",
+    "revision": "182be2fd6c7bc44887d88a91cb03ff009cc9f549",
+    "filename": "Qwen_Qwen3.5-9B-Q4_K_M.gguf",
+    "size": 6169341984,
+    "sha256": "d784ce9eda1a5a7b51e8f705a9e6310844bf4f173654d115823c775fdea56d43",
+    "url": "https://huggingface.co/bartowski/Qwen_Qwen3.5-9B-GGUF/resolve/182be2fd6c7bc44887d88a91cb03ff009cc9f549/Qwen_Qwen3.5-9B-Q4_K_M.gguf",
+    "license": "Apache-2.0",
+    "license_url": "https://huggingface.co/Qwen/Qwen3.5-9B/blob/c202236235762e1c871ad0ccb60c8ee5ba337b9a/LICENSE",
+    "base_repository": "Qwen/Qwen3.5-9B",
+    "base_model_url": "https://huggingface.co/Qwen/Qwen3.5-9B",
+    "quantization_publisher": "bartowski (community GGUF conversion; original weights by Qwen)",
+    "provenance_url": "https://huggingface.co/bartowski/Qwen_Qwen3.5-9B-GGUF/blob/182be2fd6c7bc44887d88a91cb03ff009cc9f549/README.md",
+    "quantized_by": "bartowski",
+    "architecture": "qwen35 hybrid Gated DeltaNet + full attention",
+    "mode": "text only; thinking disabled by server; no vision projector downloaded"
+  },
+  "runtime": {
+    "repository": "ggml-org/llama.cpp",
+    "release": "b11669",
+    "stable_release": "v0.7.0",
+    "filename": "llama-b11669-bin-win-vulkan-x64.zip",
+    "size": 32182350,
+    "sha256": "2c07574e7bde71321cb785282b20cc821e951132149eeceeea32ddebdbf0598e",
+    "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11669/llama-b11669-bin-win-vulkan-x64.zip",
+    "license": "MIT",
+    "license_url": "https://github.com/ggml-org/llama.cpp/blob/b11669/LICENSE"
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8081,
+    "model_alias": "jana-reader",
+    "context_size": 8192,
+    "threads": 4,
+    "parallel": 1,
+    "gpu_layers": 20,
+    "cache_type_k": "q8_0",
+    "cache_type_v": "q8_0"
+  },
+  "notice": "Downloaded only by explicit setup; no paid API, no runtime downloads, no training on FAQ or evaluation questions. Local model inference can still make semantic mistakes."
+}

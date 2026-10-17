@@ -18,7 +18,7 @@ from app.schemas.digital_hr import JanaQuestion
 from app.schemas.jana import JanaAnswer, JanaArticle
 from app.services.calendar_export import CalendarExportUnavailable, leave_calendar
 from app.services.jana_errors import JanaUnavailable
-from app.services.jana_local import answer_from_faq, get_index
+from app.services.jana_reader import LocalReader, answer_from_knowledge
 
 ROOT = Path(__file__).resolve().parents[1]
 app = FastAPI(title="Jana: local model / fictional demo only")
@@ -34,10 +34,9 @@ def articles() -> list[dict]:
 def ask(payload: JanaQuestion):
     settings = get_settings()
     try:
-        return answer_from_faq(payload.question, articles(), get_index(settings),
-                               settings.jana_min_score, settings.jana_score_margin)
+        return answer_from_knowledge(payload.question, articles(), LocalReader(settings))
     except JanaUnavailable as exc:
-        raise HTTPException(503, "Local model unavailable. Run python -m scripts.prepare_jana_local") from exc
+        raise HTTPException(503, "Jana AI is temporarily unavailable") from exc
 
 
 @app.get("/api/v1/ai/sources/{article_id}", response_model=JanaArticle)

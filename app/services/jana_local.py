@@ -22,7 +22,7 @@ class FAQCard(BaseModel):
     id: str
     article_id: UUID
     source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    questions: list[str] = Field(min_length=1, max_length=12)
+    questions: list[str] = Field(min_length=1, max_length=20)
     excerpt: str = Field(min_length=1, max_length=500)
 
 
@@ -96,6 +96,12 @@ def answer_from_faq(question: str, articles: list[dict], index: FAQIndex,
         ranked = index.rank(question)
     except ValueError:
         return refuse("Сократите вопрос: я могу подобрать ответ на один короткий вопрос.")
+    # Remove only semantically incompatible positive candidates before comparing
+    # confidence. A competing unsupported intent must always keep its score.
+    ranked = [(owner, score) for owner, score in ranked
+              if owner == -1 or card_is_applicable(question, index.catalog.cards[owner].id)]
+    if not ranked:
+        return refuse()
     winner, score = ranked[0]
     if winner == -1 or score < min_score:
         return refuse()
@@ -108,10 +114,6 @@ def answer_from_faq(question: str, articles: list[dict], index: FAQIndex,
         return refuse()
 
     card = index.catalog.cards[winner]
-    if not card_is_applicable(question, card.id):
-        # Similar wording cannot turn a status/sync question into an instruction
-        # for submitting a request/importing a file. Do not pick a fallback card.
-        return refuse()
     matches = [a for a in articles if str(a["id"]) == str(card.article_id) and a.get("active") is not False]
     if len(matches) != 1 or card.excerpt not in matches[0].get("content", ""):
         # An outdated/unpublished source invalidates the card, not a license

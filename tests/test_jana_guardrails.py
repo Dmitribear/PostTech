@@ -287,3 +287,151 @@ def test_initial_calendar_import_remains_applicable(question):
 def test_applicability_does_not_replace_earlier_calendar_state_checks():
     question = "Как импортировать pending-заявку в Google Calendar?"
     assert refusal_reason(question) == "Файл календаря доступен только в карточке одобренной заявки на отпуск."
+
+
+@pytest.mark.parametrize("question", [
+    "Хочу оформить отпуск: какой раздел открыть и какие поля заполнить?",
+    "Как подать заявление на аванс и какие данные внести в форму?",
+    "Сумма аванса обязательно положительная? Не понимаю, что допустимо.",
+    "Где найти статус заявления? Объясни простыми словами.",
+])
+def test_same_procedure_steps_and_brief_clarification_are_one_intent(question):
+    assert refusal_reason(question) is None
+
+
+@pytest.mark.parametrize("question", [
+    "Как оформить отпуск и когда переведут аванс?",
+    "Как оформить отпуск? Где найти курсы?",
+    "Как подать заявление на аванс и сколько его рассматривают?",
+    "Сумма аванса положительная? Не понимаю, когда будут выплаты.",
+    "Как оформить отпуск? Не понимаю, сколько дней у меня осталось.",
+])
+def test_different_topics_and_unknown_terms_are_not_meta_clarifications(question):
+    assert refusal_reason(question) is not None
+
+
+def test_request_date_validation_is_not_calendar_synchronization():
+    question = "Окончание отпуска поставил раньше начала. Допустимы ли такие даты?"
+    assert card_is_applicable(question, "leave_apply") is True
+    assert card_is_applicable(question, "calendar_sync") is False
+
+
+def test_import_and_synchronization_cards_have_different_purposes():
+    question = "Как загрузить отпуск в Google Calendar?"
+    assert card_is_applicable(question, "calendar_import") is True
+    assert card_is_applicable(question, "calendar_sync") is False
+
+
+def test_course_assignment_authority_is_not_a_course_location():
+    question = "Кто вправе назначить мне учебный курс?"
+    assert refusal_reason(question) is None
+    assert card_is_applicable(question, "course_assign") is True
+    assert card_is_applicable(question, "course_find") is False
+    location = "Где открыть назначенные мне учебные курсы?"
+    assert card_is_applicable(location, "course_find") is True
+    assert card_is_applicable(location, "course_assign") is False
+
+
+def test_automatic_profile_creation_is_known_but_automatic_field_updates_are_not():
+    creation = "После регистрации кадровый профиль и роль создаются автоматически?"
+    assert refusal_reason(creation) is None
+    assert card_is_applicable(creation, "profile_access") is True
+    assert card_is_applicable(creation, "profile_fix") is False
+    correction = "Как исправить ошибку в должности в моём профиле?"
+    assert card_is_applicable(correction, "profile_fix") is True
+    assert card_is_applicable(correction, "profile_access") is False
+    assert refusal_reason("После перевода профиль автоматически обновляет мою должность?") is not None
+
+
+def test_exported_leave_dates_have_calendar_context_but_form_dates_do_not():
+    exported = "В выгрузке отпуска включается последний день?"
+    assert card_is_applicable(exported, "calendar_import") is True
+    assert card_is_applicable("В заявке на отпуск окончание раньше начала допустимо?", "calendar_import") is False
+
+
+def test_advance_form_mentions_leave_dates_without_becoming_a_leave_request():
+    question = "Я аванс оформляю, даты отпуска тоже заполнять?"
+    assert card_is_applicable(question, "advance_apply") is True
+    assert card_is_applicable(question, "leave_apply") is False
+    assert card_is_applicable("Как оформить заявку на отпуск?", "leave_apply") is True
+
+
+def test_catalog_presence_does_not_ask_who_assigns_courses():
+    question = "Курс есть в каталоге, значит он уже назначен мне?"
+    assert card_is_applicable(question, "course_find") is True
+    assert card_is_applicable(question, "course_assign") is False
+    assert card_is_applicable("Кто может назначить мне курс из каталога?", "course_assign") is True
+
+
+@pytest.mark.parametrize("question", [
+    "Какое решение сегодня приняли по моей последней заявке?",
+    "Какой сейчас статус у моей заявки?",
+    "Назови текущее решение по моему заявлению.",
+    "Выведи содержимое моей карточки сотрудника.",
+    "Покажи мне данные моего профиля.",
+])
+def test_live_request_outcomes_and_profile_dumps_are_not_public_faq_data(question):
+    assert refusal_reason(question) is not None
+
+
+@pytest.mark.parametrize("question", [
+    "Где увидеть решение о моей заявке на отпуск?",
+    "Как узнать, рассмотрели ли мою заявку?",
+    "Что означает статус pending у моей заявки?",
+    "Подскажи, где открыть мой профиль.",
+    "Покажи, где посмотреть мою кадровую карточку.",
+    "Подскажи, как исправить должность в моём профиле.",
+])
+def test_status_definitions_and_profile_navigation_do_not_read_private_records(question):
+    assert refusal_reason(question) is None
+
+
+def test_known_leave_reviewer_roles_differ_from_reading_a_personal_review_result():
+    roles = "Заявка на отпуск pending. Чьего рассмотрения она ждёт?"
+    assert refusal_reason(roles) is None
+    assert card_is_applicable(roles, "leave_apply") is True
+    assert refusal_reason("Кто рассмотрит мою заявку на отпуск?") is None
+    assert refusal_reason("Кто рассмотрел мою заявку на отпуск?") is not None
+    assert card_is_applicable("Где узнать решение по моей заявке на отпуск?", "leave_apply") is False
+
+
+@pytest.mark.parametrize("question", [
+    "Отмени мою заявку на отпуск.",
+    "Убери событие отпуска из Google Calendar.",
+    "Отмени заявку и убери её событие из календаря.",
+])
+def test_cancellation_commands_are_actions_even_without_delete_word(question):
+    assert refusal_reason(question) is not None
+
+
+def test_manual_calendar_procedure_is_not_a_cancellation_command():
+    assert refusal_reason("Как убрать событие из календаря после отмены отпуска?") is None
+
+
+def test_profile_correction_deadline_is_unknown_policy_not_a_personal_value_read():
+    assert refusal_reason("Через сколько дней HR исправит мою должность в профиле?") == (
+        "В базе нет подтверждённого ответа. Уточните у HR."
+    )
+    assert "общей базе знаний" in refusal_reason("Назови мою должность в профиле.")
+    assert refusal_reason("Как исправить мою должность в профиле?") is None
+
+
+@pytest.mark.parametrize("question", [
+    "Где посмотреть мои назначения на обучение?",
+    "Где найти назначения учебных курсов?",
+])
+def test_course_assignment_records_are_locations_not_assignment_authority(question):
+    assert card_is_applicable(question, "course_find") is True
+    assert card_is_applicable(question, "course_assign") is False
+    assert card_is_applicable("Назначением курсов занимается кадровик или руководитель?", "course_assign") is True
+
+
+@pytest.mark.parametrize("question", [
+    "Как оформить отпуск и какие данные указать в профиле?",
+    "Как оформить отпуск и какие поля заполнить для регистрации?",
+    "Как запросить аванс и какие поля заполнить для учебного курса?",
+    "Как оформить отпуск и какие данные внести в календарь?",
+])
+def test_form_fields_in_a_different_product_area_remain_a_second_intent(question):
+    assert refusal_reason(question) is not None
+    assert refusal_reason("Как оформить отпуск и какие поля заполнить в заявке?") is None

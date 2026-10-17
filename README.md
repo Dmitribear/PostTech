@@ -4,7 +4,12 @@ FastAPI REST backend for the JanaMen Digital HR hackathon prototype. The MVP dem
 
 AI integration: [контракт API, демо-база и локальный mock](docs/ai-jana-api.md).
 The mock runs separately without credentials; the live AI routes retain Supabase authentication.
-Real agent: [semantic evidence selection, verification and live evaluation](docs/ai-jana-agent.md).
+Real agent: [local evidence selection, source validation and evaluation](docs/ai-jana-agent.md).
+The current agent uses local Qwen3.5-9B to read all published knowledge articles,
+understand the question and select sentence IDs in one model pass. The server validates
+the source snapshot and IDs, then renders verbatim quotes. Semantic correctness is
+evaluated separately against predeclared facts; source validation does not guarantee it.
+FAQ examples are historical and are not used by the live agent. There is no paid AI API call.
 
 Web portal: [запуск фронтенда и совместимость веток](docs/frontend.md).
 
@@ -12,7 +17,8 @@ Web portal: [запуск фронтенда и совместимость ве�
 Общий проект уже подготовлен; повторно выполнять миграции и seed для подключения не нужно.
 
 Сдача кейса: [архитектура с локальной Jana и будущими интеграциями](docs/architecture.md)
-и [проверка ИИ на 50 новых вопросах](docs/jana-acceptance-report.md).
+и [порядок независимой проверки ИИ](docs/ai-jana-agent.md#проверка-качества).
+Прежние [acceptance-результаты](docs/jana-acceptance-report.md) относятся к старому FAQ-поиску.
 
 ## Architecture
 
@@ -56,19 +62,31 @@ The steps below provision a **new database**. For the existing team project, use
 the [Integration quickstart](docs/team-integration-quickstart.md) instead.
 
 1. Create a Supabase project and copy `.env.example` to `.env`.
-2. Set `SUPABASE_URL`, the server-side `SUPABASE_KEY`, and the project's public `SUPABASE_ANON_KEY` in `.env`. The anon key is used only by the backend's Supabase Auth signup/login client; keep the server key private and never commit `.env`. Jana runs locally: install dependencies and run `python -m scripts.prepare_jana_local` once. No OpenAI key is used by the HTTP agent; missing local model files produce HTTP 503. The UI mock is a separate explicit process, never an automatic fallback.
+2. Set `SUPABASE_URL`, the server-side `SUPABASE_KEY`, and the project's public `SUPABASE_ANON_KEY` in `.env`. The anon key is used only by the backend's Supabase Auth signup/login client; keep the server key private and never commit `.env`. Prepare Jana with `python -m scripts.prepare_jana_reader`, then start `scripts/start_jana_reader.ps1`. No OpenAI key is used by the HTTP agent; an unavailable local reader produces HTTP 503. The UI mock is a separate explicit process, never an automatic fallback.
 3. In a new database run [0001_digital_hr.sql](database/migrations/0001_digital_hr.sql), then [0002_request_workflow.sql](database/migrations/0002_request_workflow.sql). Do not combine it with `ver2/0002_atomic_workflows.sql`; see [branch compatibility](docs/frontend.md#совместимость-веток).
 4. In Supabase Auth, create fictional test users with emails `hr@posttech.demo`, `manager@posttech.demo`, and `employee@posttech.demo`. Set local demo passwords in Supabase; no credentials are stored in this repository.
-5. Run [database/seed.sql](database/seed.sql). It creates fictional profiles, two courses, knowledge articles, course assignments, and sample requests/notifications. It uses no real employee data. For local Jana, apply [seed_jana_demo.sql](database/seed_jana_demo.sql) afterwards to load the articles matching the FAQ cards.
+5. Run [database/seed.sql](database/seed.sql). It creates fictional profiles, two courses, knowledge articles, course assignments, and sample requests/notifications. It uses no real employee data. Apply [seed_jana_demo.sql](database/seed_jana_demo.sql) afterwards for the current 11 demo articles. New active articles do not require FAQ cards.
 6. Register via `POST /api/v1/auth/register`, confirm the email if Supabase requires it, then sign in via `POST /api/v1/auth/login`. Send the returned `access_token` as `Authorization: Bearer <token>` to protected API routes. HR must link `user_id` from Auth to the employee's existing `auth_user_id` profile field; public registration never accepts a role or edits official employee data. To issue a refreshed session, send its `refresh_token` to `POST /api/v1/auth/refresh`.
 
 ## Run
 
-With `.env` configured and demo SQL applied, run `docker compose up --build`. API: `http://localhost:8000`; Swagger UI: `http://localhost:8000/docs`.
+Use the [native Windows quickstart](docs/team-integration-quickstart.md) for the complete portal and Jana. Install Python 3.12 dependencies from `requirements-dev.txt`, configure `.env`, then run:
+
+```powershell
+python -m scripts.prepare_jana_reader
+powershell -File scripts/start_jana_reader.ps1
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Wait for `http://127.0.0.1:8081/health` to report ready. Run Vite separately with `npm.cmd ci` and `npm.cmd run dev` in `frontend`. API: `http://localhost:8000`; Swagger: `/docs`. The model weights are about 6.17 GB; the setup manifest pins versions and hashes. Development hardware is i5-9400F, 16 GB RAM and GTX 1650 SUPER 4 GB; this is not a performance guarantee for other machines.
+
+The manifest selects an 8192-token context and partial GPU offload: 20 layers on the GPU, remaining work in RAM/CPU. The 4 GB GPU does not hold the entire model. Available memory and CPU speed affect response time; measure it on the deployment machine.
+
+`docker compose up --build` still starts the API container, but the current Compose does **not** deploy the new reader. Container loopback is not the host's loopback, and Jana only permits a loopback model URL. The complete reader deployment currently uses native processes.
 
 The API container can start without `.env`, but Supabase-dependent endpoints will not work until valid credentials are provided. `GET /api/v1/health/live` checks process liveness. `/api/v1/health/ready` checks whether Supabase client configuration can be initialized; it does not prove that a database query succeeds.
 
-For local development, use Python 3.12, install `requirements-dev.txt`, and run `uvicorn app.main:app --reload`.
+The model receives only current question and general published articles. It can still misunderstand a question or select insufficient evidence; exact quotations are not a 100% accuracy guarantee.
 
 ## Scope and integration boundary
 
@@ -129,19 +147,23 @@ REST-бэкенд на FastAPI для хакатон-прототипа JanaMen 
 используйте [инструкцию команды](docs/team-integration-quickstart.md).
 
 1. Создайте проект Supabase и скопируйте `.env.example` в `.env`.
-2. Укажите в `.env` значения `SUPABASE_URL`, серверный `SUPABASE_KEY` и публичный `SUPABASE_ANON_KEY` проекта. Anon-ключ используется только серверным клиентом Supabase Auth для регистрации и входа; храните серверный ключ в секрете и никогда не коммитьте `.env`. Jana работает локально: установите зависимости и один раз выполните `python -m scripts.prepare_jana_local`. HTTP-агент не использует OpenAI-ключ; при отсутствии локальной модели возвращается HTTP 503. Mock для интерфейса запускается отдельно и не подменяет настоящий сервис при ошибке.
+2. Укажите в `.env` значения `SUPABASE_URL`, серверный `SUPABASE_KEY` и публичный `SUPABASE_ANON_KEY` проекта. Anon-ключ используется только серверным клиентом Supabase Auth для регистрации и входа; храните серверный ключ в секрете и никогда не коммитьте `.env`. Подготовьте Jana командой `python -m scripts.prepare_jana_reader` и запустите `scripts/start_jana_reader.ps1`. HTTP-агент не использует OpenAI-ключ; недоступность reader даёт HTTP 503. Mock запускается отдельно и не подменяет настоящий сервис при ошибке.
 3. В новой базе выполните [0001_digital_hr.sql](database/migrations/0001_digital_hr.sql), затем [0002_request_workflow.sql](database/migrations/0002_request_workflow.sql). Миграцию `0002_atomic_workflows.sql` из `ver2` вместе с ними применять нельзя: [совместимость веток](docs/frontend.md#совместимость-веток).
 4. В Supabase Auth создайте вымышленных тестовых пользователей с адресами `hr@posttech.demo`, `manager@posttech.demo` и `employee@posttech.demo`. Задайте им демонстрационные пароли в Supabase; учётные данные не хранятся в этом репозитории.
-5. Выполните [database/seed.sql](database/seed.sql). Скрипт создаёт вымышленные профили, два курса, статьи базы знаний, назначения курсов и примеры заявок/уведомлений. Реальные данные сотрудников не используются. Для локальной Jana затем выполните [seed_jana_demo.sql](database/seed_jana_demo.sql): он загружает статьи, соответствующие FAQ-карточкам.
+5. Выполните [database/seed.sql](database/seed.sql). Скрипт создаёт вымышленные профили, два курса, статьи базы знаний, назначения курсов и примеры заявок/уведомлений. Реальные данные сотрудников не используются. Затем выполните [seed_jana_demo.sql](database/seed_jana_demo.sql) для 11 актуальных демо-статей. Новым активным статьям FAQ-карточки не нужны.
 6. Зарегистрируйтесь через `POST /api/v1/auth/register`, при необходимости подтвердите email, затем войдите через `POST /api/v1/auth/login`. Передавайте полученный `access_token` в защищённые маршруты в заголовке `Authorization: Bearer <token>`. HR должен связать `user_id` из Auth с полем `auth_user_id` существующего профиля сотрудника. Публичная регистрация не позволяет назначать роль или изменять официальные данные сотрудника. Для обновления сессии отправьте её `refresh_token` в `POST /api/v1/auth/refresh`.
 
 ## Запуск
 
-После настройки `.env` и выполнения демонстрационных SQL-скриптов запустите `docker compose up --build`. API доступен по адресу `http://localhost:8000`, Swagger UI — по адресу `http://localhost:8000/docs`.
+Для полного запуска используйте [инструкцию Windows](docs/team-integration-quickstart.md): подготовка `scripts.prepare_jana_reader`, фоновый запуск `scripts/start_jana_reader.ps1`, затем FastAPI на 8000 и Vite на 5173. Модель Qwen3.5-9B работает через llama.cpp на `127.0.0.1:8081`; дождитесь успешного `/health`. Веса занимают около 6,17 ГБ. Компьютер разработки — i5-9400F, 16 ГБ RAM, GTX 1650 SUPER 4 ГБ; скорость на другом оборудовании проверяется отдельно.
+
+Манифест задаёт контекст 8192 токена и частичное размещение модели: 20 слоёв на GPU, остальные используют RAM/CPU. В 4 ГБ VRAM весь файл весов не помещается. Свободная память и производительность CPU влияют на время ответа.
+
+Текущий `docker compose up --build` запускает контейнер API, но не новый reader. Loopback контейнера отличается от loopback Windows, а клиент Jana допускает только локальный адрес модели. Полный контейнерный сценарий пока не настроен; основной вариант — нативные процессы. API: `http://localhost:8000`, Swagger UI: `http://localhost:8000/docs`.
 
 Контейнер API может запуститься без `.env`, но эндпоинты, зависящие от Supabase, не будут работать без корректных учётных данных. `GET /api/v1/health/live` проверяет, что процесс работает. `/api/v1/health/ready` проверяет возможность инициализировать конфигурацию клиента Supabase, но не подтверждает успешное выполнение запроса к базе данных.
 
-Для локальной разработки используйте Python 3.12, установите зависимости из `requirements-dev.txt` и запустите `uvicorn app.main:app --reload`.
+Jana за один проход модели читает всю опубликованную общую базу, определяет намерение и выбирает фрагменты. Сервер проверяет снимок источников, ID и точность цитат; тестовые вопросы и старый FAQ в этот процесс не входят. Смысловая правильность оценивается отдельно по заранее заданным фактам: происхождение цитаты не гарантирует 100% правильности ответа.
 
 ## Область MVP и границы интеграций
 
@@ -156,31 +178,34 @@ REST-бэкенд на FastAPI для хакатон-прототипа JanaMen 
 
 ## Локальная Jana и Google Calendar через файл
 
-Рабочий AI теперь использует локальный поиск по смыслу и короткие утверждённые
-FAQ-цитаты. Платного fallback нет. Экспорт календаря:
+Рабочий AI использует локальный reader и точные цитаты из всей активной базы.
+Платного fallback нет. Экспорт календаря:
 `GET /api/v1/requests/{uuid}/calendar.ics` с Bearer-токеном, только одобренный отпуск.
 
 ```powershell
 python -m pip install -r requirements-dev.txt
-python -m scripts.prepare_jana_local
+python -m scripts.prepare_jana_reader
+powershell -File scripts/start_jana_reader.ps1
 python -m uvicorn examples.jana_local_demo:app --host 127.0.0.1 --port 8002
 ```
 
 Локальная страница: http://127.0.0.1:8002. Реальная модель, вымышленные данные,
-без Supabase. Для рабочего backend нужен Supabase и обновлённый demo seed.
-Для Docker заранее подготовьте `.models/mpnet` на хосте; Compose монтирует его
-только для чтения. Модель Apache 2.0, около 288 МБ; CPU, без Docker/GPU для локального запуска.
+без Supabase, при запущенном reader. Для рабочего backend нужен Supabase;
+общую базу команды повторно заполнять seed не нужно. Прямого Google Calendar API
+и автоматической синхронизации нет: пользователь импортирует скачанный файл.
 
 [Инструкция и результаты проверки](docs/ai-jana-agent.md) ·
 [API и подключение frontend](docs/ai-jana-api.md)
 
-После изменения Jana запускайте все девять наборов с настоящей локальной моделью:
+Разработка на известном наборе с настоящей локальной моделью:
 
 ```powershell
-python -m scripts.check_jana_release --output-dir .venv/jana-check-1
+python -m scripts.evaluate_jana_reader --mode local --cases knowledge_base/demo/independent_agents_v2.json --development --output .venv/jana-reader-dev-01.json
 ```
 
-Выбирайте новую папку для каждого прогона. Команда проверяет 285 вопросов,
-сохраняет ответы и хеши входных файлов, возвращает ненулевой код при ошибке
-или незавершённой проверке. Supabase и платные AI API не вызываются.
-Текущие результаты и границы проверки — в [отчёте Jana](docs/jana-release-report.md).
+Выбирайте новый файл для каждого прогона. Ответы, хеши и журнал сохраняются
+после каждого вопроса. Подлинность цитат проверяется автоматически, смысловая
+полнота — отдельно по ожидаемым фактам. Независимая проверка требует заранее
+зафиксировать код и новый набор. Старые `check_jana_release` (285 вопросов)
+и `evaluate_jana_local` сохранены для исторического FAQ-поиска; его
+[результаты](docs/jana-release-report.md) не характеризуют новый reader.

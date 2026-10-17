@@ -1,0 +1,9 @@
+{
+  "existing_normalized_strings": 1986,
+  "normalization": "NFKC, casefold, yo-to-e, word tokens",
+  "exact_duplicate_ids": [],
+  "within_suite_duplicates": [],
+  "close_lexical_overlaps_09": [],
+  "scope": "Prior knowledge_base/demo JSON, FAQ strings, Python AST string constants in tests, quoted strings in frontend tests/e2e specs",
+  "note": "Only exact normalized duplicates disqualify. Same topics/facts from the same sources are expected; no answers seen."
+}

@@ -19,8 +19,11 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-6-luna"
     jana_model_timeout_seconds: float = Field(default=20, ge=1, le=60)
-    # The HTTP agent always uses the local FAQ model. OpenAI settings above
-    # are retained only for the explicitly invoked legacy evaluation script.
+    # HTTP inference uses a local, read-only language model. No cloud fallback.
+    jana_reader_url: str = "http://127.0.0.1:8081"
+    jana_reader_model: str = "jana-reader"
+    jana_reader_timeout_seconds: float = Field(default=120, ge=5, le=300)
+    # Historical FAQ experiments only; the live agent does not load FAQ examples.
     jana_model_dir: Path = Path(__file__).resolve().parents[2] / ".models/mpnet"
     jana_faq_path: Path = Path(__file__).resolve().parents[2] / "knowledge_base/faq.json"
     jana_min_score: float = Field(default=0.72, ge=0, le=1)

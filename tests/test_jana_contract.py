@@ -12,7 +12,7 @@ from app.schemas.common import UserContext
 from app.schemas.jana import JanaAnswer
 from app.services import jana
 from app.services.jana_errors import JanaUnavailable
-from app.services.jana_local import FAQCatalog
+from app.services.jana_intent import Decision
 from examples.jana_mock import app as mock_app
 from scripts.export_jana_demo import render_sql
 
@@ -20,7 +20,6 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = json.loads((ROOT / "knowledge_base/demo/articles.json").read_text(encoding="utf-8"))
 ARTICLE = DATA["articles"][0]
 SOURCE_PATH = f"/api/v1/ai/sources/{ARTICLE['id']}"
-CATALOG = FAQCatalog.model_validate_json((ROOT / "knowledge_base/faq.json").read_text(encoding="utf-8"))
 
 
 @pytest.fixture
@@ -70,19 +69,18 @@ class ArticleQuery:
 
 def use_articles(monkeypatch, rows):
     monkeypatch.setattr(jana, "get_supabase_client", lambda: ArticleQuery(rows))
-    monkeypatch.setattr(jana, "get_settings", lambda: SimpleNamespace(jana_min_score=0.78, jana_score_margin=0.06))
+    monkeypatch.setattr(jana, "get_settings", lambda: SimpleNamespace())
 
 
-class ContractIndex:
+class ContractReader:
     """Protocol substitute, not an assertion about semantic model accuracy."""
-
-    catalog = CATALOG
 
     def __init__(self, decision="answer"):
         self.decision = decision
 
-    def rank(self, question):
-        return [(0, 0.99), (-1, 0.4)] if self.decision == "answer" else [(-1, 0.99), (0, 0.4)]
+    def select(self, question, context):
+        ids = [s['id'] for s in context[0]['sentences'][:2]] if self.decision == 'answer' else []
+        return Decision(understanding=question, kind=self.decision, evidence_ids=ids, clarification='none')
 
 
 @pytest.mark.parametrize("path,method", [("/api/v1/ai/ask", "POST"), (SOURCE_PATH, "GET")])
@@ -94,7 +92,7 @@ def test_live_routes_require_auth(path, method):
 
 def test_live_answer_sources_resolve_to_original_articles(live_client, monkeypatch):
     use_articles(monkeypatch, DATA["articles"])
-    monkeypatch.setattr(jana, "get_index", lambda _settings: ContractIndex())
+    monkeypatch.setattr(jana, "LocalReader", lambda _settings: ContractReader())
     response = live_client.post("/api/v1/ai/ask", json={"question": "Как оформить отпуск?"})
     assert response.status_code == 200
     answer = JanaAnswer.model_validate(response.json())
@@ -113,7 +111,7 @@ def test_live_answer_sources_resolve_to_original_articles(live_client, monkeypat
 
 def test_live_no_match_is_a_normal_refusal(live_client, monkeypatch):
     use_articles(monkeypatch, DATA["articles"])
-    monkeypatch.setattr(jana, "get_index", lambda _settings: ContractIndex("insufficient"))
+    monkeypatch.setattr(jana, "LocalReader", lambda _settings: ContractReader("unknown"))
     response = live_client.post("/api/v1/ai/ask", json={"question": "Какая погода завтра?"})
     assert response.status_code == 200
     answer = response.json()
@@ -123,11 +121,21 @@ def test_live_no_match_is_a_normal_refusal(live_client, monkeypatch):
     assert answer["escalation_suggested"] is True
 
 
+def test_publication_changed_during_inference_is_not_served(live_client, monkeypatch):
+    use_articles(monkeypatch, DATA["articles"])
+    snapshots = iter([DATA["articles"], [{**ARTICLE, "content": ARTICLE["content"] + " Уточнение."}]])
+    monkeypatch.setattr(jana, "_published_articles", lambda: next(snapshots))
+    monkeypatch.setattr(jana, "LocalReader", lambda _settings: ContractReader())
+    response = live_client.post("/api/v1/ai/ask", json={"question": "Как оформить отпуск?"})
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Jana AI is temporarily unavailable"}
+
+
 def test_missing_local_model_is_technical_error_not_mock_answer(live_client, monkeypatch):
     use_articles(monkeypatch, DATA["articles"])
     def unavailable(_settings):
         raise JanaUnavailable("Missing local model")
-    monkeypatch.setattr(jana, "get_index", unavailable)
+    monkeypatch.setattr(jana, "LocalReader", unavailable)
     response = live_client.post("/api/v1/ai/ask", json={"question": "Как оформить отпуск?"})
     assert response.status_code == 503
     assert response.json() == {"detail": "Jana AI is temporarily unavailable"}

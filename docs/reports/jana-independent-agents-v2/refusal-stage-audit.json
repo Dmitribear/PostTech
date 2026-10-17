@@ -1,0 +1,135 @@
+{
+  "method": "Read-only scope functions after the first run; no additional model inference and no fixes. Retrieval stage attribution does not diagnose individual similarity scores.",
+  "counts": {
+    "retrieval_selection_or_confidence": 15,
+    "scope_guard": 6
+  },
+  "cases": [
+    {
+      "id": "V2A01",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "В базе нет подтверждённого ответа. Уточните у HR."
+    },
+    {
+      "id": "V2A02",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "В базе нет подтверждённого ответа. Уточните у HR."
+    },
+    {
+      "id": "V2A03",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "В базе нет подтверждённого ответа. Уточните у HR."
+    },
+    {
+      "id": "V2A04",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "В базе нет подтверждённого ответа. Уточните у HR."
+    },
+    {
+      "id": "V2A05",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "В базе нет подтверждённого ответа. Уточните у HR."
+    },
+    {
+      "id": "V2A06",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "В базе нет подтверждённого ответа. Уточните у HR."
+    },
+    {
+      "id": "V2A07",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "Уточните, что вас интересует: «Где посмотреть статус заявки?» или «В карточке неверно написаны имя или фамилия. Куда обращаться для исправления?»?"
+    },
+    {
+      "id": "V2A08",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "В базе нет подтверждённого ответа. Уточните у HR."
+    },
+    {
+      "id": "V2A12",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "В базе нет подтверждённого ответа. Уточните у HR."
+    },
+    {
+      "id": "V2A13",
+      "stage": "scope_guard",
+      "guard_reason": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ.",
+      "answer": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ."
+    },
+    {
+      "id": "V2B02",
+      "stage": "scope_guard",
+      "guard_reason": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ.",
+      "answer": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ."
+    },
+    {
+      "id": "V2B04",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "Уточните, что вас интересует: «Кто видит мои кадровые данные?» или «В карточке неверно написаны имя или фамилия. Куда обращаться для исправления?»?"
+    },
+    {
+      "id": "V2B05",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "Уточните, что вас интересует: «Где читать уведомления?» или «Кто видит мои кадровые данные?»?"
+    },
+    {
+      "id": "V2B06",
+      "stage": "scope_guard",
+      "guard_reason": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ.",
+      "answer": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ."
+    },
+    {
+      "id": "V2B07",
+      "stage": "scope_guard",
+      "guard_reason": "Я отвечаю по общей базе знаний. Личные данные и действия с заявками доступны в соответствующих разделах платформы.",
+      "answer": "Я отвечаю по общей базе знаний. Личные данные и действия с заявками доступны в соответствующих разделах платформы."
+    },
+    {
+      "id": "V2B08",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "В базе нет подтверждённого ответа. Уточните у HR."
+    },
+    {
+      "id": "V2B10",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "В базе нет подтверждённого ответа. Уточните у HR."
+    },
+    {
+      "id": "V2B11",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "В базе нет подтверждённого ответа. Уточните у HR."
+    },
+    {
+      "id": "V2B12",
+      "stage": "scope_guard",
+      "guard_reason": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ.",
+      "answer": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ."
+    },
+    {
+      "id": "V2B13",
+      "stage": "scope_guard",
+      "guard_reason": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ.",
+      "answer": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ."
+    },
+    {
+      "id": "V2B15",
+      "stage": "retrieval_selection_or_confidence",
+      "guard_reason": null,
+      "answer": "В базе нет подтверждённого ответа. Уточните у HR."
+    }
+  ]
+}

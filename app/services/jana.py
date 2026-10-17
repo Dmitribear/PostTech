@@ -2,7 +2,9 @@
 
 from app.core.config import get_settings
 from app.db.supabase import get_supabase_client
-from app.services.jana_local import MAX_ARTICLES, answer_from_faq, get_index
+from app.services.jana_evidence import MAX_ARTICLES
+from app.services.jana_errors import JanaUnavailable
+from app.services.jana_reader import LocalReader, answer_from_knowledge
 
 
 def get_source_article(article_id: str) -> dict | None:
@@ -19,7 +21,7 @@ def get_source_article(article_id: str) -> dict | None:
     return (result.data or [None])[0]
 
 
-def answer_question(question: str) -> dict:
+def _published_articles() -> list[dict]:
     result = (
         get_supabase_client()
         .table("knowledge_articles")
@@ -29,6 +31,15 @@ def answer_question(question: str) -> dict:
         .limit(MAX_ARTICLES + 1)
         .execute()
     )
+    return result.data or []
+
+
+def answer_question(question: str) -> dict:
+    articles = _published_articles()
     settings = get_settings()
-    return answer_from_faq(question, result.data or [], get_index(settings),
-                           settings.jana_min_score, settings.jana_score_margin)
+    answer = answer_from_knowledge(question, articles, LocalReader(settings))
+    # A publication or an exception elsewhere in a source may change while the
+    # local model reads it. Never serve an answer from that obsolete snapshot.
+    if _published_articles() != articles:
+        raise JanaUnavailable("Knowledge changed during inference; retry")
+    return answer

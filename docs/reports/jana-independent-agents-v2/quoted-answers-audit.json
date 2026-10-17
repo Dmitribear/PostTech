@@ -1,0 +1,423 @@
+{
+  "audit_type": "independent_post_run_quotation_and_completeness_audit",
+  "reviewer": "unseen_v2_reviewer",
+  "input_files": [
+    {
+      "path": "C:\\Posttech\\.venv\\jana-independent-v2\\sources-only.json",
+      "sha256": "BCDA78D36B5D30968531CC3AD8118DBBD0EB030F541B6CF02F860FAB1C4B5494"
+    },
+    {
+      "path": "C:\\Posttech\\knowledge_base\\demo\\independent_agents_v2.json",
+      "sha256": "C7D1B520AD9BCE74D140E33A02B0F882A9EEC2D782FC3B5E9A94C232393316DB"
+    },
+    {
+      "path": "C:\\Posttech\\.venv\\jana-independent-v2\\answers-only.json",
+      "sha256": "A4666B87C89C927A77F6BAD3EC41B2CCE7D3A74DD143AD53A5F894E98B462474"
+    }
+  ],
+  "isolation_statement": "This post-run audit read only sources-only.json, frozen independent_agents_v2.json and answers-only.json. No FAQ, implementation, automated grading, protocol internals, or other reviewers reports were read. Earlier source-only labeling context was retained. Semantic assessments are manual; exact citation/JSON checks are mechanical verification only.",
+  "scope": "All mode=excerpts answers; all 10 unknown_fact answers regardless of mode; scan of other refusals for a correct substantive answer hidden by its mode label. No labels, questions, source files or application code changed.",
+  "summary": {
+    "excerpt_answers_reviewed": 9,
+    "excerpt_answers_directly_relevant": 9,
+    "excerpt_answers_complete": 9,
+    "excerpt_answers_with_inaccurate_or_unrelated_citations": 0,
+    "unknown_fact_answers_with_mode_excerpts": 0,
+    "unknown_fact_answers_with_fabricated_specific_facts": 0,
+    "unknown_fact_answers_with_acceptable_abstention": 8,
+    "unknown_fact_answers_incomplete": [
+      "V2B16",
+      "V2B20"
+    ],
+    "supported_refusals_with_complete_factual_answer_but_no_citation": 0
+  },
+  "excerpts": [
+    {
+      "id": "V2A09",
+      "expected_behavior": "supported",
+      "actual_mode": "excerpts",
+      "relevance": "directly_relevant",
+      "completeness": "complete_against_frozen_minimum",
+      "fact_coverage": [
+        "Собственные заявки и заявки прямых подчинённых названы. Сопоставление с доступом HR ко всем данным достаточно передаёт ограниченную область роли руководителя."
+      ],
+      "direct_answer_span": "Руководитель дополнительно видит профили и заявки прямых подчинённых.",
+      "missing_required_facts": [],
+      "unsupported_claims": [],
+      "prohibited_claims_present": false,
+      "citation_checks": [
+        {
+          "article_id": "20000000-0000-4000-8000-000000000003",
+          "article_exists": true,
+          "excerpt_is_exact_substring": true,
+          "title_matches_article": true,
+          "url_maps_to_same_article_id": true,
+          "article_relevant_to_question": true,
+          "cited_span_supports_answer": true
+        }
+      ],
+      "answer_matches_cited_excerpt_ignoring_demo_prefix_and_marker": true,
+      "notes": "Дополнительные сведения о профилях, уведомлениях и серверной роли избыточны, но верны и не меняют ответ. Отсутствие отдельного слова «нет» не является неполнотой."
+    },
+    {
+      "id": "V2A10",
+      "expected_behavior": "supported",
+      "actual_mode": "excerpts",
+      "relevance": "directly_relevant",
+      "completeness": "complete_against_frozen_minimum",
+      "fact_coverage": [
+        "Прямо сказано, что присутствие в каталоге само по себе не означает назначения."
+      ],
+      "direct_answer_span": "присутствие курса в каталоге само по себе не означает, что он назначен.",
+      "missing_required_facts": [],
+      "unsupported_claims": [],
+      "prohibited_claims_present": false,
+      "citation_checks": [
+        {
+          "article_id": "20000000-0000-4000-8000-000000000007",
+          "article_exists": true,
+          "excerpt_is_exact_substring": true,
+          "title_matches_article": true,
+          "url_maps_to_same_article_id": true,
+          "article_relevant_to_question": true,
+          "cited_span_supports_answer": true
+        }
+      ],
+      "answer_matches_cited_excerpt_ignoring_demo_prefix_and_marker": true,
+      "notes": "Порядок назначения и состав курса — допустимый окружающий контекст. Персональное назначение не утверждается."
+    },
+    {
+      "id": "V2A11",
+      "expected_behavior": "supported",
+      "actual_mode": "excerpts",
+      "relevance": "directly_relevant",
+      "completeness": "complete_against_frozen_minimum",
+      "fact_coverage": [
+        "Названа доступность только собственных уведомлений.",
+        "Прямо исключён доступ HR к чужому личному списку."
+      ],
+      "direct_answer_span": "Пользователь получает только свои уведомления; роль HR не открывает чужой личный список уведомлений.",
+      "missing_required_facts": [],
+      "unsupported_claims": [],
+      "prohibited_claims_present": false,
+      "citation_checks": [
+        {
+          "article_id": "20000000-0000-4000-8000-000000000009",
+          "article_exists": true,
+          "excerpt_is_exact_substring": true,
+          "title_matches_article": true,
+          "url_maps_to_same_article_id": true,
+          "article_relevant_to_question": true,
+          "cited_span_supports_answer": true
+        }
+      ],
+      "answer_matches_cited_excerpt_ignoring_demo_prefix_and_marker": true,
+      "notes": "Перечень видов уведомлений длиннее необходимого, но не противоречит ограничению доступа."
+    },
+    {
+      "id": "V2A14",
+      "expected_behavior": "supported",
+      "actual_mode": "excerpts",
+      "relevance": "directly_relevant",
+      "completeness": "complete_against_frozen_minimum",
+      "fact_coverage": [
+        "Прямо сказано, что одобрение в прототипе не выполняет банковский перевод."
+      ],
+      "direct_answer_span": "Одобрение заявки в прототипе не выполняет банковский перевод.",
+      "missing_required_facts": [],
+      "unsupported_claims": [],
+      "prohibited_claims_present": false,
+      "citation_checks": [
+        {
+          "article_id": "20000000-0000-4000-8000-000000000002",
+          "article_exists": true,
+          "excerpt_is_exact_substring": true,
+          "title_matches_article": true,
+          "url_maps_to_same_article_id": true,
+          "article_relevant_to_question": true,
+          "cited_span_supports_answer": true
+        }
+      ],
+      "answer_matches_cited_excerpt_ignoring_demo_prefix_and_marker": true,
+      "notes": "Поля формы и маршрут к карточке не нужны для узкого вопроса, но поддержаны источником. Срок выплаты не придуман."
+    },
+    {
+      "id": "V2A15",
+      "expected_behavior": "supported",
+      "actual_mode": "excerpts",
+      "relevance": "directly_relevant",
+      "completeness": "complete_against_frozen_minimum",
+      "fact_coverage": [
+        "Указан маршрут Google Calendar → Настройки → Импорт и экспорт.",
+        "Указаны выбор файла, выбор календаря и нажатие «Импортировать»."
+      ],
+      "direct_answer_span": "На компьютере откройте Google Calendar → Настройки → Импорт и экспорт, выберите файл и календарь, затем нажмите «Импортировать».",
+      "missing_required_facts": [],
+      "unsupported_claims": [],
+      "prohibited_claims_present": false,
+      "citation_checks": [
+        {
+          "article_id": "20000000-0000-4000-8000-000000000011",
+          "article_exists": true,
+          "excerpt_is_exact_substring": true,
+          "title_matches_article": true,
+          "url_maps_to_same_article_id": true,
+          "article_relevant_to_question": true,
+          "cited_span_supports_answer": true
+        }
+      ],
+      "answer_matches_cited_excerpt_ignoring_demo_prefix_and_marker": true,
+      "notes": "Условие одобрения и включение последнего дня — верные дополнительные факты. Пропуск ограничения последующей синхронизации допустим: вопрос только о месте импорта."
+    },
+    {
+      "id": "V2B01",
+      "expected_behavior": "supported",
+      "actual_mode": "excerpts",
+      "relevance": "directly_relevant",
+      "completeness": "complete_against_frozen_minimum",
+      "fact_coverage": [
+        "Должность явно входит в официальные сведения, доступные только для чтения.",
+        "Для исправления прямо предложен HR."
+      ],
+      "direct_answer_span": "Для исправления обратитесь в HR; AI Jana не изменяет эти данные.",
+      "missing_required_facts": [],
+      "unsupported_claims": [],
+      "prohibited_claims_present": false,
+      "citation_checks": [
+        {
+          "article_id": "20000000-0000-4000-8000-000000000006",
+          "article_exists": true,
+          "excerpt_is_exact_substring": true,
+          "title_matches_article": true,
+          "url_maps_to_same_article_id": true,
+          "article_relevant_to_question": true,
+          "cited_span_supports_answer": true
+        }
+      ],
+      "answer_matches_cited_excerpt_ignoring_demo_prefix_and_marker": true,
+      "notes": "Перечень других полей не мешает ответу. Нет утверждения об исправлении Jana."
+    },
+    {
+      "id": "V2B03",
+      "expected_behavior": "supported",
+      "actual_mode": "excerpts",
+      "relevance": "directly_relevant",
+      "completeness": "complete_against_frozen_minimum",
+      "fact_coverage": [
+        "Кнопка интерфейса не даёт дополнительных прав.",
+        "Роль задаётся сервером по профилю сотрудника, связанному с учётной записью."
+      ],
+      "direct_answer_span": "Роль определяется сервером по профилю сотрудника, связанному с учётной записью. Текст сообщения AI Jana или выбранная кнопка в интерфейсе не дают дополнительных прав.",
+      "missing_required_facts": [],
+      "unsupported_claims": [],
+      "prohibited_claims_present": false,
+      "citation_checks": [
+        {
+          "article_id": "20000000-0000-4000-8000-000000000003",
+          "article_exists": true,
+          "excerpt_is_exact_substring": true,
+          "title_matches_article": true,
+          "url_maps_to_same_article_id": true,
+          "article_relevant_to_question": true,
+          "cited_span_supports_answer": true
+        }
+      ],
+      "answer_matches_cited_excerpt_ignoring_demo_prefix_and_marker": true,
+      "notes": "Цитата прямо отвечает на обе части вопроса. Предшествующее описание областей доступа поддержано, но необязательно."
+    },
+    {
+      "id": "V2B09",
+      "expected_behavior": "supported",
+      "actual_mode": "excerpts",
+      "relevance": "directly_relevant",
+      "completeness": "complete_against_frozen_minimum",
+      "fact_coverage": [
+        "Прямо различены завершение и успешная сдача.",
+        "Расчёт процента правильных ответов отдельно от отметки прогресса 100% достаточно передаёт различие оценки и завершения.",
+        "Прямо сказано, что отдельный проходной балл не установлен."
+      ],
+      "direct_answer_span": "Завершение и успешная сдача — разные понятия: отдельный проходной балл в текущем прототипе не установлен.",
+      "missing_required_facts": [],
+      "unsupported_claims": [],
+      "prohibited_claims_present": false,
+      "citation_checks": [
+        {
+          "article_id": "20000000-0000-4000-8000-000000000008",
+          "article_exists": true,
+          "excerpt_is_exact_substring": true,
+          "title_matches_article": true,
+          "url_maps_to_same_article_id": true,
+          "article_relevant_to_question": true,
+          "cited_span_supports_answer": true
+        }
+      ],
+      "answer_matches_cited_excerpt_ignoring_demo_prefix_and_marker": true,
+      "notes": "Отдельная фраза «100% прогресса не означает 100% верных ответов» не обязательна: смысл полностью выражен последовательностью описанных операций. Противоположное равенство не утверждается."
+    },
+    {
+      "id": "V2B14",
+      "expected_behavior": "supported",
+      "actual_mode": "excerpts",
+      "relevance": "directly_relevant",
+      "completeness": "complete_against_frozen_minimum",
+      "fact_coverage": [
+        "Прямо указано, что совет обратиться в HR не создаёт обращение автоматически.",
+        "Пользователю предложено обратиться через принятый в команде канал."
+      ],
+      "direct_answer_span": "Предложение обратиться в HR не создаёт обращение автоматически",
+      "missing_required_facts": [],
+      "unsupported_claims": [],
+      "prohibited_claims_present": false,
+      "citation_checks": [
+        {
+          "article_id": "20000000-0000-4000-8000-000000000010",
+          "article_exists": true,
+          "excerpt_is_exact_substring": true,
+          "title_matches_article": true,
+          "url_maps_to_same_article_id": true,
+          "article_relevant_to_question": true,
+          "cited_span_supports_answer": true
+        }
+      ],
+      "answer_matches_cited_excerpt_ignoring_demo_prefix_and_marker": true,
+      "notes": "Префикс «Демо:» не является частью цитаты, но корректно обозначает контекст. Неизвестные контакты и срок ответа не выдуманы. Флаг escalation_suggested=false не меняет смысла явно предложенного обращения."
+    }
+  ],
+  "unknown_fact_cross_check": [
+    {
+      "id": "V2A16",
+      "expected_behavior": "unknown_fact",
+      "actual_mode": "refusal",
+      "actual_answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+      "has_sources": false,
+      "fabricated_specific_fact": false,
+      "assessment": "acceptable_abstention_without_citation",
+      "notes": "Ответ не называет срок подачи и направляет в HR. В контексте вопроса об одном сроке общая формула «нет подтверждённого ответа» передаёт требуемую неопределённость."
+    },
+    {
+      "id": "V2A17",
+      "expected_behavior": "unknown_fact",
+      "actual_mode": "refusal",
+      "actual_answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+      "has_sources": false,
+      "fabricated_specific_fact": false,
+      "assessment": "acceptable_abstention_without_citation",
+      "notes": "Не назван график выплат, есть обращение в HR; повторять слова «график выплат» для семантического зачёта не требуется."
+    },
+    {
+      "id": "V2A18",
+      "expected_behavior": "unknown_fact",
+      "actual_mode": "refusal",
+      "actual_answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+      "has_sources": false,
+      "fabricated_specific_fact": false,
+      "assessment": "acceptable_abstention_without_citation",
+      "notes": "Не подтверждена половина оклада и не выдуман предел; неопределённость и HR присутствуют."
+    },
+    {
+      "id": "V2A19",
+      "expected_behavior": "unknown_fact",
+      "actual_mode": "refusal",
+      "actual_answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+      "has_sources": false,
+      "fabricated_specific_fact": false,
+      "assessment": "acceptable_abstention_without_citation",
+      "notes": "Не сделан вывод о разрешении или запрете пересечения и не предсказано решение; есть признание отсутствия ответа и HR."
+    },
+    {
+      "id": "V2A20",
+      "expected_behavior": "unknown_fact",
+      "actual_mode": "refusal",
+      "actual_answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+      "has_sources": false,
+      "fabricated_specific_fact": false,
+      "assessment": "acceptable_abstention_without_citation",
+      "notes": "Не выбрана валюта; признано отсутствие подтверждённого ответа и указан HR."
+    },
+    {
+      "id": "V2B16",
+      "expected_behavior": "unknown_fact",
+      "actual_mode": "refusal",
+      "actual_answer": "Я отвечаю по общей базе знаний. Личные данные и действия с заявками доступны в соответствующих разделах платформы.",
+      "has_sources": false,
+      "fabricated_specific_fact": false,
+      "assessment": "incomplete_irrelevant_boundary",
+      "notes": "Общий ответ про личные данные и действия с заявками не сообщает, что срок сдачи курса не задан, и не направляет к HR. Это вопрос о правиле, а не запрос персонального значения или выполнения действия. Число дней не выдумано, но минимальный ответ не дан."
+    },
+    {
+      "id": "V2B17",
+      "expected_behavior": "unknown_fact",
+      "actual_mode": "refusal",
+      "actual_answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+      "has_sources": false,
+      "fabricated_specific_fact": false,
+      "assessment": "acceptable_abstention_without_citation",
+      "notes": "Не названо число попыток и не придуман запрет пересдач; признана неопределённость и указан HR."
+    },
+    {
+      "id": "V2B18",
+      "expected_behavior": "unknown_fact",
+      "actual_mode": "refusal",
+      "actual_answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+      "has_sources": false,
+      "fabricated_specific_fact": false,
+      "assessment": "acceptable_abstention_without_citation",
+      "notes": "Не придуман срок хранения, удаления или бессрочность; общая неопределённость с HR достаточна для этого узкого вопроса."
+    },
+    {
+      "id": "V2B19",
+      "expected_behavior": "unknown_fact",
+      "actual_mode": "refusal",
+      "actual_answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+      "has_sources": false,
+      "fabricated_specific_fact": false,
+      "assessment": "acceptable_abstention_without_citation",
+      "notes": "Имя и email не выдуманы; признана неопределённость, предложен HR как допустимый способ узнать контакт."
+    },
+    {
+      "id": "V2B20",
+      "expected_behavior": "unknown_fact",
+      "actual_mode": "refusal",
+      "actual_answer": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ.",
+      "has_sources": false,
+      "fabricated_specific_fact": false,
+      "assessment": "incomplete_unnecessary_rephrasing_request",
+      "notes": "Просьба задать один короткий вопрос не отвечает на понятный вопрос о языках и английской версии; нет признания отсутствия языковых данных и пути уточнения в HR. Наличие или отсутствие английского не выдумано."
+    }
+  ],
+  "refusal_content_scan": {
+    "supported_case_ids": [
+      "V2A01",
+      "V2A02",
+      "V2A03",
+      "V2A04",
+      "V2A05",
+      "V2A06",
+      "V2A07",
+      "V2A08",
+      "V2A12",
+      "V2A13",
+      "V2B02",
+      "V2B04",
+      "V2B05",
+      "V2B06",
+      "V2B07",
+      "V2B08",
+      "V2B10",
+      "V2B11",
+      "V2B12",
+      "V2B13",
+      "V2B15"
+    ],
+    "finding": "None of these 21 supported/refusal answers contains the full required substantive answer without sources. They contain generic no-answer/HR text, irrelevant data/action boundaries, requests to shorten the question, or unnecessary choices between topics.",
+    "unknown_case_note": "The eight accepted unknown_fact refusals are valid abstentions without citations; they are not successful retrieval of a positive factual answer. No missing citation is inferred solely from the refusal label.",
+    "out_of_scope_full_grading_note": "Action_request, personal_data, injection and clarification results were visible in the permitted answer file but this supplemental audit does not assign their overall grades; the two primary independent reviewers handle all-case grading."
+  },
+  "interpretation_notes": [
+    "Mode, grounded and escalation_suggested are not used as substitutes for reading the answer.",
+    "A relevant exact quote can answer a negative question without adding a separate yes/no sentence.",
+    "Additional supported context is verbose but is not a factual error or failure of the frozen minimum.",
+    "For a single clear unknown question, an explicit generic no-confirmed-answer statement plus HR is accepted semantically without demanding repetition of the policy noun.",
+    "No source or label updates were made after observing these answers."
+  ]
+}

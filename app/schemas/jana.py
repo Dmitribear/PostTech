@@ -14,7 +14,7 @@ class JanaSource(BaseModel):
 class JanaAnswer(BaseModel):
     answer: str
     sources: list[JanaSource]
-    grounded: bool = Field(description="The selected FAQ quote exists in an active source; not a confidence score or a guarantee of relevance.")
+    grounded: bool = Field(description="Selected verbatim evidence exists in the active knowledge snapshot; not a guarantee of semantic correctness.")
     escalation_suggested: bool
     mode: Literal["generated", "excerpts", "refusal"]
 

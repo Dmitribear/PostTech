@@ -1,0 +1,518 @@
+{
+  "created_at": "2026-10-16T22:38:17.390158+00:00",
+  "execution": "local_cpu_demo_articles",
+  "model": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+  "revision": "4328cf26390c98c5e3c738b4460a05b95f4911f5",
+  "model_files_sha256": {
+    "onnx/model_quint8_avx2.onnx": "82f6b58b509e6f87a3c181fd08a94376499faa6c344eea0b36214d47d3943e61",
+    "tokenizer.json": "2c3387be76557bd40970cec13153b3bbf80407865484b209e655e5e4729076b8"
+  },
+  "model_loaded": true,
+  "python": "3.12.14",
+  "notice": "Synthetic FAQ regression results, not a guarantee on unseen questions. No HTTP or database calls.",
+  "min_score": 0.72,
+  "margin": 0.045,
+  "faq_sha256": "ae32c02184ecb84900181fe7ff9877a6a2fe5a4558db3fd6c75dada6c237d3f9",
+  "articles_sha256": "af1d51100ddfc75490367de9291b86d7bbbb50ba1c0a91554536f3130af2e691",
+  "source_preflight": {
+    "checked_cards": 15,
+    "issues": []
+  },
+  "runtime_sha256": {
+    "app/core/config.py": "f0d86b8874959c1005a9c6acdd56a4972853c4ec2f45f3bc412a758348c274ea",
+    "app/schemas/jana.py": "2a259c3c17ab255ae4efbfc97e6cbb870d2b2388466d0856ef4204404b0fd55c",
+    "app/services/jana_local.py": "2c24f51632b70121ca088686bd278e3d917d5199f3a8ec452b66da833aea6b7b",
+    "app/services/jana_guardrails.py": "3e704ad9999cae8bcd59dd5e9fc800d3dd0ab03e0eb11d36670e392ad65423ec",
+    "app/services/jana_text.py": "7e9bf2712b32a1fb78d917fa63d86cc8e1fe61765430eaf9c126c3e9993bc6b5",
+    "app/services/local_embeddings.py": "2658a677be2e3e4e1d26ac1f86faa064a4c9b057c3c119978a970643c05fe606",
+    "app/services/jana_errors.py": "66f5e0b12b9008d4c00b420b5c194c825c6db543bc317c5e624cde7aaa7a287e",
+    "scripts/evaluate_jana_local.py": "e817919e90ed0a114cca33d7fa082769f1d0fe307159c4303be0d7f70c30afa3",
+    "scripts/check_jana_release.py": "f6e7435e154d0a96db3dcc65fb3e9aa2c43a32009558038b120c9a84a33e7718"
+  },
+  "packages": {
+    "numpy": "2.5.4",
+    "onnxruntime": "1.31.0",
+    "tokenizers": "0.23.3",
+    "pydantic": "2.14.1"
+  },
+  "card_coverage": {
+    "covered": [
+      "advance_apply",
+      "calendar_import",
+      "calendar_sync",
+      "capabilities",
+      "course_assign",
+      "course_find",
+      "course_finish",
+      "hr_contact",
+      "leave_apply",
+      "leave_balance",
+      "notification_find",
+      "profile_access",
+      "profile_fix",
+      "request_status",
+      "visibility"
+    ],
+    "missing": []
+  },
+  "load_seconds": 7.313,
+  "suite_name": "Jana profile correction v1",
+  "suite_sha256": "02bd90a3bc3ebae42401a6381ae53bb67754329c9116c6c825e3a7b0ae2e25f4",
+  "planned_total": 20,
+  "complete": true,
+  "total": 20,
+  "passed": 20,
+  "results": [
+    {
+      "id": "P01",
+      "category": "profile_correction",
+      "question": "В моей учётной карточке неверно написано имя. Куда сообщить?",
+      "expected_card": "profile_fix",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000006",
+            "title": "Демо: кадровый профиль и привязка учётной записи",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000006",
+            "excerpt": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0207
+    },
+    {
+      "id": "P02",
+      "category": "profile_correction",
+      "question": "Я заметил опечатку в фамилии в профиле. Кто занимается исправлением?",
+      "expected_card": "profile_fix",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000006",
+            "title": "Демо: кадровый профиль и привязка учётной записи",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000006",
+            "excerpt": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0207
+    },
+    {
+      "id": "P03",
+      "category": "profile_edit_permission",
+      "question": "Разрешено ли самому изменить отдел в кадровой карточке?",
+      "expected_card": "profile_fix",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000006",
+            "title": "Демо: кадровый профиль и привязка учётной записи",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000006",
+            "excerpt": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0189
+    },
+    {
+      "id": "P04",
+      "category": "profile_edit_permission",
+      "question": "Могу я отредактировать свою должность на странице профиля?",
+      "expected_card": "profile_fix",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000006",
+            "title": "Демо: кадровый профиль и привязка учётной записи",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000006",
+            "excerpt": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0169
+    },
+    {
+      "id": "P05",
+      "category": "profile_correction",
+      "question": "У меня в профиле указан не тот руководитель. Как исправить ошибку?",
+      "expected_card": "profile_fix",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000006",
+            "title": "Демо: кадровый профиль и привязка учётной записи",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000006",
+            "excerpt": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.021
+    },
+    {
+      "id": "P06",
+      "category": "profile_correction",
+      "question": "Дата приёма в профиле неверная. К кому идти за исправлением?",
+      "expected_card": "profile_fix",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000006",
+            "title": "Демо: кадровый профиль и привязка учётной записи",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000006",
+            "excerpt": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0225
+    },
+    {
+      "id": "P07",
+      "category": "profile_edit_permission",
+      "question": "Какие кадровые сведения работник может редактировать сам?",
+      "expected_card": "profile_fix",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000006",
+            "title": "Демо: кадровый профиль и привязка учётной записи",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000006",
+            "excerpt": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0158
+    },
+    {
+      "id": "P08",
+      "category": "profile_correction",
+      "question": "В личной карточке неверная компания. Куда обратиться?",
+      "expected_card": "profile_fix",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000006",
+            "title": "Демо: кадровый профиль и привязка учётной записи",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000006",
+            "excerpt": "В демо-прототипе официальные сведения профиля — имя, компания, должность, подразделение, руководитель, дата приёма и остаток отпуска — доступны сотруднику только для чтения. Для исправления обратитесь в HR; AI Jana не изменяет эти данные."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0215
+    },
+    {
+      "id": "P09",
+      "category": "action",
+      "question": "Измени мою фамилию в профиле на Тестовую.",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "Я отвечаю по общей базе знаний. Личные данные и действия с заявками доступны в соответствующих разделах платформы.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0
+    },
+    {
+      "id": "P10",
+      "category": "action",
+      "question": "Исправь подразделение в моей карточке на отдел доставки.",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "Я отвечаю по общей базе знаний. Личные данные и действия с заявками доступны в соответствующих разделах платформы.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0
+    },
+    {
+      "id": "P11",
+      "category": "action",
+      "question": "Поменяй мне руководителя в профиле.",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.017
+    },
+    {
+      "id": "P12",
+      "category": "personal_data",
+      "question": "Назови фамилию моего руководителя.",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "Я отвечаю по общей базе знаний. Личные данные и действия с заявками доступны в соответствующих разделах платформы.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0002
+    },
+    {
+      "id": "P13",
+      "category": "personal_data",
+      "question": "Какая дата приёма у меня указана в профиле?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "Я отвечаю по общей базе знаний. Личные данные и действия с заявками доступны в соответствующих разделах платформы.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0001
+    },
+    {
+      "id": "P14",
+      "category": "unknown_policy",
+      "question": "За сколько часов HR исправит ошибку в моей карточке?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0235
+    },
+    {
+      "id": "P15",
+      "category": "unknown_policy",
+      "question": "Какие документы нужно приложить для смены фамилии?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0224
+    },
+    {
+      "id": "P16",
+      "category": "unsupported_field",
+      "question": "Как поменять банковские реквизиты в личном кабинете?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.024
+    },
+    {
+      "id": "P17",
+      "category": "unsupported_field",
+      "question": "Как сменить номер телефона в профиле?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0159
+    },
+    {
+      "id": "P18",
+      "category": "unknown_policy",
+      "question": "Какой размер зарплаты назначат после смены должности?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0197
+    },
+    {
+      "id": "P19",
+      "category": "profile_access",
+      "question": "После создания учётной записи кадровая карточка не появилась. Что делать?",
+      "expected_card": "profile_access",
+      "expected": null,
+      "result": {
+        "answer": "Демо: Регистрация создаёт учётную запись, но не создаёт кадровый профиль и не назначает роль. Администратор должен создать или связать профиль с учётной записью. Если после входа получен отказ из-за отсутствия HR-профиля, обратитесь к администратору проекта. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000006",
+            "title": "Демо: кадровый профиль и привязка учётной записи",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000006",
+            "excerpt": "Регистрация создаёт учётную запись, но не создаёт кадровый профиль и не назначает роль. Администратор должен создать или связать профиль с учётной записью. Если после входа получен отказ из-за отсутствия HR-профиля, обратитесь к администратору проекта."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0203
+    },
+    {
+      "id": "P20",
+      "category": "compound",
+      "question": "Как исправить имя в профиле и сколько стоит доставка посылки?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0001
+    }
+  ],
+  "summary": {
+    "outcomes": {
+      "pass": 20
+    },
+    "supported": {
+      "passed": 9,
+      "total": 9
+    },
+    "refusals": {
+      "passed": 11,
+      "total": 11
+    },
+    "categories": {
+      "action": {
+        "passed": 3,
+        "total": 3
+      },
+      "compound": {
+        "passed": 1,
+        "total": 1
+      },
+      "personal_data": {
+        "passed": 2,
+        "total": 2
+      },
+      "profile_access": {
+        "passed": 1,
+        "total": 1
+      },
+      "profile_correction": {
+        "passed": 5,
+        "total": 5
+      },
+      "profile_edit_permission": {
+        "passed": 3,
+        "total": 3
+      },
+      "unknown_policy": {
+        "passed": 3,
+        "total": 3
+      },
+      "unsupported_field": {
+        "passed": 2,
+        "total": 2
+      }
+    }
+  },
+  "errors": []
+}
