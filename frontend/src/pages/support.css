@@ -304,3 +304,28 @@ body[data-density=compact] .support-notification{padding:16px 20px}
 .assign-course-options small{display:block;margin-top:4px;color:var(--muted,#748097);font-size:12px}
 
 .support-answer-action{margin-top:14px}
+
+/* Jana's floating launcher reuses the same chat in a compact, responsive panel. */
+.support-jana-embedded{height:100%;min-height:0;margin:0;gap:0;overflow:hidden}
+.support-jana-embedded .support-chat-layout{height:100%;max-width:none;min-height:0;gap:0}
+.support-jana-embedded .support-chat{height:100%;min-height:0;border:0!important;border-radius:0;box-shadow:none!important}
+.support-jana-embedded .support-chat-top{position:relative;flex-shrink:0;padding:14px 16px}
+.support-jana-embedded .support-chat-top>.btn{margin-right:42px;padding:9px 10px;font-size:11px}
+.support-jana-embedded .support-widget-close{position:absolute;top:10px;right:10px;width:40px;height:40px}
+.support-jana-embedded .support-chat-welcome{min-height:0;overflow:auto;padding:22px 18px}
+.support-jana-embedded .support-chat-welcome>.support-jana-icon{width:52px;height:52px;margin-bottom:14px}
+.support-jana-embedded .support-chat-welcome h2{font-size:24px;margin-bottom:8px}
+.support-jana-embedded .support-chat-welcome p{font-size:12px;margin-bottom:16px}
+.support-jana-embedded .support-prompts{grid-template-columns:1fr;gap:8px}
+.support-jana-embedded .support-prompt{padding:11px 12px}
+.support-jana-embedded .support-chat-messages{flex:1;min-height:0;max-height:none;overscroll-behavior:contain;padding:18px 14px}
+.support-jana-embedded .support-chat-composer{flex-shrink:0;padding:13px 14px}
+.support-jana-embedded .support-jana-help{display:none}
+@media(max-width:900px){
+ .support-jana-embedded{height:100%;min-height:0;gap:0}
+ .support-jana-embedded .support-chat-top{padding:12px 14px}
+ .support-jana-embedded .support-chat-top>.btn{margin-right:42px}
+ .support-jana-embedded .support-chat-welcome{padding:18px 14px}
+ .support-jana-embedded .support-chat-messages{padding:14px 12px}
+ .support-jana-embedded .support-chat-composer{padding:10px 12px}
+}

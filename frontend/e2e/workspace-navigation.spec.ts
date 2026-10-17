@@ -10,6 +10,24 @@ const switches = (page: Page) => page.locator(page.viewportSize()!.width <= 900 
 const nav = (page: Page) => page.getByRole('navigation', { name: page.viewportSize()!.width <= 900 ? 'Быстрая навигация' : 'Главная навигация' });
 async function noOverflow(page: Page) { expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true); }
 
+test('merged language picker works inside the profile menu and preserves workspace', async ({ page }) => {
+  await demo(page, 'hr_admin');
+  await switches(page).getByRole('button', { name: 'HR', exact: true }).click();
+  await page.getByLabel('Меню профиля', { exact: true }).click();
+  await page.getByRole('button', { name: 'Language / Тіл', exact: true }).click();
+  await page.getByRole('option', { name: /Қазақша/ }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'kk');
+  await expect(page).toHaveURL(/\/team$/);
+  await expect(switches(page).getByRole('button', { name: 'HR', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await noOverflow(page);
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'kk');
+  await page.locator('.account-menu summary').click();
+  await page.getByRole('button', { name: 'Language / Тіл', exact: true }).click();
+  await page.getByRole('option', { name: /Русский/ }).click();
+  await expect(page.getByRole('heading', { name: 'Сотрудники', exact: true })).toBeVisible();
+});
+
 test('minimal employee workspace keeps primary tasks and secondary tools reachable', async ({ page }, info) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await demo(page, 'worker');
