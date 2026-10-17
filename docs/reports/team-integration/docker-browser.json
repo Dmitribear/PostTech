@@ -1,0 +1,58 @@
+{
+  "base_url": "http://127.0.0.1:8000",
+  "transport": "Actual built Docker website, GoTrue, PostgREST, PostgreSQL, FastAPI and local reader; no route mocks",
+  "shared_supabase_used": false,
+  "checks": [
+    {
+      "name": "Real employee login",
+      "passed": true
+    },
+    {
+      "name": "Desktop top-right launcher",
+      "passed": true
+    },
+    {
+      "name": "Real local Jana HTTP answer",
+      "passed": true,
+      "seconds": 24.38
+    },
+    {
+      "name": "Grounded HR final approval",
+      "passed": true,
+      "mode": "excerpts",
+      "answer": "Демонстрационные материалы:\n\nЗаявку сначала рассматривает назначенный руководитель или директор, затем HR; после первого согласования статус pending_hr, после окончательного — approved. Если руководитель не назначен, заявку рассматривает HR напрямую. При окончательном одобрении дни списываются из кадрового остатка один раз, а резерв снимается. [1]"
+    },
+    {
+      "name": "Versioned full source",
+      "passed": true,
+      "source_id": "20000000-0000-4000-8000-000000000001",
+      "version": "6109459d705823a289728d1e"
+    },
+    {
+      "name": "Mobile modal fits 320px",
+      "passed": true
+    },
+    {
+      "name": "Local approved leave fixture",
+      "passed": true
+    },
+    {
+      "name": "Actual aggregate calendar file",
+      "passed": true,
+      "filename": "janapost-all-leaves.ics",
+      "events": 2,
+      "scope": "all",
+      "content_type": "text/calendar; charset=utf-8"
+    },
+    {
+      "name": "Mobile calendar no overflow",
+      "passed": true
+    },
+    {
+      "name": "No browser exceptions",
+      "passed": true
+    }
+  ],
+  "page_errors": [],
+  "status": "passed"
+}

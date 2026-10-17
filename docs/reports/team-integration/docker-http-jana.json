@@ -1,0 +1,137 @@
+{
+  "scope": "jana",
+  "base_url": "http://127.0.0.1:8000",
+  "shared_supabase_used": false,
+  "transport": "Real nginx, FastAPI, GoTrue, PostgREST and PostgreSQL containers",
+  "checks": [
+    {
+      "name": "Built portal served",
+      "passed": true
+    },
+    {
+      "name": "anonymous GET /api/v1/health/ready",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "anonymous GET /api/v1/profile",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "anonymous POST /api/v1/auth/login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "worker GET /api/v1/profile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Verified role worker",
+      "passed": true
+    },
+    {
+      "name": "anonymous POST /api/v1/auth/login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "manager GET /api/v1/profile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Verified role manager",
+      "passed": true
+    },
+    {
+      "name": "anonymous POST /api/v1/auth/login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "director GET /api/v1/profile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Verified role director",
+      "passed": true
+    },
+    {
+      "name": "anonymous POST /api/v1/auth/login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "hr_admin GET /api/v1/profile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Verified role hr_admin",
+      "passed": true
+    },
+    {
+      "name": "worker POST /api/v1/ai/ask",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Jana returns evidence about HR",
+      "passed": true
+    },
+    {
+      "name": "worker GET /api/v1/ai/sources/20000000-0000-4000-8000-000000000001?version=6109459d705823a289728d1e",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Exact and current source",
+      "passed": true
+    },
+    {
+      "name": "worker POST /api/v1/ai/ask",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Unknown fact is not invented",
+      "passed": true
+    }
+  ],
+  "run_id": "8dc5e17b-a02a-42d2-b776-0d4cb39089c0",
+  "jana": {
+    "question": "Кто окончательно одобряет отпуск?",
+    "seconds": 226.64,
+    "answer": {
+      "answer": "Демонстрационные материалы:\n\nЗаявку сначала рассматривает назначенный руководитель или директор, затем HR; после первого согласования статус pending_hr, после окончательного — approved. Если руководитель не назначен, заявку рассматривает HR напрямую. При окончательном одобрении дни списываются из кадрового остатка один раз, а резерв снимается. [1]",
+      "sources": [
+        {
+          "version": "6109459d705823a289728d1e",
+          "freshness": "reviewed",
+          "updated_at": "2026-10-17T13:00:42.162693+00:00",
+          "reviewed_at": "2026-10-17T00:00:00+00:00",
+          "review_due_at": "2027-01-15T00:00:00+00:00",
+          "id": "20000000-0000-4000-8000-000000000001",
+          "title": "Демо: оформление заявки на отпуск",
+          "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000001?version=6109459d705823a289728d1e",
+          "excerpt": "Заявку сначала рассматривает назначенный руководитель или директор, затем HR; после первого согласования статус pending_hr, после окончательного — approved. Если руководитель не назначен, заявку рассматривает HR напрямую. При окончательном одобрении дни списываются из кадрового остатка один раз, а резерв снимается."
+        }
+      ],
+      "grounded": true,
+      "escalation_suggested": false,
+      "mode": "excerpts"
+    }
+  },
+  "unknown_answer": {
+    "answer": "Не удалось надёжно подтвердить ответ материалами базы. Уточните вопрос или обратитесь в HR.",
+    "sources": [],
+    "grounded": false,
+    "escalation_suggested": true,
+    "mode": "refusal"
+  },
+  "result": "passed"
+}

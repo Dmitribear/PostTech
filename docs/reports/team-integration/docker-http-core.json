@@ -94,22 +94,22 @@
       "passed": true
     },
     {
-      "name": "director GET /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "name": "director GET /api/v1/requests/ec3a395d-e0b5-45b5-a513-a48acdfb7c77",
       "passed": true,
       "status": 403
     },
     {
-      "name": "worker PATCH /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/review",
+      "name": "worker PATCH /api/v1/requests/ec3a395d-e0b5-45b5-a513-a48acdfb7c77/review",
       "passed": true,
       "status": 403
     },
     {
-      "name": "hr_admin PATCH /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/review",
+      "name": "hr_admin PATCH /api/v1/requests/ec3a395d-e0b5-45b5-a513-a48acdfb7c77/review",
       "passed": true,
       "status": 409
     },
     {
-      "name": "worker GET /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "name": "worker GET /api/v1/requests/ec3a395d-e0b5-45b5-a513-a48acdfb7c77",
       "passed": true,
       "status": 200
     },
@@ -118,7 +118,7 @@
       "passed": true
     },
     {
-      "name": "manager PATCH /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/review",
+      "name": "manager PATCH /api/v1/requests/ec3a395d-e0b5-45b5-a513-a48acdfb7c77/review",
       "passed": true,
       "status": 200
     },
@@ -127,12 +127,12 @@
       "passed": true
     },
     {
-      "name": "worker GET /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/calendar.ics",
+      "name": "worker GET /api/v1/requests/ec3a395d-e0b5-45b5-a513-a48acdfb7c77/calendar.ics",
       "passed": true,
       "status": 409
     },
     {
-      "name": "hr_admin PATCH /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/review",
+      "name": "hr_admin PATCH /api/v1/requests/ec3a395d-e0b5-45b5-a513-a48acdfb7c77/review",
       "passed": true,
       "status": 200
     },
@@ -141,7 +141,7 @@
       "passed": true
     },
     {
-      "name": "hr_admin PATCH /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/review",
+      "name": "hr_admin PATCH /api/v1/requests/ec3a395d-e0b5-45b5-a513-a48acdfb7c77/review",
       "passed": true,
       "status": 200
     },
@@ -153,30 +153,30 @@
     {
       "name": "Exactly one two-day debit",
       "passed": true,
-      "official_before": 18.0,
-      "official_after": 16.0
+      "official_before": 16.0,
+      "official_after": 14.0
     },
     {
       "name": "Final approval closes the hold",
       "passed": true
     },
     {
-      "name": "worker GET /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/calendar.ics",
+      "name": "worker GET /api/v1/requests/ec3a395d-e0b5-45b5-a513-a48acdfb7c77/calendar.ics",
       "passed": true,
       "status": 200
     },
     {
       "name": "Calendar includes both boundary dates",
       "passed": true,
-      "start": "2026-12-08",
-      "end": "2026-12-09"
+      "start": "2026-12-15",
+      "end": "2026-12-16"
     },
     {
       "name": "Calendar response is a download",
       "passed": true
     },
     {
-      "name": "hr_admin GET /api/v1/workspace/fulfillment/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "name": "hr_admin GET /api/v1/workspace/fulfillment/ec3a395d-e0b5-45b5-a513-a48acdfb7c77",
       "passed": true,
       "status": 200
     },
@@ -185,12 +185,12 @@
       "passed": true
     },
     {
-      "name": "hr_admin POST /api/v1/workspace/fulfillment/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "name": "hr_admin POST /api/v1/workspace/fulfillment/ec3a395d-e0b5-45b5-a513-a48acdfb7c77",
       "passed": true,
       "status": 409
     },
     {
-      "name": "hr_admin POST /api/v1/workspace/fulfillment/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "name": "hr_admin POST /api/v1/workspace/fulfillment/ec3a395d-e0b5-45b5-a513-a48acdfb7c77",
       "passed": true,
       "status": 200
     },
@@ -213,7 +213,7 @@
       "status": 201
     },
     {
-      "name": "director PATCH /api/v1/requests/7efe794d-d14e-4750-91ce-cb7aba86703f/review",
+      "name": "director PATCH /api/v1/requests/ecba93c9-b744-4b03-9330-8b7aa5b7bd16/review",
       "passed": true,
       "status": 200
     },
@@ -222,7 +222,7 @@
       "passed": true
     },
     {
-      "name": "hr_admin PATCH /api/v1/requests/7efe794d-d14e-4750-91ce-cb7aba86703f/review",
+      "name": "hr_admin PATCH /api/v1/requests/ecba93c9-b744-4b03-9330-8b7aa5b7bd16/review",
       "passed": true,
       "status": 200
     },
@@ -302,8 +302,8 @@
       "passed": true
     }
   ],
-  "run_id": "304f95b4-40d6-4a65-ae9a-b8e1ef42b9d4",
-  "leave_request_id": "1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
-  "director_review_request_id": "7efe794d-d14e-4750-91ce-cb7aba86703f",
+  "run_id": "5d02ae13-3b4f-44df-b89b-8b83c699793b",
+  "leave_request_id": "ec3a395d-e0b5-45b5-a513-a48acdfb7c77",
+  "director_review_request_id": "ecba93c9-b744-4b03-9330-8b7aa5b7bd16",
   "result": "passed"
 }

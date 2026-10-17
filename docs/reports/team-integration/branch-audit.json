@@ -22,7 +22,7 @@
       ]
     },
     "test": {
-      "commit": "16f1c27",
+      "commit": "3a18c24",
       "integration": "merged",
       "preserved": [
         "frontend",
@@ -30,7 +30,8 @@
         "employee import",
         "onboarding tracks",
         "scoped summaries",
-        "reminders"
+        "reminders",
+        "invitation email workflow, disabled in isolated Docker demo"
       ]
     },
     "ver2": {
@@ -51,5 +52,17 @@
       "excluded_sql": "0002_atomic_workflows.sql would duplicate notification/event triggers; current migration explicitly rejects that legacy schema"
     }
   },
-  "shared_supabase_modified": false
+  "shared_supabase_modified": false,
+  "late_main_update": {
+    "commit": "268a7e2",
+    "included": false,
+    "reason": "Parallel full architectural reorganization published during final verification; tested snapshot main55f5c09 features are preserved. New main is left unchanged.",
+    "reviewed_against": "d54e481",
+    "unique_features": [
+      "cursor-paginated /team/page",
+      "additional indexes",
+      "architecture and CI restructuring"
+    ],
+    "workflow_conflict": "Late main changes approval to direct approved without immediate official balance debit; our tested manager/director then HR process and final single debit intentionally preserved."
+  }
 }

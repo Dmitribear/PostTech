@@ -1,0 +1,293 @@
+{
+  "scope": "calendar",
+  "base_url": "http://127.0.0.1:8000",
+  "shared_supabase_used": false,
+  "transport": "Real nginx, FastAPI, GoTrue, PostgREST and PostgreSQL containers",
+  "checks": [
+    {
+      "name": "Built portal served",
+      "passed": true
+    },
+    {
+      "name": "anonymous GET /api/v1/health/ready",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "anonymous GET /api/v1/profile",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "anonymous POST /api/v1/auth/login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "worker GET /api/v1/profile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Verified role worker",
+      "passed": true
+    },
+    {
+      "name": "anonymous POST /api/v1/auth/login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "manager GET /api/v1/profile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Verified role manager",
+      "passed": true
+    },
+    {
+      "name": "anonymous POST /api/v1/auth/login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "director GET /api/v1/profile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Verified role director",
+      "passed": true
+    },
+    {
+      "name": "anonymous POST /api/v1/auth/login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "hr_admin GET /api/v1/profile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Verified role hr_admin",
+      "passed": true
+    },
+    {
+      "name": "anonymous GET /api/v1/requests/calendar.ics",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "worker GET /api/v1/requests/calendar.ics?scope=team",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "worker GET /api/v1/requests/calendar.ics?start_date=2026-12-31&end_date=2026-01-01",
+      "passed": true,
+      "status": 422
+    },
+    {
+      "name": "worker GET /api/v1/requests?scope=all&request_type=leave&status=approved&limit=100&offset=0",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "worker GET /api/v1/requests/calendar.ics?scope=mine",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Project calendar scope worker/mine",
+      "passed": true,
+      "event_count": 1
+    },
+    {
+      "name": "Project calendar count worker/mine",
+      "passed": true
+    },
+    {
+      "name": "Project dates worker/mine/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "passed": true
+    },
+    {
+      "name": "worker GET /api/v1/requests/calendar.ics?scope=all",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Project calendar scope worker/all",
+      "passed": true,
+      "event_count": 1
+    },
+    {
+      "name": "Project calendar count worker/all",
+      "passed": true
+    },
+    {
+      "name": "Project dates worker/all/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "passed": true
+    },
+    {
+      "name": "manager GET /api/v1/requests?scope=all&request_type=leave&status=approved&limit=100&offset=0",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "manager GET /api/v1/requests/calendar.ics?scope=mine",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Project calendar scope manager/mine",
+      "passed": true,
+      "event_count": 0
+    },
+    {
+      "name": "Project calendar count manager/mine",
+      "passed": true
+    },
+    {
+      "name": "manager GET /api/v1/requests/calendar.ics?scope=team",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Project calendar scope manager/team",
+      "passed": true,
+      "event_count": 1
+    },
+    {
+      "name": "Project calendar count manager/team",
+      "passed": true
+    },
+    {
+      "name": "Project dates manager/team/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "passed": true
+    },
+    {
+      "name": "manager GET /api/v1/requests/calendar.ics?scope=all",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Project calendar scope manager/all",
+      "passed": true,
+      "event_count": 1
+    },
+    {
+      "name": "Project calendar count manager/all",
+      "passed": true
+    },
+    {
+      "name": "Project dates manager/all/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "passed": true
+    },
+    {
+      "name": "director GET /api/v1/requests?scope=all&request_type=leave&status=approved&limit=100&offset=0",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "director GET /api/v1/requests/calendar.ics?scope=mine",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Project calendar scope director/mine",
+      "passed": true,
+      "event_count": 0
+    },
+    {
+      "name": "Project calendar count director/mine",
+      "passed": true
+    },
+    {
+      "name": "director GET /api/v1/requests/calendar.ics?scope=team",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Project calendar scope director/team",
+      "passed": true,
+      "event_count": 0
+    },
+    {
+      "name": "Project calendar count director/team",
+      "passed": true
+    },
+    {
+      "name": "director GET /api/v1/requests/calendar.ics?scope=all",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Project calendar scope director/all",
+      "passed": true,
+      "event_count": 0
+    },
+    {
+      "name": "Project calendar count director/all",
+      "passed": true
+    },
+    {
+      "name": "hr_admin GET /api/v1/requests?scope=all&request_type=leave&status=approved&limit=100&offset=0",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "hr_admin GET /api/v1/requests/calendar.ics?scope=mine",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Project calendar scope hr_admin/mine",
+      "passed": true,
+      "event_count": 0
+    },
+    {
+      "name": "Project calendar count hr_admin/mine",
+      "passed": true
+    },
+    {
+      "name": "hr_admin GET /api/v1/requests/calendar.ics?scope=team",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Project calendar scope hr_admin/team",
+      "passed": true,
+      "event_count": 1
+    },
+    {
+      "name": "Project calendar count hr_admin/team",
+      "passed": true
+    },
+    {
+      "name": "Project dates hr_admin/team/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "passed": true
+    },
+    {
+      "name": "hr_admin GET /api/v1/requests/calendar.ics?scope=all",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Project calendar scope hr_admin/all",
+      "passed": true,
+      "event_count": 1
+    },
+    {
+      "name": "Project calendar count hr_admin/all",
+      "passed": true
+    },
+    {
+      "name": "Project dates hr_admin/all/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "passed": true
+    }
+  ],
+  "run_id": "0ab6e7b4-92e6-4287-8624-414d2e6dfc0c",
+  "result": "passed"
+}

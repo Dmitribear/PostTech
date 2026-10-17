@@ -175,6 +175,12 @@ def test_knowledge_base_failure_is_503_without_internal_details(live_client, mon
     assert response.json() == {"detail": "Jana knowledge base is temporarily unavailable"}
 
 
+def test_explicit_ui_mock_examples_do_not_overwrite_other_sources():
+    from examples.jana_mock import _normalize
+    questions = [_normalize(q) for a in DATA["articles"] for q in a["demo_questions"]]
+    assert len(questions) == len(set(questions))
+
+
 @pytest.mark.parametrize("article", DATA["articles"], ids=lambda article: article["id"])
 def test_mock_questions_and_sources_use_same_contract(article):
     with TestClient(mock_app) as client:

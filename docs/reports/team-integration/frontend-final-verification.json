@@ -1,0 +1,144 @@
+{
+  "stage": "Final integration after origin/test 3a18c24 email invitations and aggregate all-leave calendar",
+  "command": "npm run test:e2e --prefix frontend -- --reporter=list,json",
+  "browser": "Microsoft Edge Chromium; desktop 1440x1000 and mobile 390x844, selected narrow checks 320px",
+  "transport": "Local Vite and contract fixtures; actual Docker browser smoke recorded separately",
+  "shared_supabase_used": false,
+  "stats": {
+    "startTime": "2026-10-17T13:14:46.350Z",
+    "duration": 162109.90399999998,
+    "expected": 86,
+    "skipped": 2,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "by_file": {
+    "calendar-export.spec.ts": {
+      "expected": 2
+    },
+    "extensions.spec.ts": {
+      "expected": 10
+    },
+    "hr-workflows.spec.ts": {
+      "expected": 8
+    },
+    "invitations.spec.ts": {
+      "expected": 6
+    },
+    "jana-modal.spec.ts": {
+      "expected": 6
+    },
+    "jana.spec.ts": {
+      "expected": 4
+    },
+    "portal.spec.ts": {
+      "expected": 20
+    },
+    "request-lifecycle.spec.ts": {
+      "expected": 14,
+      "skipped": 2
+    },
+    "team-integration.spec.ts": {
+      "expected": 8
+    },
+    "workspace-navigation.spec.ts": {
+      "expected": 8
+    }
+  },
+  "unit": {
+    "command": "npm test --prefix frontend",
+    "passed": 52,
+    "failed": 0
+  },
+  "build": {
+    "command": "npm run build --prefix frontend",
+    "status": "passed"
+  },
+  "skipped_reason": "Two intentionally skipped manual request-state screenshot cases; no functional cases skipped.",
+  "selected_checks": [
+    {
+      "file": "calendar-export.spec.ts",
+      "title": "calendar exports its month and scope, explains manual import, and never downloads an error",
+      "project": "desktop",
+      "status": "expected"
+    },
+    {
+      "file": "calendar-export.spec.ts",
+      "title": "calendar exports its month and scope, explains manual import, and never downloads an error",
+      "project": "mobile",
+      "status": "expected"
+    },
+    {
+      "file": "invitations.spec.ts",
+      "title": "registration shows HR-assigned role without a role chooser",
+      "project": "desktop",
+      "status": "expected"
+    },
+    {
+      "file": "invitations.spec.ts",
+      "title": "HR assigns role and sees honest failed email state with retry",
+      "project": "desktop",
+      "status": "expected"
+    },
+    {
+      "file": "invitations.spec.ts",
+      "title": "simplified demo still offers the director and top-right Jana",
+      "project": "desktop",
+      "status": "expected"
+    },
+    {
+      "file": "invitations.spec.ts",
+      "title": "registration shows HR-assigned role without a role chooser",
+      "project": "mobile",
+      "status": "expected"
+    },
+    {
+      "file": "invitations.spec.ts",
+      "title": "HR assigns role and sees honest failed email state with retry",
+      "project": "mobile",
+      "status": "expected"
+    },
+    {
+      "file": "invitations.spec.ts",
+      "title": "simplified demo still offers the director and top-right Jana",
+      "project": "mobile",
+      "status": "expected"
+    },
+    {
+      "file": "jana-modal.spec.ts",
+      "title": "top-right Jana is absent on login, modal traps focus and keeps a draft across pages",
+      "project": "desktop",
+      "status": "expected"
+    },
+    {
+      "file": "jana-modal.spec.ts",
+      "title": "closing during inference keeps the answer and nested source Escape closes only the source",
+      "project": "desktop",
+      "status": "expected"
+    },
+    {
+      "file": "jana-modal.spec.ts",
+      "title": "modal preserves failures, requires HR consent, and loads portal summary without a model request",
+      "project": "desktop",
+      "status": "expected"
+    },
+    {
+      "file": "jana-modal.spec.ts",
+      "title": "top-right Jana is absent on login, modal traps focus and keeps a draft across pages",
+      "project": "mobile",
+      "status": "expected"
+    },
+    {
+      "file": "jana-modal.spec.ts",
+      "title": "closing during inference keeps the answer and nested source Escape closes only the source",
+      "project": "mobile",
+      "status": "expected"
+    },
+    {
+      "file": "jana-modal.spec.ts",
+      "title": "modal preserves failures, requires HR consent, and loads portal summary without a model request",
+      "project": "mobile",
+      "status": "expected"
+    }
+  ]
+}
