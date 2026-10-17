@@ -18,3 +18,10 @@
 @media(max-width:540px) { .invite-fields { grid-template-columns: minmax(0,1fr); } .invite-code { font-size: 12px; } }
 .invite-list{max-height:none;overflow:visible}
 .invite-list small{overflow-wrap:anywhere}
+.invite-result details > summary { cursor:pointer; color:var(--muted); font-size:13px; }
+.invite-result details .field { margin:12px 0; }
+@media(max-width:540px) {
+  .invite-list article { flex-wrap:wrap; gap:8px; }
+  .invite-list article > div { flex:0 0 100%; }
+  .invite-list button { min-height:44px; }
+}

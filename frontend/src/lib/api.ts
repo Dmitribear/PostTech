@@ -36,6 +36,7 @@ const translatedErrors: Record<string, string> = {
   'Invitation has already been used. Sign in to your account': 'Приглашение уже активировано. Войдите с почтой и паролем.',
   'Invitation has already been used': 'Приглашение уже активировано.',
   'Invitation not found': 'Приглашение не найдено.',
+  'Invitation email sender is not configured': 'Отправка приглашений не настроена. Добавьте RESEND_API_KEY на сервере.',
   'HR administrator role required': 'Приглашения доступны только HR-администратору.',
   'Invitation lifetime must be between 1 and 168 hours': 'Срок приглашения — от 1 часа до 7 дней.',
   'Invitation manager must be a manager or HR administrator': 'Выберите руководителя или HR-администратора.',
@@ -299,6 +300,10 @@ export class LiveApi implements HrApi {
 
   async getInvitations(): Promise<InvitationRecord[]> {
     return this.send('/auth/invitations');
+  }
+
+  async sendInvitation(id: string): Promise<IssuedInvitation> {
+    return this.send(`/auth/invitations/${encodeURIComponent(id)}/send`, { method: 'POST' });
   }
 
   async revokeInvitation(id: string): Promise<{ id: string; revoked: boolean }> {

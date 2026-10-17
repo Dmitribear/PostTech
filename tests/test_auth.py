@@ -185,6 +185,9 @@ def test_registration_does_not_forward_client_roles_or_employee_metadata(monkeyp
         **REGISTRATION, "email": "attacker@example.test",
         "role": "hr_admin", "employee_id": "other-employee", "data": {"role": "hr_admin"},
     })
+    assert response.status_code == 422
+    assert calls == []
+    response = client.post("/api/v1/auth/register", json=REGISTRATION)
     assert response.status_code == 201
     assert calls == [{"email": "worker@example.test", "password": "Safe-password9"}]
     assert "role" not in response.json()
@@ -238,6 +241,9 @@ def test_verify_otp_uses_invited_email_and_activates_only_verified_user(monkeypa
     monkeypatch.setattr(auth, "get_supabase_auth_client", lambda: SimpleNamespace(auth=SimpleNamespace(verify_otp=verify)))
     monkeypatch.setattr(auth.invitations, "complete", lambda *args: completed.append(args))
     response = client.post("/api/v1/auth/verify-registration", json={"invitation_code": REGISTRATION["invitation_code"], "token": token, "email": "attacker@example.test"})
+    assert response.status_code == 422
+    assert calls == [] and completed == []
+    response = client.post("/api/v1/auth/verify-registration", json={"invitation_code": REGISTRATION["invitation_code"], "token": token})
     assert response.status_code == 200
     assert response.json()["access_token"] == "access-token"
     assert calls == [{"email": INVITATION["email"], "token": token, "type": "email"}]
@@ -323,6 +329,10 @@ def test_completion_supplies_names_only_after_verified_login(monkeypatch):
         SimpleNamespace(user=SimpleNamespace(id="verified-user",email=INVITATION["email"],email_confirmed_at="now"),session=_session()))))
     payload = {"invitation_code": REGISTRATION["invitation_code"],"email": INVITATION["email"],"password": "Safe-password9",
         "first_name": "  Алексей ","last_name": " Ким ","role": "hr_admin"}
+    response = client.post("/api/v1/auth/complete-invitation",json=payload)
+    assert response.status_code == 422
+    assert completed == []
+    payload.pop("role")
     response = client.post("/api/v1/auth/complete-invitation",json=payload)
     assert response.status_code == 200
     assert completed == [(REGISTRATION["invitation_code"],"verified-user","Алексей","Ким")]
