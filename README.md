@@ -75,7 +75,7 @@ Open `Start PostTech.cmd` to run the prepared portal at **http://127.0.0.1:8010*
 
 ## Run
 
-With `.env` configured and database migrations applied, open `Start PostTech Docker.cmd` or run `docker compose up --build -d --wait`. The launcher waits for a healthy container and opens **http://localhost:8000**. The multi-stage image builds the current frontend source and serves it together with the API under `/api/v1`; Swagger UI is at `http://localhost:8000/docs`.
+With `.env` configured and database migrations applied, open `Start PostTech Docker.cmd` or run `docker compose up --build -d --remove-orphans --wait`. The launcher waits for a healthy container and opens **http://localhost:8000**. The three services are `frontend` (Nginx), `api` (Python), and `integrations` (reminders and delivery workers). Nginx serves the current frontend and proxies `/api/v1` to the internal API. Supabase remains external. See [Docker and local AI](docs/docker.md).
 
 Compose rebuilds the image on `docker compose up` (`pull_policy: build`). After changing source files, run the launcher again. Docker Desktop's Start/Restart button and `docker compose restart` only restart the existing container; they do not include new code. The separate non-Docker launcher `Start PostTech.cmd` uses port **8010**, so use port **8000** when checking Docker.
 
@@ -127,7 +127,7 @@ See the [role matrix and six-minute demo](docs/hackathon-scenarios.md), [archite
 
 ## Stages 7–10
 
-The subsequent [five HR workflow improvements](docs/hr-workflows.md) add HR document fulfillment, atomic CSV/XLSX employee import previews, sequential onboarding tracks, role-scoped Jana operational reports, and deduplicated reminders. Apply migrations 0011–0012 before rebuilding. The standard Compose stack now includes `workflow-worker`; direct Python launches need `python -m scripts.workflow_worker` in a separate process. Achievements/gamification are intentionally omitted.
+The subsequent [five HR workflow improvements](docs/hr-workflows.md) add HR document fulfillment, atomic CSV/XLSX employee import previews, sequential onboarding tracks, role-scoped Jana operational reports, and deduplicated reminders. Apply migrations 0011–0012 before rebuilding. The standard Compose stack runs reminders in `integrations`; direct Python launches need `python -m scripts.workflow_worker` in a separate process. Achievements/gamification are intentionally omitted.
 
 The live stand now includes date-limited approval deputies, an HR course editor with immutable published versions, assignment deadlines, Russian/Kazakh UI and translated course content, and consent-based in-portal HR tickets. See [verification and boundaries](docs/stages-7-10.md). Run `python scripts/verify_workspace_live.py` only with the marked fictional jury/scenario fixtures; the checkpoint prevents duplicate submissions.
 

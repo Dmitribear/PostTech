@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Literal
 from uuid import UUID
 
@@ -13,8 +14,13 @@ from app.application.dto.digital_hr import (
     RequestType,
 )
 from app.application.use_cases import requests as workflow
+from app.application.use_cases.calendar_export import permitted_calendar_requests
 from app.domain.models import UserContext
-from app.infrastructure.calendar_export import CalendarExportUnavailable, leave_calendar
+from app.infrastructure.calendar_export import (
+    CalendarExportUnavailable,
+    leave_calendar,
+    project_leave_calendar,
+)
 from app.presentation.http.security import get_current_user
 
 router = APIRouter(prefix="/requests", tags=["HR requests"])
@@ -44,6 +50,58 @@ def list_requests(
 @router.get("/routing", response_model=RequestRoutingResponse)
 def request_routing(actor: UserContext = Depends(get_current_user)) -> dict:
     return workflow.request_routing(actor)
+
+
+@router.get(
+    "/calendar.ics",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "All permitted approved leave events; manual calendar import",
+            "content": {
+                "text/calendar": {"schema": {"type": "string", "format": "binary"}}
+            },
+        },
+        403: {"description": "Calendar scope is not permitted"},
+        409: {"description": "An approved leave has invalid dates"},
+        413: {"description": "Choose a narrower date range or employee"},
+        422: {"description": "Invalid calendar filter"},
+        503: {"description": "Request storage unavailable or changed during export"},
+    },
+)
+def export_project_calendar(
+    scope: Literal["mine", "team", "all"] = "all",
+    employee_id: UUID | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    actor: UserContext = Depends(get_current_user),
+) -> Response:
+    """Export date-overlapping leaves with the same permissions as /requests.
+
+    Team excludes the caller; all still respects their role. An empty permitted
+    selection returns a valid calendar with zero events.
+    """
+    records = permitted_calendar_requests(
+        actor,
+        scope=scope,
+        employee_id=employee_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    try:
+        content = project_leave_calendar(records)
+    except CalendarExportUnavailable as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return Response(
+        content,
+        media_type="text/calendar; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="janapost-leaves.ics"',
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+            "X-Calendar-Event-Count": str(len(records)),
+        },
+    )
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=RequestResponse)

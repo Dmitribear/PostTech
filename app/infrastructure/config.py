@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import AnyHttpUrl, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -18,11 +19,13 @@ class Settings(BaseSettings):
     supabase_anon_key: SecretStr | str | None = None
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-4o-mini"
+    jana_provider: Literal['openai', 'local'] = 'openai'
     resend_api_key: SecretStr | None = None
     invitation_email_from: str = "PostTech <onboarding@resend.dev>"
     portal_public_url: AnyHttpUrl | None = None
     jana_model_timeout_seconds: float = Field(default=20, ge=1, le=60)
     jana_reader_url: str = "http://127.0.0.1:8081"
+    jana_reader_allow_docker_host: bool = False
     jana_reader_model: str = "jana-reader"
     jana_reader_timeout_seconds: float = Field(default=120, ge=5, le=300)
     jana_model_dir: Path = Path(__file__).resolve().parents[2] / ".models/mpnet"

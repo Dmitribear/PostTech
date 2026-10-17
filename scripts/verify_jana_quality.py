@@ -66,7 +66,7 @@ def run(
                     s.get("freshness") in {"unverified", "reviewed"} for s in sources
                 )
                 checks["source_readable"] = all(
-                    client.get(f"/api/v1/ai/local/sources/{s['id']}").status_code == 200
+                    client.get(f"/api/v1/ai/sources/{s['id']}").status_code == 200
                     for s in sources
                 )
             results.append(

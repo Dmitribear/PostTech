@@ -1,10 +1,3 @@
-FROM node:22-alpine AS portal
-WORKDIR /portal
-COPY frontend/package*.json ./
-RUN npm ci --no-audit --no-fund
-COPY frontend/ ./
-RUN npm run build
-
 FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -22,7 +15,7 @@ COPY app ./app
 COPY knowledge_base ./knowledge_base
 COPY scripts/integration_worker.py ./scripts/integration_worker.py
 COPY scripts/workflow_worker.py ./scripts/workflow_worker.py
-COPY --from=portal /portal/dist ./frontend/dist
+COPY scripts/background_worker.py ./scripts/background_worker.py
 
 USER app
 EXPOSE 8000

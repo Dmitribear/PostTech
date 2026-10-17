@@ -1,0 +1,27 @@
+services:
+  api:
+    environment:
+      JANA_PROVIDER: local
+      JANA_READER_URL: http://jana-reader:8081
+      JANA_READER_ALLOW_DOCKER_HOST: "true"
+      JANA_READER_TIMEOUT_SECONDS: "300"
+    depends_on:
+      jana-reader:
+        condition: service_healthy
+  jana-reader:
+    image: ghcr.io/ggml-org/llama.cpp:server-b11669
+    command: [--model, /models/model.gguf, --alias, jana-reader, --host, 0.0.0.0, --port, "8081", --ctx-size, "8192", --parallel, "1", --threads, "4", --gpu-layers, "0", --jinja, --no-context-shift]
+    volumes:
+      - type: bind
+        source: ${JANA_MODEL_PATH:?Set JANA_MODEL_PATH to an existing GGUF file}
+        target: /models/model.gguf
+        read_only: true
+        bind:
+          create_host_path: false
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:8081/health]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 120s

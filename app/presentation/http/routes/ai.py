@@ -1,11 +1,16 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from httpx import HTTPError
+from postgrest.exceptions import APIError
 
 from app.application.dto.digital_hr import JanaQuestion
+from app.domain.knowledge.jana_errors import JanaUnavailable
 from app.domain.localization import locale
 from app.domain.models import UserContext
+from app.infrastructure.ai import local_jana
 from app.infrastructure.ai.jana import answer_question, get_source
+from app.infrastructure.config import get_settings
 from app.presentation.http.security import get_current_user
 
 router = APIRouter(prefix="/ai", tags=["AI Jana"])
@@ -32,7 +37,16 @@ def ask_jana(
             "Өтінім мәртебесін қайдан көруге болады?": "Где посмотреть статус заявки?",
             "Менің кадрлық деректерімді кім көреді?": "Кто видит мои кадровые данные?",
         }.get(question, question)
-    result = answer_question(question, language=locale.get())
+    try:
+        if get_settings().jana_provider == "local":
+            return local_jana.answer_question(question, language=locale.get())
+        result = answer_question(question, language=locale.get())
+    except JanaUnavailable as exc:
+        raise HTTPException(503, "Jana AI is temporarily unavailable") from exc
+    except (RuntimeError, HTTPError, APIError) as exc:
+        raise HTTPException(
+            503, "Jana knowledge base is temporarily unavailable"
+        ) from exc
     if locale.get() == "kk":
         if not result["grounded"]:
             result["answer"] = (
@@ -52,6 +66,16 @@ def knowledge_source(
     version: str | None = None,
     actor: UserContext = Depends(get_current_user),
 ) -> dict:
+    if get_settings().jana_provider == "local":
+        try:
+            article = local_jana.get_source_article(str(source_id), version)
+        except (RuntimeError, HTTPError, APIError) as exc:
+            raise HTTPException(
+                503, "Jana knowledge base is temporarily unavailable"
+            ) from exc
+        if article is None:
+            raise HTTPException(404, "Source not found")
+        return article
     return (
         get_source(source_id, version) if version is not None else get_source(source_id)
     )

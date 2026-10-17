@@ -450,6 +450,10 @@ export class DemoApi implements HrApi {
       ),
     );
   }
+  async getCalendarExport(): Promise<Blob> {
+    throw new ApiError(409, 'Общий экспорт доступен после входа в портал.');
+  }
+
   async getLeaveCalendar(id: string): Promise<Blob> {
     const record = await this.getRequest(id);
     if (record.request_type !== 'leave' || record.status !== 'approved') throw new ApiError(409);

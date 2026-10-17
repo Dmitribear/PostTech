@@ -38,13 +38,18 @@ class LocalReader:
             port = address.port
         except ValueError as exc:
             raise JanaUnavailable("Invalid local reader address") from exc
+        docker_service = (
+            settings.jana_reader_allow_docker_host
+            and address.hostname == "jana-reader"
+            and port == 8081
+        )
         # Neither environment proxies nor an accidentally configured cloud URL
         # may receive employee questions or company knowledge.
         if (
             address.scheme != "http"
-            or address.hostname not in {"127.0.0.1", "::1"}
-            or address.username
-            or address.password
+            or (address.hostname not in {"127.0.0.1", "::1"} and not docker_service)
+            or address.username is not None
+            or address.password is not None
             or address.query
             or address.fragment
             or address.path not in {"", "/"}

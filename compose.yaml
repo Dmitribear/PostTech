@@ -5,13 +5,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: posttech-api
     environment:
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_KEY: ${SUPABASE_KEY:-}
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      JANA_PROVIDER: ${JANA_PROVIDER:-openai}
+      JANA_READER_URL: ${JANA_READER_URL:-http://127.0.0.1:8081}
+      JANA_READER_ALLOW_DOCKER_HOST: ${JANA_READER_ALLOW_DOCKER_HOST:-false}
+      JANA_READER_MODEL: ${JANA_READER_MODEL:-jana-reader}
+      JANA_READER_TIMEOUT_SECONDS: ${JANA_READER_TIMEOUT_SECONDS:-120}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       INVITATION_EMAIL_FROM: ${INVITATION_EMAIL_FROM:-PostTech <onboarding@resend.dev>}
       PORTAL_PUBLIC_URL: ${PORTAL_PUBLIC_URL:-}
@@ -21,8 +25,7 @@ services:
       INTEGRATION_DOCUMENTOLOG_ENABLED: ${INTEGRATION_DOCUMENTOLOG_ENABLED:-false}
       INTEGRATION_DOCUMENTOLOG_URL: ${INTEGRATION_DOCUMENTOLOG_URL:-}
       INTEGRATION_DOCUMENTOLOG_SECRET: ${INTEGRATION_DOCUMENTOLOG_SECRET:-}
-    ports:
-      - "8000:8000"
+    expose: ["8000"]
     restart: unless-stopped
     healthcheck:
       test:
@@ -34,21 +37,35 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-  workflow-worker:
+  integrations:
     build: .
     pull_policy: build
-    command: [python, -m, scripts.workflow_worker]
+    init: true
+    command: [python, -m, scripts.background_worker]
     environment:
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_KEY: ${SUPABASE_KEY:-}
+      INTEGRATION_1C_ENABLED: ${INTEGRATION_1C_ENABLED:-false}
+      INTEGRATION_1C_URL: ${INTEGRATION_1C_URL:-}
+      INTEGRATION_1C_SECRET: ${INTEGRATION_1C_SECRET:-}
+      INTEGRATION_DOCUMENTOLOG_ENABLED: ${INTEGRATION_DOCUMENTOLOG_ENABLED:-false}
+      INTEGRATION_DOCUMENTOLOG_URL: ${INTEGRATION_DOCUMENTOLOG_URL:-}
+      INTEGRATION_DOCUMENTOLOG_SECRET: ${INTEGRATION_DOCUMENTOLOG_SECRET:-}
+    restart: unless-stopped
+    stop_grace_period: 30s
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    pull_policy: build
+    ports:
+      - "127.0.0.1:${POSTTECH_HTTP_PORT:-8000}:80"
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      disable: true
-  integration-worker:
-    profiles: [integrations]
-    build: .
-    command: [python, -m, scripts.integration_worker]
-    env_file: .env
-    restart: unless-stopped
-    healthcheck:
-      disable: true
+      test: [CMD, wget, -q, --spider, http://127.0.0.1/healthz]
+      interval: 15s
+      timeout: 5s
+      retries: 3

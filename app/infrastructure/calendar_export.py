@@ -46,3 +46,24 @@ def leave_calendar(request: dict, *, demo: bool = False) -> bytes:
     calendar.add_component(event)
     # The library handles UTF-8, escaping, CRLF and octet-aware line folding.
     return calendar.to_ical()
+
+
+def project_leave_calendar(requests: list[dict]) -> bytes:
+    """Combine authorized leave events without copying private HR fields.
+
+    Reuse the individual export's UID and date semantics. This is a manual
+    import file, not a subscription or access grant to a Google calendar.
+    """
+    calendar = Calendar()
+    calendar.add("prodid", "-//PostTech//Jana Leave Export//RU")
+    calendar.add("version", "2.0")
+    calendar.add("calscale", "GREGORIAN")
+    calendar.add("x-wr-calname", "Отпуска — JanaPost")
+    for request in requests:
+        event = Calendar.from_ical(leave_calendar(request)).walk("VEVENT")[0]
+        # Distinguish overlapping leaves without reading additional profiles.
+        event["summary"] = (
+            str(event["summary"]) + " · " + str(UUID(str(request["id"])))[:8]
+        )
+        calendar.add_component(event)
+    return calendar.to_ical()

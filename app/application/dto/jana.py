@@ -11,6 +11,11 @@ class JanaSource(BaseModel):
         description="Relative API URL; fetch with the user's Bearer token."
     )
     excerpt: str = Field(description="Verbatim excerpt of the retrieved article.")
+    version: str | None = None
+    freshness: str | None = None
+    reviewed_at: str | None = None
+    review_due_at: str | None = None
+    updated_at: str | None = None
 
 
 class JanaAnswer(BaseModel):
@@ -29,6 +34,11 @@ class JanaArticle(BaseModel):
     content: str
     source_title: str
     source_url: str | None = None
+    version: str | None = None
+    freshness: str | None = None
+    reviewed_at: str | None = None
+    review_due_at: str | None = None
+    updated_at: str | None = None
 
 
 class JanaError(BaseModel):

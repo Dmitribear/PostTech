@@ -46,10 +46,11 @@ def ask_jana(
 )
 def read_jana_source(
     article_id: UUID,
+    version: str | None = None,
     actor: UserContext = Depends(get_current_user),
 ) -> dict:
     try:
-        article = get_source_article(str(article_id))
+        article = get_source_article(str(article_id), version) if version is not None else get_source_article(str(article_id))
     except (RuntimeError, HTTPError, APIError) as exc:
         raise HTTPException(
             status_code=503, detail="Jana knowledge base is temporarily unavailable"

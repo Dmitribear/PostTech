@@ -1,5 +1,6 @@
-import type {
+﻿import type {
   AppRole,
+  CalendarExportFilters,
   AssignedCourse,
   AuthResponse,
   AuthSession,
@@ -37,6 +38,15 @@ export const SESSION_KEY = 'jana.hr.session.v1';
 const translatedErrors: Record<string, string> = {
   'Source not found': 'Источник больше не опубликован или недоступен.',
   'Jana AI is temporarily unavailable': 'Jana сейчас недоступна. Попробуйте ещё раз.',
+  'Jana knowledge base is temporarily unavailable':
+    'База знаний Jana временно недоступна. Попробуйте ещё раз.',
+  'Calendar changed while loading; retry the export':
+    'Список отпусков изменился. Повторите экспорт.',
+  'Too many leave events; choose a narrower date range or employee':
+    'Слишком много отпусков. Выберите меньший период.',
+  'Team calendar requires a reviewer role': 'Командный календарь доступен руководителю и HR.',
+  'Calendar end date must not precede its start date':
+    'Дата окончания должна быть не раньше даты начала.',
   'Calendar export requires an approved leave request':
     'Файл доступен только для одобренного отпуска.',
   'HR role required': 'Раздел доступен HR',
@@ -486,6 +496,12 @@ export class LiveApi implements HrApi {
     });
   }
 
+  async getCalendarExport(filters: CalendarExportFilters = {}): Promise<Blob> {
+    return new Blob([await this.send<string>(`/requests/calendar.ics${queryString(filters)}`)], {
+      type: 'text/calendar',
+    });
+  }
+
   async getLeaveCalendar(id: string): Promise<Blob> {
     return new Blob([await this.send<string>(`/requests/${encodeURIComponent(id)}/calendar.ics`)], {
       type: 'text/calendar',
@@ -564,7 +580,10 @@ export class LiveApi implements HrApi {
     if (authenticated && !this.session) throw new ApiError(401);
     const accessToken = authenticated ? this.session?.access_token : undefined;
     const headers = new Headers(init.headers);
-    headers.set('Accept', path.endsWith('/calendar.ics') ? 'text/calendar' : 'application/json');
+    headers.set(
+      'Accept',
+      path.split('?')[0].endsWith('/calendar.ics') ? 'text/calendar' : 'application/json',
+    );
     headers.set('Accept-Language', getLocale());
     if (init.body) headers.set('Content-Type', 'application/json');
     if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
@@ -590,7 +609,7 @@ export class LiveApi implements HrApi {
     }
     const raw = await response.text();
     if (authenticated && authenticationEpoch !== this.authenticationEpoch) throw new ApiError(401);
-    if (response.ok && path.endsWith('/calendar.ics')) {
+    if (response.ok && path.split('?')[0].endsWith('/calendar.ics')) {
       if (
         !response.headers.get('Content-Type')?.startsWith('text/calendar') ||
         !raw.startsWith('BEGIN:VCALENDAR')

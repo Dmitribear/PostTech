@@ -67,13 +67,60 @@ class ArticleQuery:
 
     def execute(self):
         return SimpleNamespace(
-            data=[{key: row[key] for key in self.columns} for row in self.rows]
+            data=[{key: row.get(key) for key in self.columns} for row in self.rows]
         )
 
 
 def use_articles(monkeypatch, rows):
+    rows = [
+        {
+            "reviewed_at": "2026-01-01T00:00:00Z",
+            "review_due_at": "2099-01-01T00:00:00Z",
+            **row,
+        }
+        for row in rows
+    ]
     monkeypatch.setattr(jana, "get_supabase_client", lambda: ArticleQuery(rows))
     monkeypatch.setattr(jana, "get_settings", lambda: SimpleNamespace())
+
+
+def test_main_chat_uses_selected_local_provider(live_client, monkeypatch):
+    from app.presentation.http.routes import ai as main_ai
+
+    monkeypatch.setattr(
+        main_ai, "get_settings", lambda: SimpleNamespace(jana_provider="local")
+    )
+    use_articles(monkeypatch, DATA["articles"])
+    monkeypatch.setattr(jana, "LocalReader", lambda settings: ContractReader())
+    response = live_client.post(
+        "/api/v1/ai/ask", json={"question": "Как оформить отпуск?"}
+    )
+    assert response.status_code == 200
+    source = response.json()["sources"][0]
+    assert source["version"] and source["freshness"] == "reviewed"
+    path = f"/api/v1/ai/sources/{source['id']}"
+    assert (
+        live_client.get(path, params={"version": source["version"]}).status_code == 200
+    )
+    assert live_client.get(path, params={"version": "old-version"}).status_code == 409
+
+
+def test_local_reader_failure_is_unavailability_not_an_answer(live_client, monkeypatch):
+    from app.presentation.http.routes import ai as main_ai
+
+    monkeypatch.setattr(
+        main_ai, "get_settings", lambda: SimpleNamespace(jana_provider="local")
+    )
+
+    def fail(*args, **kwargs):
+        raise JanaUnavailable("Internal connection details")
+
+    monkeypatch.setattr(jana, "answer_question", fail)
+    response = live_client.post(
+        "/api/v1/ai/ask", json={"question": "Как оформить отпуск?"}
+    )
+    assert response.status_code == 503
+    assert "Internal" not in response.text
 
 
 class ContractReader:

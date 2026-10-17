@@ -308,7 +308,15 @@ export interface KnowledgeSource extends KnowledgeFreshness {
 export type JanaArticle = KnowledgeSource;
 
 /** Shared contract: live HTTP and explicitly selected demonstration mode. */
+export interface CalendarExportFilters {
+  scope?: 'mine' | 'team' | 'all';
+  start_date?: string;
+  end_date?: string;
+  employee_id?: string;
+}
+
 export interface HrApi {
+  getCalendarExport(filters?: CalendarExportFilters): Promise<Blob>;
   getLeaveCalendar(id: string): Promise<Blob>;
   workspace<T>(path: string, method?: string, body?: unknown): Promise<T>;
   readonly mode: 'live' | 'demo';

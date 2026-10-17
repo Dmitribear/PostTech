@@ -11,6 +11,7 @@ import {
   requestNumber,
 } from '@/entities/hr-request';
 import { usePortal } from '@/entities/session';
+import { CalendarExport } from '@/features/export-calendar';
 import { LeaveBalance } from '@/features/leave-balance';
 import type { EmployeeProfile } from '@/shared/api/contracts';
 import { localizedDate, t, tx } from '@/shared/lib/i18n';
@@ -480,10 +481,18 @@ export default function Calendar() {
       <PageHeader
         title={t('Календарь')}
         actions={
-          <button className="btn btn-primary" onClick={startPlanning}>
-            <Icon name="plus" size={18} />
-            {t(' Оформить отпуск')}
-          </button>
+          <>
+            <CalendarExport
+              start={dateKey(monthStart(month))}
+              end={dateKey(new Date(month.getFullYear(), month.getMonth() + 1, 0, 12))}
+              scope={scope === 'own' ? 'mine' : 'team'}
+              month={monthLabel(month)}
+            />
+            <button className="btn btn-primary" onClick={startPlanning}>
+              <Icon name="plus" size={18} />
+              {t(' Оформить отпуск')}
+            </button>
+          </>
         }
       />
       <div className="card cal-toolbar">
