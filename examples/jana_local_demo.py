@@ -37,6 +37,8 @@ def ask(payload: JanaQuestion):
     try:
         knowledge = articles()
         result = answer_from_knowledge(payload.question, knowledge, LocalReader(settings))
+        if articles() != knowledge:
+            raise JanaUnavailable("Knowledge changed during inference; retry")
         indexed = {a["id"]: a for a in knowledge}
         for source in result["sources"]:
             source.update(metadata(indexed[str(source["id"])]))

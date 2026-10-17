@@ -1,0 +1,197 @@
+{
+  "scope": "Latest origin/test frontend plus top-right Jana modal; all browser API responses mocked or in-memory demo",
+  "shared_supabase_used": false,
+  "browser_command": "npm run test:e2e --prefix frontend -- --reporter=list,json",
+  "browser_environment": {
+    "base_url": "http://127.0.0.1:5175",
+    "browser": "local Microsoft Edge"
+  },
+  "browser_stats": {
+    "startTime": "2026-10-17T12:46:09.747Z",
+    "duration": 161963.954,
+    "expected": 78,
+    "skipped": 2,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "by_suite": [
+    {
+      "file": "extensions.spec.ts",
+      "project": "desktop",
+      "passed": 5,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "extensions.spec.ts",
+      "project": "mobile",
+      "passed": 5,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "hr-workflows.spec.ts",
+      "project": "desktop",
+      "passed": 4,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "hr-workflows.spec.ts",
+      "project": "mobile",
+      "passed": 4,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "jana-modal.spec.ts",
+      "project": "desktop",
+      "passed": 3,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "jana-modal.spec.ts",
+      "project": "mobile",
+      "passed": 3,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "jana.spec.ts",
+      "project": "desktop",
+      "passed": 2,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "jana.spec.ts",
+      "project": "mobile",
+      "passed": 2,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "portal.spec.ts",
+      "project": "desktop",
+      "passed": 10,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "portal.spec.ts",
+      "project": "mobile",
+      "passed": 10,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "request-lifecycle.spec.ts",
+      "project": "desktop",
+      "passed": 7,
+      "skipped": 1,
+      "failed": 0
+    },
+    {
+      "file": "request-lifecycle.spec.ts",
+      "project": "mobile",
+      "passed": 7,
+      "skipped": 1,
+      "failed": 0
+    },
+    {
+      "file": "team-integration.spec.ts",
+      "project": "desktop",
+      "passed": 4,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "team-integration.spec.ts",
+      "project": "mobile",
+      "passed": 4,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "workspace-navigation.spec.ts",
+      "project": "desktop",
+      "passed": 4,
+      "skipped": 0,
+      "failed": 0
+    },
+    {
+      "file": "workspace-navigation.spec.ts",
+      "project": "mobile",
+      "passed": 4,
+      "skipped": 0,
+      "failed": 0
+    }
+  ],
+  "modal_tests": [
+    {
+      "test": "top-right Jana is absent on login, modal traps focus and keeps a draft across pages",
+      "project": "desktop",
+      "result": "passed"
+    },
+    {
+      "test": "closing during inference keeps the answer and nested source Escape closes only the source",
+      "project": "desktop",
+      "result": "passed"
+    },
+    {
+      "test": "modal preserves failures, requires HR consent, and loads portal summary without a model request",
+      "project": "desktop",
+      "result": "passed"
+    },
+    {
+      "test": "top-right Jana is absent on login, modal traps focus and keeps a draft across pages",
+      "project": "mobile",
+      "result": "passed"
+    },
+    {
+      "test": "closing during inference keeps the answer and nested source Escape closes only the source",
+      "project": "mobile",
+      "result": "passed"
+    },
+    {
+      "test": "modal preserves failures, requires HR consent, and loads portal summary without a model request",
+      "project": "mobile",
+      "result": "passed"
+    }
+  ],
+  "unit": {
+    "command": "npm test --prefix frontend",
+    "passed": 47,
+    "failed": 0,
+    "files": 5
+  },
+  "build": {
+    "command": "npm run build --prefix frontend",
+    "result": "success"
+  },
+  "skipped_reason": "Two intentionally skipped manual request-state screenshot captures",
+  "source_branch_changes_preserved": [
+    "HR fulfillment after final approval",
+    "employee import preview/apply",
+    "onboarding tracks",
+    "workflow reminders",
+    "native select and button styling",
+    "operational summary display"
+  ],
+  "summary_boundary": "What needs attention reads GET /api/v1/workspace/summary. No model request or knowledge citations are used for this portal report.",
+  "modal_behavior": [
+    "top-right header button; absent on auth pages",
+    "shared Jana component",
+    "Tab containment; Escape only closes top dialog; focus restored",
+    "draft and pending answer survive close and navigation",
+    "state cleared on logout or profile ID change",
+    "versioned exact source quotes",
+    "HR ticket requires separate consent"
+  ],
+  "screenshots": [
+    "jana-header-modal-desktop.png",
+    "jana-header-modal-mobile.png"
+  ],
+  "limitations": "This report validates frontend behavior and API contracts, not actual shared Supabase or Docker/model availability."
+}

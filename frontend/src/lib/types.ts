@@ -100,6 +100,7 @@ export interface InvitationRecord extends InvitationPreview {
 }
 
 export interface HrRequest {
+  fulfillment?: {status: 'awaiting_hr'|'processing'|'completed'} | null;
   id: string;
   employee_id: string;
   request_type: RequestType;
@@ -242,6 +243,11 @@ export interface CourseDetail extends CourseSummary {
 
 export interface AssignedCourse extends CourseAssignment {
   course: CourseSummary | null;
+}
+
+export interface WorkspaceSummary {
+  as_of: string;
+  sections: {title:string;count:number;href:string;items:{label:string;href:string}[]}[];
 }
 
 export interface JanaAnswer {

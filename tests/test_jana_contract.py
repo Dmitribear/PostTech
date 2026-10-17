@@ -205,7 +205,7 @@ def test_mock_unknown_or_extended_questions_refused(question):
 def test_seed_matches_json_and_evaluation_sources_exist():
     assert (ROOT / "database/seed_jana_demo.sql").read_text(encoding="utf-8") == render_sql()
     ids = {article["id"] for article in DATA["articles"]}
-    assert len(ids) == len(DATA["articles"]) == 13
+    assert len(ids) == len(DATA["articles"]) == 17
     for article in DATA["articles"]:
         assert article["source_title"].startswith("Демо:")
     evaluation = json.loads((ROOT / "knowledge_base/demo/evaluation.json").read_text(encoding="utf-8"))

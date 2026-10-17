@@ -1,0 +1,53 @@
+{
+  "scope": "Frontend merge verification; shared Supabase was not used",
+  "full_browser_run_before_second_merge": {
+    "command": "npm run test:e2e --prefix frontend",
+    "environment": {
+      "PLAYWRIGHT_BASE_URL": "http://127.0.0.1:5175",
+      "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH": "<local Microsoft Edge executable>"
+    },
+    "passed": 58,
+    "skipped": 2,
+    "skipped_reason": "Intentional manual screenshot capture cases",
+    "evidence_kind": "Summary of observed terminal output; original HTML report later overwritten"
+  },
+  "delegation_followup_before_second_merge": {
+    "scope": "New delegation-role cases after accessible select labels were added",
+    "passed": 2,
+    "projects": [
+      "desktop",
+      "mobile"
+    ],
+    "evidence_kind": "Summary of observed terminal output"
+  },
+  "after_second_merge": [
+    {
+      "command": "npm test --prefix frontend",
+      "passed": 47,
+      "failed": 0,
+      "test_files": 5
+    },
+    {
+      "command": "npm run build --prefix frontend",
+      "result": "success"
+    },
+    {
+      "command": "npm run test:e2e --prefix frontend -- e2e/jana.spec.ts",
+      "passed": 4,
+      "failed": 0,
+      "projects": [
+        "desktop",
+        "mobile"
+      ],
+      "coverage": [
+        "source loading and retry",
+        "refusal without citations",
+        "question preserved on model failure",
+        "source text rendered without HTML execution",
+        "authenticated calendar download",
+        "calendar status conflict"
+      ]
+    }
+  ],
+  "limits": "Unit and browser tests use in-memory data or mocked HTTP. They do not prove live Supabase or model integration. The separate real local demo check has its own report."
+}

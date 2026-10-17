@@ -1,0 +1,33 @@
+{
+  "mode": "Cold local reader HTTP request; auth identity and knowledge transport mocked, real full 13-article corpus; no shared Supabase",
+  "timeout_seconds": 180.0,
+  "question": "Кто окончательно одобряет отпуск?",
+  "status": 200,
+  "seconds": 84.5,
+  "response": {
+    "answer": "Демонстрационные материалы:\n\nЗаявку сначала рассматривает назначенный руководитель или директор, затем HR; после первого согласования статус pending_hr, после окончательного — approved. Если руководитель не назначен, заявку рассматривает HR напрямую. При окончательном одобрении дни списываются из кадрового остатка один раз, а резерв снимается. [1]",
+    "sources": [
+      {
+        "version": "0f7380034a4b8eb30bf458e9",
+        "freshness": "reviewed",
+        "updated_at": "2026-10-17T00:00:00Z",
+        "reviewed_at": "2026-10-17T00:00:00Z",
+        "review_due_at": "2027-01-15T00:00:00Z",
+        "id": "20000000-0000-4000-8000-000000000001",
+        "title": "Демо: оформление заявки на отпуск",
+        "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000001?version=0f7380034a4b8eb30bf458e9",
+        "excerpt": "Заявку сначала рассматривает назначенный руководитель или директор, затем HR; после первого согласования статус pending_hr, после окончательного — approved. Если руководитель не назначен, заявку рассматривает HR напрямую. При окончательном одобрении дни списываются из кадрового остатка один раз, а резерв снимается."
+      }
+    ],
+    "grounded": true,
+    "escalation_suggested": false,
+    "mode": "excerpts"
+  },
+  "source_checks": [
+    {
+      "status": 200,
+      "exact_excerpt": true,
+      "matching_version": true
+    }
+  ]
+}

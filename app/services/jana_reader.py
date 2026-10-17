@@ -35,12 +35,18 @@ class LocalReader:
             port = address.port
         except ValueError as exc:
             raise JanaUnavailable("Invalid local reader address") from exc
+        # Compose uses this one fixed internal service. An opt-in does not turn
+        # this setting into a general HTTP client or enable a cloud fallback.
+        docker_service = (settings.jana_reader_allow_docker_host
+                          and address.hostname == "jana-reader" and port == 8081)
         # Neither environment proxies nor an accidentally configured cloud URL
         # may receive employee questions or company knowledge.
-        if (address.scheme != "http" or address.hostname not in {"127.0.0.1", "::1"}
-                or address.username or address.password or address.query or address.fragment
+        if (address.scheme != "http"
+                or (address.hostname not in {"127.0.0.1", "::1"} and not docker_service)
+                or address.username is not None or address.password is not None
+                or address.query or address.fragment
                 or address.path not in {"", "/"} or port == 0):
-            raise JanaUnavailable("Jana reader must be a loopback HTTP service")
+            raise JanaUnavailable("Jana reader must use loopback or the explicitly enabled Docker service")
         self.url = settings.jana_reader_url.rstrip("/")
         self.model = settings.jana_reader_model
         self.timeout = settings.jana_reader_timeout_seconds

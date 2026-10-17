@@ -305,7 +305,7 @@ body[data-density=compact] .support-notification{padding:16px 20px}
 
 .support-answer-action{margin-top:14px}
 
-/* Jana's floating launcher reuses the same chat in a compact, responsive panel. */
+/* The header modal reuses the full Jana chat. */
 .support-jana-embedded{height:100%;min-height:0;margin:0;gap:0;overflow:hidden}
 .support-jana-embedded .support-chat-layout{height:100%;max-width:none;min-height:0;gap:0}
 .support-jana-embedded .support-chat{height:100%;min-height:0;border:0!important;border-radius:0;box-shadow:none!important}
@@ -331,3 +331,5 @@ body[data-density=compact] .support-notification{padding:16px 20px}
 }
 
 .support-source{display:grid;gap:16px;min-width:0}.support-source h3{margin:0;font-size:15px}.support-source blockquote{margin:0;padding:12px 16px;border-left:3px solid #e87732;background:#fff8f1;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+
+.support-jana-embedded>.support-demo-note{flex-shrink:0;margin:0;padding:10px 14px;font-size:11px}.support-jana-embedded .support-chat-layout{flex:1;height:auto}.support-jana-embedded .support-chat-welcome{flex:1}.support-jana-embedded .support-chat{min-height:0}

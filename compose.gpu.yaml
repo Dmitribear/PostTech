@@ -1,0 +1,47 @@
+# Optional NVIDIA acceleration; same pinned model and llama.cpp release as CPU.
+# docker compose --env-file .local/docker.env -f compose.yaml -f compose.gpu.yaml up -d
+services:
+  jana-reader:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b11669
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command:
+      - --model
+      - /models/Qwen_Qwen3.5-9B-Q4_K_M.gguf
+      - --alias
+      - jana-reader
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8081"
+      - --ctx-size
+      - "8192"
+      - --parallel
+      - "1"
+      - --threads
+      - "${JANA_READER_THREADS:-4}"
+      - --threads-batch
+      - "${JANA_READER_THREADS:-4}"
+      - --gpu-layers
+      - "20"
+      - --batch-size
+      - "256"
+      - --ubatch-size
+      - "64"
+      - --cache-type-k
+      - q8_0
+      - --cache-type-v
+      - q8_0
+      - --flash-attn
+      - "on"
+      - --jinja
+      - --reasoning
+      - "off"
+      - --no-ui
+      - --no-agent
+      - --no-context-shift

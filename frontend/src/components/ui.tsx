@@ -41,6 +41,6 @@ export function Modal({ title, onClose, children, wide = false }: { title: strin
   const dialog = useRef<HTMLDialogElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
-  useEffect(() => { const node = dialog.current; node?.showModal(); const before = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { node?.close(); document.body.style.overflow = before; }; }, []);
+  useEffect(() => { const node = dialog.current; const opener = document.activeElement as HTMLElement | null; node?.showModal(); const before = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { node?.close(); document.body.style.overflow = before; if (opener?.isConnected) opener.focus({ preventScroll: true }); }; }, []);
   return <dialog ref={dialog} className={`modal ${wide ? 'modal-wide' : ''}`} aria-label={title} onCancel={e => { e.preventDefault(); close.current(); }} onClick={e => { if (e.target === dialog.current) close.current(); }}><div className="modal-inner"><div className="modal-heading"><h2>{tx(title)}</h2><button className="icon-btn" aria-label={t("Закрыть")} onClick={onClose}><Icon name="x" /></button></div>{tx(children)}</div></dialog>;
 }

@@ -48,6 +48,7 @@ async function portal(page: Page, role: AppRole, status: HrRequest['status'] = '
       sources.push(url.search);
       return respond({ id: sourceId, title: 'Согласование отпуска', source_title: 'Порядок согласования', source_url: null, content: `${excerpt}\nОтпуск до одобрения остаётся на согласовании.`, version: 'snapshot-test', freshness: 'reviewed', reviewed_at: stamp });
     }
+    if (path.startsWith('/workspace/fulfillment/')) return respond({ status: 'awaiting_hr', note: '', can_send: false, deliveries: [], events: [] });
     return respond([]);
   });
   return { record, writes, sources };
@@ -74,7 +75,7 @@ test('HR queue includes pending_hr and final approval exposes an inclusive calen
   await page.locator('.req-table-title').click();
   await page.getByRole('button', { name: 'Согласовать заявку', exact: true }).click();
   await page.getByRole('button', { name: 'Подтвердить решение', exact: true }).click();
-  await expect(page.locator('.req-detail-actions')).toContainText('Одобрено');
+  await expect(page.locator('.req-detail-actions')).toContainText('Согласовано');
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Скачать отпуск (.ics)' }).click();
   const download = await downloading;

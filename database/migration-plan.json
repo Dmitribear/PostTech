@@ -15,6 +15,8 @@
     "database/migrations/main/0003_director_approval.sql",
     "database/migrations/main/0004_hr_role_administration.sql",
     "database/migrations/main/0005_vacation_balance.sql",
-    "database/migrations/0011_team_workflow.sql"
+    "database/migrations/0011_team_workflow.sql",
+    "database/migrations/0011_hr_workflows.sql",
+    "database/migrations/0012_employee_import.sql"
   ]
 }

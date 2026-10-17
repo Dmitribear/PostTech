@@ -257,6 +257,47 @@ def test_explicit_loopback_addresses_are_accepted(url):
     assert local_reader(url).url == url.rstrip("/")
 
 
+def test_docker_reader_is_disabled_by_default(monkeypatch):
+    monkeypatch.delenv("JANA_READER_ALLOW_DOCKER_HOST", raising=False)
+    with pytest.raises(JanaUnavailable):
+        local_reader("http://jana-reader:8081")
+
+
+def test_explicit_docker_env_enables_only_the_internal_service(monkeypatch):
+    monkeypatch.setenv("JANA_READER_ALLOW_DOCKER_HOST", "true")
+    monkeypatch.setenv("JANA_READER_URL", "http://jana-reader:8081/")
+    reader = LocalReader(Settings(_env_file=None))
+    assert reader.url == "http://jana-reader:8081"
+
+
+@pytest.mark.parametrize("url", [
+    "http://jana-reader", "http://jana-reader:8082", "https://jana-reader:8081",
+    "http://jana-reader.example.com:8081", "http://jana-reader.:8081",
+    "http://another-reader:8081", "http://172.18.0.2:8081", "http://example.com:8081",
+    "http://jana-reader:8081/private", "http://jana-reader:8081?send=1",
+    "http://jana-reader:8081#fragment", "http://user:secret@jana-reader:8081",
+    "http://@jana-reader:8081", "http://jana-reader:8081@outside.example:8081",
+    "http://jana-reader\\@outside.example:8081",
+])
+def test_docker_opt_in_does_not_allow_other_origins_or_url_features(url):
+    settings = Settings(_env_file=None, jana_reader_url=url, jana_reader_allow_docker_host=True)
+    with pytest.raises(JanaUnavailable):
+        LocalReader(settings)
+
+
+def test_docker_transport_still_disables_proxies_and_external_redirects(mock_server, monkeypatch):
+    monkeypatch.setenv("HTTP_PROXY", "http://external-proxy.invalid:9000")
+    captured = mock_server(lambda request: httpx.Response(307, headers={"location": "https://outside.invalid/"}))
+    reader = LocalReader(Settings(_env_file=None, jana_reader_url="http://jana-reader:8081",
+                                  jana_reader_allow_docker_host=True))
+    with pytest.raises(JanaUnavailable):
+        reader.select("Вопрос", [])
+    assert len(captured["requests"]) == 1
+    assert str(captured["requests"][0].url) == "http://jana-reader:8081/v1/chat/completions"
+    assert captured["client_options"][0]["trust_env"] is False
+    assert captured["client_options"][0]["follow_redirects"] is False
+
+
 @pytest.mark.parametrize("content", [
     "not-json", "[]", "{}", "null",
     '{"kind":"answer","evidence_ids":[],"clarification":"none"}',

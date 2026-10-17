@@ -1,4 +1,5 @@
 import { LessonReader } from '../components/LessonReader';
+import { MyTracks } from '../components/Workflow';
 import { getLocale } from '../lib/i18n';
 import { t, tx } from '../lib/i18n';
 import { Deadline } from '../components/Deadline';
@@ -147,6 +148,7 @@ export default function Academy() {
   function closeCourse() { const next = new URLSearchParams(params); next.delete('course'); setParams(next); }
   return <div className="support-page">
     <PageHeader title={t("Обучение")} description={t("Новый навык — в вашем темпе")} actions={<span className="academy-brand"><Icon name="graduation" size={19} />Jana Academy</span>} />
+    {tab !== 'team' && <MyTracks />}
     <div className="support-tabs" role="group" aria-label={t("Разделы обучения")}><button className="support-tab" aria-pressed={tab === 'mine'} onClick={() => changeTab('mine')}>{t("Моё обучение")}<span>{tx(assigned.length)}</span></button><button className="support-tab" aria-pressed={tab === 'all'} onClick={() => changeTab('all')}>{t("Каталог курсов")}<span>{tx(courses.length)}</span></button>{tx(canManage && <button className="support-tab" aria-pressed={tab === 'team'} onClick={() => changeTab('team')}>{t("Обучение команды")}</button>)}</div>
     {tx(tab === 'team' && canManage ? <TeamLearning courseId={params.get('courseFilter') || undefined} onResetCourse={() => { const next = new URLSearchParams(params); next.delete('courseFilter'); setParams(next); }} /> : loading ? <LoadingState /> : error ? <ErrorState error={error} retry={() => setRetry(value => value + 1)} /> : <>
       <div className="support-metrics"><div className="support-metric"><span><Icon name="book" /></span><div><strong>{tx(assigned.length)}</strong><small>{t("Всего назначено")}</small></div></div><div className="support-metric"><span><Icon name="clock" /></span><div><strong>{tx(assigned.length - completed.length)}</strong><small>{t("Осталось пройти")}</small></div></div><div className="support-metric"><span><Icon name="check-circle" /></span><div><strong>{tx(completed.length)}</strong><small>{t("Завершено")}</small></div></div></div>

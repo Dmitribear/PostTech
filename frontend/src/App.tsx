@@ -5,6 +5,7 @@ import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-r
 import { createLiveApi } from './lib/api';
 import Auth from './pages/Auth';
 import { Brand } from './components/Brand';
+import { JanaChatDialog } from './components/JanaChatDialog';
 import { createDemoApi } from './lib/demo';
 import { LocalDemoJana } from './lib/localJana';
 import type { AppRole, EmployeeProfile, HrApi } from './lib/types';
@@ -22,6 +23,7 @@ const Team = lazy(() => import('./pages/Team'));
 const Support = lazy(() => import('./pages/Workspace'));
 const Delegations = lazy(() => import('./pages/Workspace').then(m => ({ default: m.Delegations })));
 const Operations = lazy(() => import('./pages/Operations'));
+const HrWorkflows = lazy(() => import('./pages/HrWorkflows'));
 const CourseEditor = lazy(() => import('./pages/CourseEditor'));
 const Settings = lazy(() => import('./pages/Settings'));
 
@@ -34,7 +36,7 @@ function savedDemoRole(): AppRole | null {
 
 
 export default function App() {
-  const locale = useLocale();
+  useLocale();
   const [api, setApi] = useState<HrApi | null>(() => { const role = savedDemoRole(); return role ? createDemoApi(role, demoJana) : live.getSession() ? live : null; });
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(Boolean(api));
@@ -72,7 +74,7 @@ export default function App() {
   if (!api) return <><Auth api={live} onLogin={loginDone} onDemo={enterDemo} />{tx(toast && <div className="toast" role="status">{tx(toast)}</div>)}</>;
   if (loading) return <div className="boot-screen"><Brand /><LoadingState /></div>;
   if (error || !profile) return <div className="boot-screen"><Brand /><div className="card boot-error"><ErrorState error={error || 'Профиль не найден'} retry={() => setProfileAttempt(v => v + 1)} /><p>{t("Для доступа к порталу HR должен связать вашу учётную запись с профилем сотрудника.")}</p><button className="btn btn-secondary" onClick={logout}>{t("Вернуться ко входу")}</button></div></div>;
-  return <PortalContext.Provider value={{ api, profile, mode: api.mode, refreshKey, refresh: () => setRefreshKey(v => v + 1), notify: setToast, logout }}><Shell key={locale} />{tx(toast && <div className="toast" role="status"><Icon name="check-circle" size={18} />{tx(toast)}<button aria-label={t("Закрыть уведомление")} onClick={() => setToast('')}><Icon name="x" size={16} /></button></div>)}</PortalContext.Provider>;
+  return <PortalContext.Provider value={{ api, profile, mode: api.mode, refreshKey, refresh: () => setRefreshKey(v => v + 1), notify: setToast, logout }}><Shell key={profile.id} />{tx(toast && <div className="toast" role="status"><Icon name="check-circle" size={18} />{tx(toast)}<button aria-label={t("Закрыть уведомление")} onClick={() => setToast('')}><Icon name="x" size={16} /></button></div>)}</PortalContext.Provider>;
 }
 
 
@@ -90,7 +92,7 @@ function Shell() {
   const janaLauncher = useRef<HTMLButtonElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  useLayoutEffect(() => { setOpen(false); setJanaOpen(false); if (account.current) account.current.open = false; window.scrollTo(0, 0); }, [location.pathname, location.search]);
+  useLayoutEffect(() => { setOpen(false); if (account.current) account.current.open = false; window.scrollTo(0, 0); }, [location.pathname, location.search]);
   useEffect(() => {
     const dismiss = (event: PointerEvent) => { if (account.current && !account.current.contains(event.target as Node)) account.current.open = false; };
     const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && account.current?.open) { account.current.open = false; account.current.querySelector('summary')?.focus(); } };
@@ -115,21 +117,10 @@ function Shell() {
     document.addEventListener('keydown', onKey); desktop.addEventListener('change', closeOnDesktop);
     return () => { document.body.style.overflow = before; document.removeEventListener('keydown', onKey); desktop.removeEventListener('change', closeOnDesktop); };
   }, [open]);
-  useEffect(() => {
-    if (!janaOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setJanaOpen(false);
-        janaLauncher.current?.focus();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [janaOpen]);
   useEffect(() => { let active = true; api.getNotifications({ unread_only: true, limit: 100 }).then(n => { if (active) setUnread(n.length); }).catch(() => {}); return () => { active = false; }; }, [api, refreshKey, location.pathname]);
   const review = location.pathname === '/requests' && location.search.includes('scope=review');
   const teamLearning = location.pathname === '/academy' && location.search.includes('tab=team');
-  const teamRoute = review || teamLearning || ['/team', '/operations', '/hr-tools', '/delegations', '/course-editor'].some(path => location.pathname.startsWith(path));
+  const teamRoute = review || teamLearning || ['/team', '/operations', '/hr-tools', '/hr-workflow', '/delegations', '/course-editor'].some(path => location.pathname.startsWith(path));
   const personalRoute = ['/', '/requests', '/requests/new', '/academy', '/calendar', '/profile'].includes(location.pathname) && !teamRoute;
   const inTeam = profile.role !== 'worker' && (teamRoute || (!personalRoute && workspace === 'team'));
   useEffect(() => { if (teamRoute) setWorkspace('team'); else if (personalRoute) setWorkspace('personal'); }, [teamRoute, personalRoute]);
@@ -157,7 +148,7 @@ function Shell() {
     <div className="main-shell">
       <header className="topbar">
         <div className="topbar-left"><button ref={menuButton} className="icon-btn menu-toggle" aria-label={t("Открыть меню")} aria-controls="workspace-navigation" aria-expanded={open} onClick={() => setOpen(v => !v)}><Icon name="menu" /></button><Link to="/" className="mobile-brand" aria-label={t("PostTech — главная")}><Brand /></Link><span className="workspace-label">{t(inTeam ? profile.role === 'hr_admin' ? 'HR' : 'Моя команда' : 'Личный кабинет')}</span></div>
-        <div className="topbar-right"><Link className="icon-btn notification-button" aria-label={`Уведомления: ${unread} непрочитанных`} to="/notifications"><Icon name="bell" size={22} />{unread > 0 && <span className="unread-dot" />}</Link><details ref={account} className="account-menu"><summary className="user-menu" aria-label={t('Меню профиля')}><Avatar name={profile.full_name} size={36} /><span className="user-copy"><strong>{profile.full_name}</strong></span><Icon name="chevron-down" size={16} /></summary><div className="account-popover"><p>{profile.full_name}</p><Link to="/profile"><Icon name="user" size={18} />{t('Мой профиль')}</Link><Link to="/calendar"><Icon name="calendar" size={18} />{t('Календарь')}</Link><Link to="/settings"><Icon name="settings" size={18} />{t('Настройки')}</Link>{profile.role === 'hr_admin' && <Link to="/hr-tools"><Icon name="briefcase" size={18} />{t('Инструменты HR')}</Link>}<div className="account-language"><span>{t('Язык')}</span><LanguageSwitch /></div><button onClick={logout}><Icon name="logout" size={18} />{t(mode === 'demo' ? 'Сменить роль' : 'Выйти')}</button></div></details></div>
+        <div className="topbar-right"><button ref={janaLauncher} type="button" className="jana-header-button" onClick={() => setJanaOpen(true)} aria-label={t("Открыть AI Jana")} title={t("Открыть AI Jana")} aria-haspopup="dialog" aria-expanded={janaOpen} aria-controls="jana-global-chat"><Icon name="bot" size={22} /><span>Jana</span></button><Link className="icon-btn notification-button" aria-label={`Уведомления: ${unread} непрочитанных`} to="/notifications"><Icon name="bell" size={22} />{unread > 0 && <span className="unread-dot" />}</Link><details ref={account} className="account-menu"><summary className="user-menu" aria-label={t('Меню профиля')}><Avatar name={profile.full_name} size={36} /><span className="user-copy"><strong>{profile.full_name}</strong></span><Icon name="chevron-down" size={16} /></summary><div className="account-popover"><p>{profile.full_name}</p><Link to="/profile"><Icon name="user" size={18} />{t('Мой профиль')}</Link><Link to="/calendar"><Icon name="calendar" size={18} />{t('Календарь')}</Link><Link to="/settings"><Icon name="settings" size={18} />{t('Настройки')}</Link>{profile.role === 'hr_admin' && <Link to="/hr-tools"><Icon name="briefcase" size={18} />{t('Инструменты HR')}</Link>}<div className="account-language"><span>{t('Язык')}</span><LanguageSwitch /></div><button onClick={logout}><Icon name="logout" size={18} />{t(mode === 'demo' ? 'Сменить роль' : 'Выйти')}</button></div></details></div>
       </header>
       {tx(mode === 'demo' && <div className="demo-banner"><span><span className="dot dot-amber" />{t("Демоверсия")}</span><button onClick={logout}>{t("Сменить роль")}<Icon name="arrow-right" size={14} /></button></div>)}
       {workspaceSwitch('workspace-switch-mobile')}
@@ -166,19 +157,11 @@ function Shell() {
         <Route path="/requests/*" element={<Requests />} /><Route path="/calendar" element={<Calendar />} /><Route path="/academy/*" element={<Academy />} /><Route path="/jana" element={<Jana />} /><Route path="/profile/*" element={<Profile />} /><Route path="/notifications" element={<Notifications />} />
         <Route path="/team/*" element={profile.role === 'worker' ? <Navigate to="/" replace /> : <Team />} /><Route path="/settings" element={<Settings />} /><Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/operations" element={profile.role === 'hr_admin' ? <Operations /> : <Navigate to="/" />} /><Route path="/support" element={<Support />} /><Route path="/delegations" element={profile.role === 'hr_admin' ? <Delegations /> : <Navigate to="/" />} /><Route path="/course-editor" element={profile.role === 'hr_admin' ? <CourseEditor /> : <Navigate to="/" />} />
+        <Route path="/hr-workflow" element={profile.role === 'hr_admin' ? <HrWorkflows /> : <Navigate to="/" replace />} />
         <Route path="*" element={<div className="empty-state"><h1>{t("Страница не найдена")}</h1><Link to="/" className="btn btn-primary">{t("На главную")}</Link></div>} />
       </Routes></Suspense></main>
       <nav className="mobile-bottom-nav" aria-label={t("Быстрая навигация")}>{mobileNav.map(([path, icon, label]) => <Link key={path} to={path} aria-current={activePath(path) ? 'page' : undefined} className={activePath(path) ? 'active' : ''}><Icon name={icon} size={21} /><span>{t(label)}</span></Link>)}</nav>
     </div>
-    {!location.pathname.startsWith('/jana') && <>
-      {janaOpen && <div id="jana-floating-chat" className="jana-widget" role="dialog" aria-label={t("Чат с AI Jana")}>
-        <Suspense fallback={<div className="jana-widget-loading"><LoadingState /></div>}>
-          <Jana embedded onClose={() => { setJanaOpen(false); janaLauncher.current?.focus(); }} />
-        </Suspense>
-      </div>}
-      <button ref={janaLauncher} type="button" className="jana-launcher" onClick={() => setJanaOpen(value => !value)} aria-label={t(janaOpen ? "Закрыть AI Jana" : "Открыть AI Jana")} title={t(janaOpen ? "Закрыть AI Jana" : "Открыть AI Jana")} aria-expanded={janaOpen} aria-controls="jana-floating-chat">
-        <Icon name={janaOpen ? 'x' : 'bot'} size={25} />
-      </button>
-    </>}
+    <JanaChatDialog open={janaOpen} onClose={() => setJanaOpen(false)} launcher={janaLauncher} />
   </div>;
 }

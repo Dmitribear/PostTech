@@ -2,7 +2,7 @@ import { t, tx } from '../lib/i18n';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { usePortal } from '../context';
-import { EmptyState, ErrorState, LoadingState, Modal, PageHeader } from '../components/ui';
+import { EmptyState, ErrorState, Icon, LoadingState, Modal, PageHeader } from '../components/ui';
 import { errorMessage } from '../lib/api';
 import { formatDate } from '../lib/format';
 import type { EmployeeProfile } from '../lib/types';
@@ -43,7 +43,7 @@ export default function Support() {
  useEffect(()=>{let active=true;setLoading(true);setError(null);const query=new URLSearchParams({limit:'13',offset:String(offset),search:search.trim()});if(filter!=='all')query.set('status',filter);const timer=setTimeout(()=>{api.workspace<Ticket[]>(`/tickets?${query}`).then(r=>{if(active){setRows(r.slice(0,12));setHasNext(r.length>12);}}).catch(e=>{if(active)setError(e);}).finally(()=>{if(active)setLoading(false);});},250);return()=>{active=false;clearTimeout(timer);};},[api,refreshKey,offset,filter,search]);
  useEffect(()=>{const id=params.get('ticket');setSelected(null);setAnswer('');if(!id)return;let active=true;api.workspace<Ticket>(`/tickets/${encodeURIComponent(id)}`).then(r=>{if(active)setSelected(r);}).catch(e=>{if(active)setError(e);});return()=>{active=false;};},[api,params,refreshKey]);
  async function respond(e:FormEvent){e.preventDefault();if(!selected||busy)return;setBusy(true);setError(null);try{await api.workspace(`/tickets/${selected.id}/answer`,'POST',{answer});refresh();}catch(e){setError(e);}finally{setBusy(false);}}
- return <div className="support-page"><PageHeader title={t("Обращения в HR")} actions={<button className="btn btn-primary" onClick={()=>setCreate(true)}>{t("Задать вопрос")}</button>}/>
+ return <div className="support-page"><PageHeader title={t("Обращения в HR")} actions={<button className="btn btn-primary" type="button" onClick={()=>setCreate(true)}><Icon name="message" size={17}/>{t("Задать вопрос")}</button>}/>
  <div className="support-tabs">{tx([['all','Все'],['open','Ожидают ответа'],['resolved','С ответом']].map(([v,l])=><button key={v} className="support-tab" aria-pressed={filter===v} onClick={()=>{setFilter(v);setOffset(0);}}>{tx(l)}</button>))}</div>
  <label className="field">{t("Поиск обращения")}<input className="input" type="search" maxLength={120} value={search} onChange={e=>{setSearch(e.target.value);setOffset(0);}} placeholder={t("Текст вопроса")}/></label>
  {tx(Boolean(error)&&<ErrorState error={error} retry={()=>{setError(null);refresh();}}/>)}

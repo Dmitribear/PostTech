@@ -21,6 +21,8 @@ def readiness() -> dict[str, str] | JSONResponse:
             ('knowledge_articles','id,version,reviewed_at,review_due_at,revision,draft'),
             ('courses','id,lessons'), ('course_assignments','id,completed_lesson_ids'),
             ('leave_holds','request_id,state'), ('integration_outbox','id,status'),
+            ('request_fulfillment','request_id,status'), ('learning_enrollments','id,track_id'),
+            ('workflow_policy','id,last_run_at'), ('employee_imports','id,applied_at'),
         ):
             client.table(table).select(columns).limit(1).execute()
     except Exception:

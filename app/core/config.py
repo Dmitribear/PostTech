@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     jana_model_timeout_seconds: float = Field(default=20, ge=1, le=60)
     # HTTP inference uses a local, read-only language model. No cloud fallback.
     jana_reader_url: str = "http://127.0.0.1:8081"
+    # Explicit Compose opt-in, limited to http://jana-reader:8081.
+    jana_reader_allow_docker_host: bool = False
     jana_reader_model: str = "jana-reader"
     jana_reader_timeout_seconds: float = Field(default=180, ge=5, le=300)
     # Historical FAQ experiments only; the live agent does not load FAQ examples.

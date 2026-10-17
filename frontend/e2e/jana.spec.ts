@@ -14,6 +14,7 @@ async function livePortal(page: Page, handler: (route: Route, path: string) => P
     const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
     if (await handler(route, path)) return;
     if (path === '/profile') return respond(route, { id: employeeId, employee_code: 'TEST-01', full_name: 'Тестовый Сотрудник', email: 'test@example.test', company: 'PostTech', job_title: 'Оператор', department: 'Хаб', manager_id: null, hired_at: '2023-01-10', vacation_days_remaining: 24, role: 'worker', external_source: 'test', created_at: '2026-01-01T10:00:00Z', updated_at: '2026-10-01T10:00:00Z' });
+    if (path.startsWith('/workspace/fulfillment/')) return respond(route, { status: 'awaiting_hr', note: '', can_send: false, deliveries: [], events: [] });
     return respond(route, []);
   });
 }

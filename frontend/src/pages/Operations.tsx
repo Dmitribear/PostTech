@@ -13,7 +13,7 @@ type SourceData={title:string;content:string;source_title:string;source_url:stri
 type Article=SourceData & {id:string;revision:number;version:string;draft:SourceData|null;active:boolean;editorial_state:string;review_due_at:string|null};
 type Delivery={id:string;destination:string;aggregate_id:string;status:string;attempts:number;last_error:string|null;next_attempt_at:string;created_at:string};
 const blank=():SourceData=>({title:'',content:'',source_title:'',source_url:null,keywords:[]});
-const deliveryLabel:Record<string,string>={queued:'В очереди',sending:'Отправляется',retry:'Ожидает повтора',delivered:'Принято системой',dead:'Нужна проверка'};
+const deliveryLabel:Record<string,string>={queued:'В очереди',sending:'Отправляется',retry:'Ожидает повтора',delivered:'Принято системой',dead:'Нужна проверка',cancelled:'Оформлено вручную'};
 
 export default function Operations(){
  const [params,setParams]=useSearchParams();const tab=params.get('tab')||'knowledge';

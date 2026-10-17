@@ -46,8 +46,18 @@ class SqlTable:
 
     def select(self, columns):
         self.columns = columns.split(",")
-        assert all(name.replace("_", "").isalnum() for name in self.columns)
+        assert all(name.replace("_", "").isalnum() or
+                   (self.name == "hr_requests" and name == "fulfillment:request_fulfillment(status)")
+                   for name in self.columns)
         return self
+
+    def projection(self):
+        return sql.SQL(",").join(
+            sql.SQL("(SELECT jsonb_build_object('status',f.status) FROM public.request_fulfillment f "
+                    "WHERE f.request_id=hr_requests.id) AS fulfillment")
+            if name == "fulfillment:request_fulfillment(status)" else sql.Identifier(name)
+            for name in self.columns
+        )
 
     def eq(self, column, value):
         self.filters.append(sql.SQL("{} = %s").format(sql.Identifier(column)))
@@ -67,7 +77,7 @@ class SqlTable:
 
     def execute(self):
         statement = sql.SQL("SELECT {} FROM public.{}").format(
-            sql.SQL(",").join(map(sql.Identifier, self.columns)), sql.Identifier(self.name)
+            self.projection(), sql.Identifier(self.name)
         )
         values = list(self.values)
         if self.filters:
@@ -228,7 +238,7 @@ def test_jana_seed_publication_citations_and_source_version_through_sql(api, mon
         connection.execute(seed)
         assert connection.execute("""SELECT count(*) FROM knowledge_articles WHERE active
             AND editorial_state='published' AND reviewed_at IS NOT NULL
-            AND review_due_at>reviewed_at""").fetchone()[0] == 13
+            AND review_due_at>reviewed_at""").fetchone()[0] == 17
         content = " ".join(row[0] for row in connection.execute("SELECT content FROM knowledge_articles"))
         assert "При окончательном одобрении дни списываются" in content
         assert "У курса есть свой проходной балл" in content
@@ -261,7 +271,7 @@ def test_jana_seed_publication_citations_and_source_version_through_sql(api, mon
             pass
 
         def select(self, question, articles):
-            assert len(articles) == 13
+            assert len(articles) == 17
             if question == "Сколько дней у меня осталось?":
                 return Decision(understanding="Запрос личного остатка", kind="personal", evidence_ids=[], clarification="none")
             article = next(a for a in articles if a["article_id"] == "20000000-0000-4000-8000-000000000001")

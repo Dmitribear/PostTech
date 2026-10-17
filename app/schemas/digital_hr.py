@@ -61,7 +61,12 @@ class RequestRoutingResponse(BaseModel):
     policy: str
 
 
+class FulfillmentStatus(BaseModel):
+    status: Literal['awaiting_hr', 'processing', 'completed']
+
+
 class RequestResponse(BaseModel):
+    fulfillment: FulfillmentStatus | None = None
     id: UUID
     employee_id: UUID
     request_type: RequestType

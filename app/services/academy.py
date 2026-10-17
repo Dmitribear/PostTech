@@ -161,5 +161,12 @@ def update_progress(actor: UserContext, course_id: UUID, progress: int) -> dict:
 
 
 def complete_course(actor: UserContext, course_id: UUID, answers: dict[str, int], key: UUID | None) -> dict:
-    return _command("submit_academy_quiz", {"p_actor_id": actor.id, "p_course_id": str(course_id),
+    result = _command("submit_academy_quiz", {"p_actor_id": actor.id, "p_course_id": str(course_id),
                     "p_answers": answers, "p_submission_id": str(key or uuid4())})
+    if result.get('status') == 'completed':
+        try:
+            _execute(_client().rpc('advance_learning_tracks', {'p_employee_id': actor.id}))
+        except HTTPException:
+            # Quiz completion is already committed; the idempotent worker retries.
+            logger.warning('Next learning step deferred to workflow worker')
+    return result

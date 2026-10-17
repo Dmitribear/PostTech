@@ -94,7 +94,8 @@ def test_two_stages_debit_once_and_preserve_reserve(team_db, people, supervisor)
         assert balance(c, worker)["pending_days"] == 0
         assert balance(c, worker)["approved_unreconciled_days"] == 0
         assert c.execute("SELECT state FROM leave_holds WHERE request_id=%s", (req["id"],)).fetchone()[0] == "reconciled"
-        assert c.execute("SELECT count(*) FROM integration_outbox WHERE aggregate_id=%s", (req["id"],)).fetchone()[0] == 2
+        assert c.execute("SELECT count(*) FROM integration_outbox WHERE aggregate_id=%s", (req["id"],)).fetchone()[0] == 0
+        assert c.execute("SELECT status FROM request_fulfillment WHERE request_id=%s", (req["id"],)).fetchone()[0] == 'awaiting_hr'
         assert [r[0] for r in c.execute("SELECT event_type FROM request_events WHERE request_id=%s ORDER BY created_at,id", (req["id"],))] == ["created", "pending_hr", "approved"]
         with sqlstate("PT409"):
             c.execute("SELECT cancel_hr_request(%s,%s)", (worker, req["id"]))

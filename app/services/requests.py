@@ -25,7 +25,7 @@ REQUEST_COLUMNS = (
     "approval_route,approver_ids,approvers,cancelled_at,leave_days,"
     "manager_reviewed_by,manager_reviewed_at,manager_reviewer_comment,"
     "director_reviewed_by,director_reviewed_at,director_reviewer_comment,"
-    "hr_reviewed_by,hr_reviewed_at,hr_reviewer_comment"
+    "hr_reviewed_by,hr_reviewed_at,hr_reviewer_comment,fulfillment:request_fulfillment(status)"
 )
 EVENT_COLUMNS = "delegation_id,id,request_id,actor_id,event_type,from_status,to_status,comment,created_at"
 
