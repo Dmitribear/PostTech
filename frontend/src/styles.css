@@ -45,9 +45,9 @@ svg { vertical-align: middle; }
 .page-title { font-size: 28px; line-height: 1.25; letter-spacing: -.04em; }
 .page-description { font-size: 14px; color: var(--secondary); margin-top: 7px; }
 .page-actions { display: flex; gap: 9px; flex-shrink: 0; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 10px 18px; border: 1px solid transparent; border-radius:4px; font-size: 13px; line-height: 20px; font-weight: 600; white-space: nowrap; transition: background .16s, border-color .16s, box-shadow .16s; }
-.btn-primary { background: var(--primary); color: white; border-color: #00833e; box-shadow: none; }
-.btn-primary:hover:not(:disabled) { background: var(--primary-hover); box-shadow: none; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 10px 18px; border: 1px solid transparent; border-radius: 10px; font-size: 13px; line-height: 20px; font-weight: 600; white-space: nowrap; transition: background .16s, border-color .16s, box-shadow .16s; }
+.btn-primary { background: linear-gradient(180deg,#00994b,#00853f); color: white; border-color: #00833e; box-shadow: 0 3px 7px #008c4512; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); box-shadow: 0 4px 12px #008c4524; }
 .btn-secondary { background: white; border-color: #dfe6eb; color: var(--green-dark); }
 .btn-secondary:hover:not(:disabled), .btn-white:hover { background: #f3faf6; border-color: #bcdcc9; }
 .btn-white { background: white; border-color: var(--border); }
@@ -64,6 +64,65 @@ svg { vertical-align: middle; }
 .input { width: 100%; min-height: 46px; padding: 12px 14px; line-height: 20px; border: 1px solid #e1e7ed; border-radius:var(--radius); background: #fafbfc; color: var(--text); font-size: 14px; transition: border-color .15s; }
 .input::placeholder { color: #8792a5; }
 .input:focus { border-color: #67b88d; background: white; }
+/* Shared select styling keeps native form validation and keyboard navigation. */
+select.input {
+  appearance: none;
+  padding-right: 38px;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23748097' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+  transition: border-color .16s, background-color .16s, box-shadow .16s;
+}
+select.input:hover:not(:disabled) { border-color: #b8d8c6; background-color: #f8fcf9; }
+select.input:focus-visible { outline: 2px solid #008c4540; outline-offset: 2px; }
+select.input:disabled { cursor: not-allowed; opacity: .55; }
+/* Supported browsers render the picker above cards and modal dialogs. */
+@supports (appearance: base-select) {
+  select.input, select.input::picker(select) { appearance: base-select; }
+  select.input { align-items: center; gap: 12px; padding-right: 14px; background-image: none; }
+  select.input:open { border-color: #67b88d; background-color: #fff; box-shadow: 0 0 0 3px #008c4510; }
+  select.input::picker-icon {
+    content: ''; width: 7px; height: 7px; margin: 0 2px 3px auto; flex-shrink: 0;
+    border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted);
+    transform: rotate(45deg); transition: transform .16s;
+  }
+  select.input:open::picker-icon { transform: translateY(3px) rotate(225deg); }
+  select.input::picker(select) {
+    /* Keep every placement below the field; only the horizontal alignment may flip. */
+    position-area: block-end span-inline-end;
+    position-try-order: normal;
+    position-try-fallbacks: block-end span-inline-start;
+    margin-block: 6px; padding: 6px;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: #fff; color: var(--text);
+    box-shadow: 0 12px 32px #172c451a, 0 2px 6px #172c4508;
+    max-height: min(320px,60dvh,calc(100% - 12px)); max-width: calc(100vw - 24px);
+    overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+    font-family: inherit; font-size: 13px; font-weight: 400;
+  }
+  select.input option {
+    display: flex; align-items: center; gap: 12px;
+    min-height: 40px; padding: 10px 12px; border-radius: 7px;
+    color: var(--secondary); background: #fff; line-height: 20px;
+    white-space: normal; overflow-wrap: anywhere; cursor: pointer;
+  }
+  select.input option + option { margin-top: 2px; }
+  select.input option:checked { background: var(--green-soft); color: var(--green-dark); font-weight: 600; }
+  select.input option:hover:not(:disabled), select.input option:focus-visible {
+    background: #f0f7f3; color: var(--green-dark); outline: none;
+  }
+  select.input option:checked:focus-visible { background: #ddf1e5; }
+  select.input option::checkmark {
+    content: ''; order: 1; margin-left: auto; margin-right: 3px; flex-shrink: 0;
+    width: 6px; height: 10px; border-right: 1.5px solid var(--primary); border-bottom: 1.5px solid var(--primary);
+    transform: translateY(-2px) rotate(45deg); visibility: hidden;
+  }
+  select.input option:checked::checkmark { visibility: visible; }
+  select.input option:disabled { color: var(--muted); cursor: not-allowed; }
+  @media(max-width:900px) { select.input option { min-height: 44px; } }
+}
 .input-wrap { position: relative; display: block; }
 .input-wrap > svg { position: absolute; left: 14px; top: 14px; color: var(--muted); }
 .input-wrap .input { padding-left: 43px; padding-right: 45px; }
