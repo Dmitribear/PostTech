@@ -61,9 +61,11 @@ def main() -> None:
         for migration in sorted((ROOT / "database/migrations").glob("*.sql")):
             sql(migration.read_text(encoding="utf-8"))
         sql((ROOT / "database/seed.sql").read_text(encoding="utf-8"))
-        # Replaying this additive migration must keep the schema usable.
+        # Replaying additive migrations must keep the schema usable.
         sql((ROOT / "database/migrations/0004_hr_role_administration.sql").read_text(encoding="utf-8"))
+        sql((ROOT / "database/migrations/0005_vacation_balance.sql").read_text(encoding="utf-8"))
         print(sql((ROOT / "database/tests/role_administration.sql").read_text(encoding="utf-8")))
+        print(sql((ROOT / "database/tests/vacation_balance.sql").read_text(encoding="utf-8")))
 
         # Two HR administrators attempt to demote each other concurrently.
         sql("""

@@ -221,14 +221,22 @@ def review_request(
             "hr_reviewer_comment": payload.reviewer_comment,
         }
 
-    result = (
-        get_supabase_client()
-        .table("hr_requests")
-        .update(update)
-        .eq("id", request_id)
-        .eq("status", expected_status)
-        .execute()
-    )
+    try:
+        result = (
+            get_supabase_client()
+            .table("hr_requests")
+            .update(update)
+            .eq("id", request_id)
+            .eq("status", expected_status)
+            .execute()
+        )
+    except APIError as exc:
+        if exc.code == "PT413":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Недостаточно дней отпуска в остатке для одобрения этой заявки",
+            ) from exc
+        raise
     updated = (result.data or [None])[0]
     if updated is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Request was already reviewed")

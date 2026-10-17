@@ -1,8 +1,10 @@
 from copy import deepcopy
+from datetime import date
 from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
+from postgrest.exceptions import APIError
 
 from app.api.routes import academy, notifications, requests
 from app.core import permissions
@@ -43,13 +45,16 @@ def profile(employee_id: str, role: str, manager_id: str | None = None) -> dict:
 
 
 def request_row(request_id: str, employee_id: str, created_at: str) -> dict:
+    start_date = date(2026, 11, 10)
+    end_date = date(2026, 11, 12)
     return {
         "id": request_id,
         "employee_id": employee_id,
         "request_type": "leave",
         "status": "pending",
-        "start_date": "2026-11-10",
-        "end_date": "2026-11-12",
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "leave_days": (end_date - start_date).days + 1,
         "amount": None,
         "comment": "",
         "reviewer_comment": None,
@@ -149,6 +154,10 @@ class MemoryQuery:
             inserted.setdefault("id", f"generated-{self.database.next_id}")
             if self.table_name == "hr_requests":
                 inserted.setdefault("status", "pending")
+                if inserted.get("request_type") == "leave":
+                    start_date = date.fromisoformat(inserted["start_date"])
+                    end_date = date.fromisoformat(inserted["end_date"])
+                    inserted["leave_days"] = (end_date - start_date).days + 1
                 inserted.setdefault("created_at", "2026-10-17T12:00:00+00:00")
                 inserted.setdefault("updated_at", inserted["created_at"])
             elif self.table_name == "course_assignments":
@@ -166,6 +175,19 @@ class MemoryQuery:
         matched = [row for row in rows if self._matches(row)]
         if self.operation == "update":
             for row in matched:
+                if (
+                    self.table_name == "hr_requests"
+                    and row.get("status") != "approved"
+                    and (self.payload or {}).get("status") == "approved"
+                    and row.get("request_type") == "leave"
+                ):
+                    employee = next(
+                        profile for profile in self.database.tables["employee_profiles"]
+                        if profile["id"] == row["employee_id"]
+                    )
+                    if employee["vacation_days_remaining"] < row["leave_days"]:
+                        raise APIError({"code": "PT413", "message": "Insufficient vacation balance"})
+                    employee["vacation_days_remaining"] -= row["leave_days"]
                 row.update(deepcopy(self.payload or {}))
             matched = [deepcopy(row) for row in matched]
         else:
@@ -269,6 +291,7 @@ def test_creating_leave_request_sets_pending_and_notifies_manager(workflow_clien
     assert created["status"] == "pending"
     assert created["start_date"] == "2026-12-01"
     assert created["end_date"] == "2026-12-05"
+    assert created["leave_days"] == 5
     manager_notifications = [item for item in database.tables["notifications"] if item["employee_id"] == MANAGER]
     assert len(manager_notifications) == 1
     assert manager_notifications[0]["notification_type"] == "request_created"
@@ -303,6 +326,7 @@ def test_manager_can_review_direct_report_and_employee_is_notified(workflow_clie
     assert response.json()["status"] == "pending_hr"
     assert response.json()["manager_reviewed_by"] == MANAGER
     assert response.json()["manager_reviewer_comment"] == "Approved"
+    assert next(item for item in database.tables["employee_profiles"] if item["id"] == WORKER)["vacation_days_remaining"] == 20
     employee_notifications = [item for item in database.tables["notifications"] if item["employee_id"] == WORKER]
     assert len(employee_notifications) == 1
     assert employee_notifications[0]["notification_type"] == "request_pending_hr"
@@ -404,6 +428,8 @@ def test_hr_makes_final_decision_after_manager_approval(workflow_client, final_s
     assert result["hr_reviewed_by"] == HR
     assert result["hr_reviewer_comment"] == "HR decision"
     assert result["reviewed_by"] == HR
+    worker_balance = next(item for item in database.tables["employee_profiles"] if item["id"] == WORKER)["vacation_days_remaining"]
+    assert worker_balance == (17 if final_status == "approved" else 20)
     employee_notifications = [item for item in database.tables["notifications"] if item["employee_id"] == WORKER]
     assert [item["notification_type"] for item in employee_notifications] == [
         "request_pending_hr",
@@ -443,6 +469,26 @@ def test_hr_can_review_request_directly_when_employee_has_no_manager(workflow_cl
     assert reviewed.status_code == 200
     assert reviewed.json()["status"] == "approved"
     assert reviewed.json()["hr_reviewed_by"] == HR
+
+
+def test_hr_cannot_approve_leave_exceeding_balance(workflow_client):
+    client, database, current_actor = workflow_client
+    worker = next(item for item in database.tables["employee_profiles"] if item["id"] == WORKER)
+    worker["vacation_days_remaining"] = 2
+    current_actor["value"] = actor(MANAGER, "manager")
+    manager_decision = client.patch(
+        "/api/v1/requests/request-1/review", json={"status": "approved"}
+    )
+    assert manager_decision.status_code == 200
+
+    current_actor["value"] = actor(HR, "hr_admin")
+    hr_decision = client.patch(
+        "/api/v1/requests/request-1/review", json={"status": "approved"}
+    )
+    assert hr_decision.status_code == 409
+    assert "Недостаточно дней отпуска" in hr_decision.json()["detail"]
+    assert database.tables["hr_requests"][0]["status"] == "pending_hr"
+    assert worker["vacation_days_remaining"] == 2
 
 
 def test_manager_leave_request_goes_to_director_then_hr(workflow_client):
@@ -496,6 +542,8 @@ def test_manager_leave_request_goes_to_director_then_hr(workflow_client):
     assert hr_decision.status_code == 200
     assert hr_decision.json()["status"] == "approved"
     assert hr_decision.json()["hr_reviewed_by"] == HR
+    manager_balance = next(item for item in database.tables["employee_profiles"] if item["id"] == MANAGER)["vacation_days_remaining"]
+    assert manager_balance == 14
 
 
 def test_only_manager_or_hr_can_assign_courses_and_assignment_notifies_employee(workflow_client):

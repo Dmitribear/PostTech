@@ -31,7 +31,7 @@ All routes except `/`, `/api/v1/health/*`, and `/api/v1/auth/*` require a Supaba
 | `GET /api/v1/team` | Direct reports for managers; all profiles for HR. |
 | `GET, POST /api/v1/requests` | View permitted requests; create leave or advance requests. |
 | `GET /api/v1/requests/{id}` | Read a request only if its employee profile is visible to the caller. |
-| `PATCH /api/v1/requests/{id}/review` | Manager rejection is final; manager approval moves the request to `pending_hr`, then HR approves/rejects. Requests without a manager go directly to HR. |
+| `PATCH /api/v1/requests/{id}/review` | Manager rejection is final; manager approval moves the request to `pending_hr`, then HR approves/rejects. On final approval, inclusive calendar leave days are deducted from the employee's balance; approval is rejected if the balance is insufficient. |
 | `GET /api/v1/academy/courses` | Active course catalog with the current user's assignment state. |
 | `GET /api/v1/academy/my-courses` | Assigned courses and progress. |
 | `GET /api/v1/academy/courses/{id}` | Course material and quiz; quiz answers are never returned. |
@@ -48,7 +48,7 @@ Roles are `worker`, `manager`, `director`, and `hr_admin`. HR and platform admin
 
 1. Create a Supabase project and copy `.env.example` to `.env`.
 2. Set `SUPABASE_URL`, the server-side `SUPABASE_KEY`, and the project's public `SUPABASE_ANON_KEY` in `.env`. The anon key is used only by the backend's Supabase Auth signup/login client; keep the server key private and never commit `.env`. Jana runs locally: install dependencies and run `python -m scripts.prepare_jana_local` once. No OpenAI key is used by the HTTP agent; missing local model files produce HTTP 503. The UI mock is a separate explicit process, never an automatic fallback.
-3. Run the SQL files in `database/migrations/` in numeric order, through [0004_hr_role_administration.sql](database/migrations/0004_hr_role_administration.sql), in the Supabase SQL editor. Existing databases with migrations 0001–0003 already applied need only 0004 for role administration.
+3. Run the SQL files in `database/migrations/` in numeric order through 0005 in the Supabase SQL editor. Existing databases with migrations 0001–0004 applied need only [0005_vacation_balance.sql](database/migrations/0005_vacation_balance.sql) for leave-day calculation and deduction.
 4. In Supabase Auth, create fictional test users with emails `hr@posttech.demo`, `manager@posttech.demo`, and `employee@posttech.demo`. Set local demo passwords in Supabase; no credentials are stored in this repository.
 5. Run [database/seed.sql](database/seed.sql). It creates fictional profiles, two courses, knowledge articles, course assignments, and sample requests/notifications. It uses no real employee data.
 6. Register via `POST /api/v1/auth/register`, confirm the email if Supabase requires it, then sign in via `POST /api/v1/auth/login`. Send the returned `access_token` as `Authorization: Bearer <token>` to protected API routes. HR must link `user_id` from Auth to the employee's existing `auth_user_id` profile field; public registration never accepts a role or edits official employee data. To issue a refreshed session, send its `refresh_token` to `POST /api/v1/auth/refresh`.
@@ -103,7 +103,7 @@ REST-бэкенд на FastAPI для хакатон-прототипа JanaMen 
 | `GET /api/v1/team` | Для руководителей — прямые подчинённые; для HR — все профили. |
 | `GET, POST /api/v1/requests` | Просмотр доступных заявок; создание заявок на отпуск или аванс. |
 | `GET /api/v1/requests/{id}` | Просмотр заявки, только если профиль её сотрудника доступен текущему пользователю. |
-| `PATCH /api/v1/requests/{id}/review` | Заявка сотрудника проходит от его руководителя в HR (`pending_hr`); заявка руководителя направляется его директору, а после одобрения — в HR. HR принимает финальное решение. Отклонение на любом этапе завершает заявку; заявки без руководителя рассматривает HR напрямую. |
+| `PATCH /api/v1/requests/{id}/review` | Заявка сотрудника проходит от его руководителя в HR (`pending_hr`); заявка руководителя направляется его директору, а после одобрения — в HR. После финального одобрения HR система списывает календарные дни отпуска (обе даты включительно); при недостаточном остатке вернёт 409. |
 | `GET /api/v1/academy/courses` | Каталог активных курсов с состоянием назначений текущего пользователя. |
 | `GET /api/v1/academy/my-courses` | Назначенные курсы и прогресс. |
 | `GET /api/v1/academy/courses/{id}` | Материалы курса и тест; правильные ответы не возвращаются. |
@@ -122,7 +122,7 @@ HR и администратор платформы объединены в ро
 
 1. Создайте проект Supabase и скопируйте `.env.example` в `.env`.
 2. Укажите в `.env` значения `SUPABASE_URL`, серверный `SUPABASE_KEY` и публичный `SUPABASE_ANON_KEY` проекта. Anon-ключ используется только серверным клиентом Supabase Auth для регистрации и входа; храните серверный ключ в секрете и никогда не коммитьте `.env`. Jana работает локально: установите зависимости и один раз выполните `python -m scripts.prepare_jana_local`. HTTP-агент не использует OpenAI-ключ; при отсутствии локальной модели возвращается HTTP 503. Mock для интерфейса запускается отдельно и не подменяет настоящий сервис при ошибке.
-3. Для нового проекта выполните SQL-файлы `database/migrations/` по порядку: 0001, 0002, 0003, затем [0004_hr_role_administration.sql](database/migrations/0004_hr_role_administration.sql) в SQL Editor проекта Supabase. Если первые три миграции уже применены, для управления ролями нужна только 0004.
+3. Для нового проекта выполните SQL-файлы `database/migrations/` по порядку: 0001–0005 в SQL Editor проекта Supabase. Если применены миграции 0001–0004, выполните только [0005_vacation_balance.sql](database/migrations/0005_vacation_balance.sql).
 4. В Supabase Auth создайте вымышленных тестовых пользователей с адресами `hr@posttech.demo`, `director@posttech.demo`, `manager@posttech.demo` и `employee@posttech.demo`. Задайте им демонстрационные пароли в Supabase; учётные данные не хранятся в этом репозитории.
 5. Выполните [database/seed.sql](database/seed.sql). Скрипт создаёт вымышленные профили, два курса, статьи базы знаний, назначения курсов и примеры заявок/уведомлений. Реальные данные сотрудников не используются.
 6. Зарегистрируйтесь через `POST /api/v1/auth/register`, при необходимости подтвердите email, затем войдите через `POST /api/v1/auth/login`. Передавайте полученный `access_token` в защищённые маршруты в заголовке `Authorization: Bearer <token>`. HR должен связать `user_id` из Auth с полем `auth_user_id` существующего профиля сотрудника. Публичная регистрация не позволяет назначать роль или изменять официальные данные сотрудника. Для обновления сессии отправьте её `refresh_token` в `POST /api/v1/auth/refresh`.
