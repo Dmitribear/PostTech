@@ -1,4 +1,5 @@
 import { t, tx } from '../lib/i18n';
+import { OperationalReport } from '../components/Workflow';
 import { Escalation } from './Workspace';
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
@@ -35,13 +36,22 @@ export default function Jana({ embedded = false, onClose }: { embedded?: boolean
   const [sourceError, setSourceError] = useState<unknown>(null);
   useEffect(() => { if (!sourceId) return; let active = true; setSource(null); setSourceError(null); api.getKnowledgeSource(sourceId,sourceVersion).then(value => { if (active) setSource(value); }).catch(e => { if (active) setSourceError(e); }); return () => { active = false; }; }, [api, sourceId, sourceVersion]);
   const end = useRef<HTMLDivElement>(null);
+  const reportStart = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
   const generation = useRef(0);
   const sending = useRef(false);
   const counter = useRef(0);
   useEffect(() => () => { generation.current += 1; }, []);
-  useEffect(() => { if (embedded) composer.current?.focus(); }, [embedded]);
-  useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, [messages, busy]);
+  useEffect(() => { if (embedded) composer.current?.focus({preventScroll:true}); }, [embedded]);
+  useEffect(() => {
+    const container=end.current?.closest<HTMLElement>('.support-chat-messages');
+    if(!container)return;
+    const last=messages.at(-1), report=reportStart.current;
+    const top=!busy&&last?.role==='jana'&&last.result.report&&report
+      ? report.getBoundingClientRect().top-container.getBoundingClientRect().top+container.scrollTop-12
+      : container.scrollHeight;
+    container.scrollTo({top,behavior:'smooth'});
+  }, [messages, busy]);
   async function ask(value: string) {
     const text = value.trim();
     if (sending.current) return;
@@ -61,7 +71,7 @@ export default function Jana({ embedded = false, onClose }: { embedded?: boolean
       }
     } finally {
       sending.current = false;
-      if (current === generation.current) { setBusy(false); composer.current?.focus(); }
+      if (current === generation.current) { setBusy(false); composer.current?.focus({preventScroll:true}); }
     }
   }
   function submit(event: FormEvent) { event.preventDefault(); void ask(question); }
@@ -72,11 +82,11 @@ export default function Jana({ embedded = false, onClose }: { embedded?: boolean
     {!embedded && <PageHeader title="AI Jana" description={t("Помощник по рабочим вопросам")} />}
     <div className="support-chat-layout">
       <section className="card support-chat" aria-label={t("Чат с AI Jana")}>
-        <div className="support-chat-top"><div className="support-chat-identity"><span className="support-jana-icon"><Icon name="bot" size={21} /></span><div><h2>Jana</h2><p>{tx(mode === 'demo' ? 'Демонстрационная база знаний' : 'По материалам компании')}</p></div></div><button className="btn btn-ghost" disabled={busy || !messages.length} onClick={() => { generation.current += 1; setMessages([]); setError(''); setQuestion(''); composer.current?.focus(); }}><Icon name="plus" size={16} />{t("Новый диалог")}</button>{embedded && <button type="button" className="icon-btn support-widget-close" onClick={onClose} aria-label={t("Закрыть AI Jana")}><Icon name="x" size={19} /></button>}</div>
-        {!messages.length && !busy ? <div className="support-chat-welcome"><div className="support-jana-icon"><Icon name="sparkles" size={31} /></div><h2>{t("Чем помочь?")}</h2><p>{t("Отпуск, аванс или правила компании — спросите Jana.")}</p><div className="support-prompts">{prompts.map(prompt => <button className="support-prompt" key={t(prompt.text)} aria-label={t(prompt.text)} onClick={() => void ask(t(prompt.text))}><Icon name={prompt.icon} size={20} /><span className="support-prompt-full">{t(prompt.text)}</span><span className="support-prompt-short" aria-hidden="true">{t(prompt.short)}</span><Icon name="arrow-right" size={15} /></button>)}</div></div> : <div className="support-chat-messages" role="log" aria-label={t("Сообщения диалога")} aria-live="polite" aria-relevant="additions text">
+        <div className="support-chat-top"><div className="support-chat-identity"><span className="support-jana-icon"><Icon name="bot" size={21} /></span><div><h2>Jana</h2><p>{tx(mode === 'demo' ? 'Демонстрационная база знаний' : 'По материалам компании')}</p></div></div><button className="btn btn-ghost" disabled={busy || !messages.length} onClick={() => { generation.current += 1; setMessages([]); setError(''); setQuestion(''); composer.current?.focus({preventScroll:true}); }}><Icon name="plus" size={16} />{t("Новый диалог")}</button>{embedded && <button type="button" className="icon-btn support-widget-close" onClick={onClose} aria-label={t("Закрыть AI Jana")}><Icon name="x" size={19} /></button>}</div>
+        {!messages.length && !busy ? <div className="support-chat-welcome"><div className="support-jana-icon"><Icon name="sparkles" size={31} /></div><h2>{t("Чем помочь?")}</h2><p>{t("Отпуск, аванс или правила компании — спросите Jana.")}</p><div className="support-prompts">{mode === 'live' && <button className="support-prompt" onClick={() => void ask('Что требует внимания?')}><Icon name="clipboard" size={20}/><span>{t('Что требует внимания?')}</span><Icon name="arrow-right" size={15}/></button>}{prompts.map(prompt => <button className="support-prompt" key={t(prompt.text)} aria-label={t(prompt.text)} onClick={() => void ask(t(prompt.text))}><Icon name={prompt.icon} size={20} /><span className="support-prompt-full">{t(prompt.text)}</span><span className="support-prompt-short" aria-hidden="true">{t(prompt.short)}</span><Icon name="arrow-right" size={15} /></button>)}</div></div> : <div className="support-chat-messages" role="log" aria-label={t("Сообщения диалога")} aria-live="polite" aria-relevant="additions text">
           {messages.map(message => <div key={message.id} className={`support-message ${message.role}`}>
             {message.role === 'user' ? <Avatar name={profile.full_name} size={29} /> : <span className="support-jana-icon"><Icon name="bot" size={18} /></span>}
-            <div className="support-message-bubble"><span className="support-message-author">{tx(message.role === 'user' ? 'Вы' : 'AI Jana')}</span>{message.role === 'user' ? message.text : <><p className="support-answer-text">{message.result.answer}</p>{tx(message.result.sources.length > 0 && <div className="support-citations"><span className="support-citations-label">{t("Источники ответа")}</span>{tx(message.result.sources.map((source, index) => { const href = safeSourceUrl(source.url); return source.id ? <button className="support-citation" key={`${source.title}-${index}`} onClick={() => { setSourceVersion(source.version||null); setSourceId(source.id!); }}><Icon name="file" size={12} />{tx(source.title)}<Icon name="arrow-right" size={11} /></button> : href ? <a className="support-citation" key={`${source.title}-${index}`} href={href} target="_blank" rel="noopener noreferrer"><Icon name="file" size={12} />{tx(source.title)}<Icon name="arrow-right" size={11} /></a> : <span className="support-citation" key={`${source.title}-${index}`}><Icon name="file" size={12} />{tx(source.title)}</span>; }))}</div>)}{message.result.grounded && !message.result.escalation_suggested && prompts.filter(prompt => message.question === prompt.text || message.question === t(prompt.text)).map(prompt => <Link key={prompt.href} className="btn btn-secondary support-answer-action" to={prompt.href}><Icon name={prompt.icon} size={16} />{t(prompt.action)}<Icon name="arrow-right" size={16} /></Link>)}{(!message.result.grounded || message.result.escalation_suggested) && <button className="btn btn-secondary" onClick={() => setEscalation({question:message.question,context:message.result.answer})}>{t("Передать вопрос в HR")}</button>}</>}</div>
+            <div className="support-message-bubble"><span className="support-message-author">{tx(message.role === 'user' ? 'Вы' : 'AI Jana')}</span>{message.role === 'user' ? message.text : <><p className="support-answer-text">{message.result.answer}</p>{message.result.report && <div ref={reportStart}><OperationalReport report={message.result.report}/></div>}{tx(message.result.sources.length > 0 && <div className="support-citations"><span className="support-citations-label">{t("Источники ответа")}</span>{tx(message.result.sources.map((source, index) => { const href = safeSourceUrl(source.url); return source.id ? <button className="support-citation" key={`${source.title}-${index}`} onClick={() => { setSourceVersion(source.version||null); setSourceId(source.id!); }}><Icon name="file" size={12} />{tx(source.title)}<Icon name="arrow-right" size={11} /></button> : href ? <a className="support-citation" key={`${source.title}-${index}`} href={href} target="_blank" rel="noopener noreferrer"><Icon name="file" size={12} />{tx(source.title)}<Icon name="arrow-right" size={11} /></a> : <span className="support-citation" key={`${source.title}-${index}`}><Icon name="file" size={12} />{tx(source.title)}</span>; }))}</div>)}{message.result.grounded && !message.result.escalation_suggested && prompts.filter(prompt => message.question === prompt.text || message.question === t(prompt.text)).map(prompt => <Link key={prompt.href} className="btn btn-secondary support-answer-action" to={prompt.href}><Icon name={prompt.icon} size={16} />{t(prompt.action)}<Icon name="arrow-right" size={16} /></Link>)}{(!message.result.grounded || message.result.escalation_suggested) && <button className="btn btn-secondary" onClick={() => setEscalation({question:message.question,context:message.result.answer})}>{t("Передать вопрос в HR")}</button>}</>}</div>
           </div>)}
           {tx(busy && <div className="support-message"><span className="support-jana-icon"><Icon name="bot" size={18} /></span><span className="support-chat-typing" role="status">{t("Ищу ответ в базе знаний…")}</span></div>)}
           <div ref={end} />

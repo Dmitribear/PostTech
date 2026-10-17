@@ -149,7 +149,7 @@ test('all conflicting requests remain discoverable on a narrow screen', async ({
   await mockPortal(page, { role: 'worker', records: [request(), request({ id: otherRequestId, status: 'approved', start_date: '2030-11-10', end_date: '2030-11-12' })] });
   await page.goto('/calendar?select=1&start=2030-11-05&end=2030-11-11');
   await expect(page.locator('.req-conflict-list>li')).toHaveCount(2);
-  await expect(page.locator('.req-conflict')).toContainText('Одобрено');
+  await expect(page.locator('.req-conflict')).toContainText('Согласовано');
   await expect(page.getByRole('button', { name: 'Продолжить' })).toBeDisabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator('.req-conflict-list>li').last().getByRole('link', { name: 'Открыть заявку' }).click();

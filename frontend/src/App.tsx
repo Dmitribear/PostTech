@@ -21,6 +21,7 @@ const Team = lazy(() => import('./pages/Team'));
 const Support = lazy(() => import('./pages/Workspace'));
 const Delegations = lazy(() => import('./pages/Workspace').then(m => ({ default: m.Delegations })));
 const Operations = lazy(() => import('./pages/Operations'));
+const HrWorkflows = lazy(() => import('./pages/HrWorkflows'));
 const CourseEditor = lazy(() => import('./pages/CourseEditor'));
 const Settings = lazy(() => import('./pages/Settings'));
 
@@ -121,7 +122,7 @@ function Shell() {
   useEffect(() => { let active = true; api.getNotifications({ unread_only: true, limit: 100 }).then(n => { if (active) setUnread(n.length); }).catch(() => {}); return () => { active = false; }; }, [api, refreshKey, location.pathname]);
   const review = location.pathname === '/requests' && location.search.includes('scope=review');
   const teamLearning = location.pathname === '/academy' && location.search.includes('tab=team');
-  const teamRoute = review || teamLearning || ['/team', '/operations', '/hr-tools', '/delegations', '/course-editor'].some(path => location.pathname.startsWith(path));
+  const teamRoute = review || teamLearning || ['/team', '/operations', '/hr-tools', '/hr-workflow', '/delegations', '/course-editor'].some(path => location.pathname.startsWith(path));
   const personalRoute = ['/', '/requests', '/requests/new', '/academy', '/calendar', '/profile'].includes(location.pathname) && !teamRoute;
   const inTeam = profile.role !== 'worker' && (teamRoute || (!personalRoute && workspace === 'team'));
   useEffect(() => { if (teamRoute) setWorkspace('team'); else if (personalRoute) setWorkspace('personal'); }, [teamRoute, personalRoute]);
@@ -158,6 +159,7 @@ function Shell() {
         <Route path="/requests/*" element={<Requests />} /><Route path="/calendar" element={<Calendar />} /><Route path="/academy/*" element={<Academy />} /><Route path="/jana" element={<Jana />} /><Route path="/profile/*" element={<Profile />} /><Route path="/notifications" element={<Notifications />} />
         <Route path="/team/*" element={profile.role === 'worker' ? <Navigate to="/" replace /> : <Team />} /><Route path="/settings" element={<Settings />} /><Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/operations" element={profile.role === 'hr_admin' ? <Operations /> : <Navigate to="/" />} /><Route path="/support" element={<Support />} /><Route path="/delegations" element={profile.role === 'hr_admin' ? <Delegations /> : <Navigate to="/" />} /><Route path="/course-editor" element={profile.role === 'hr_admin' ? <CourseEditor /> : <Navigate to="/" />} />
+        <Route path="/hr-workflow" element={profile.role === 'hr_admin' ? <HrWorkflows /> : <Navigate to="/" replace />} />
         <Route path="*" element={<div className="empty-state"><h1>{t("Страница не найдена")}</h1><Link to="/" className="btn btn-primary">{t("На главную")}</Link></div>} />
       </Routes></Suspense></main>
       <nav className="mobile-bottom-nav" aria-label={t("Быстрая навигация")}>{mobileNav.map(([path, icon, label]) => <Link key={path} to={path} aria-current={activePath(path) ? 'page' : undefined} className={activePath(path) ? 'active' : ''}><Icon name={icon} size={21} /><span>{t(label)}</span></Link>)}</nav>

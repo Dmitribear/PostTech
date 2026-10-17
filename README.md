@@ -125,6 +125,8 @@ See the [role matrix and six-minute demo](docs/hackathon-scenarios.md), [archite
 
 ## Stages 7–10
 
+The subsequent [five HR workflow improvements](docs/hr-workflows.md) add HR document fulfillment, atomic CSV/XLSX employee import previews, sequential onboarding tracks, role-scoped Jana operational reports, and deduplicated reminders. Apply migrations 0011–0012 before rebuilding. The standard Compose stack now includes `workflow-worker`; direct Python launches need `python -m scripts.workflow_worker` in a separate process. Achievements/gamification are intentionally omitted.
+
 The live stand now includes date-limited approval deputies, an HR course editor with immutable published versions, assignment deadlines, Russian/Kazakh UI and translated course content, and consent-based in-portal HR tickets. See [verification and boundaries](docs/stages-7-10.md). Run `python scripts/verify_workspace_live.py` only with the marked fictional jury/scenario fixtures; the checkpoint prevents duplicate submissions.
 
 New authenticated API routes are under `/api/v1/workspace`: `/delegations`, `/courses`, `/assignments/{id}/deadline`, and `/tickets`. Only HR can administer deputies/course content or answer tickets. A manager's temporary approval right does not grant employee-profile or learning-management rights. `Accept-Language: kk` selects translated course content and notification labels; missing content translations are explicitly shown as Russian originals.

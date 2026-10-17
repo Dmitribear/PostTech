@@ -1,0 +1,230 @@
+{
+  "at": "2026-10-17T12:04:28.831Z",
+  "backend": "Docker + real Supabase, synthetic test identities",
+  "results": [
+    {
+      "role": "hr",
+      "screen": "queue",
+      "width": 320,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "import",
+      "width": 320,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "tracks",
+      "width": 320,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "reminders",
+      "width": 320,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "document",
+      "width": 320,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "jana",
+      "width": 320,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "queue",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "import",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "tracks",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "reminders",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "document",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "jana",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "queue",
+      "width": 768,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "import",
+      "width": 768,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "tracks",
+      "width": 768,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "reminders",
+      "width": 768,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "document",
+      "width": 768,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "jana",
+      "width": 768,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "queue",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "import",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "tracks",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "reminders",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "document",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "jana",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "screen": "learning",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "screen": "document",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "screen": "jana",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "screen": "learning",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "screen": "document",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "screen": "jana",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "manager",
+      "screen": "jana",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "manager",
+      "screen": "jana",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    }
+  ]
+}

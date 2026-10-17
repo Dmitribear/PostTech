@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 REQUEST_COLUMNS = (
     "id,employee_id,request_type,status,start_date,end_date,amount,comment,"
     "reviewer_comment,reviewed_by,reviewed_at,created_at,updated_at,"
-    "approval_route,approver_ids,approvers,cancelled_at"
+    "approval_route,approver_ids,approvers,cancelled_at,fulfillment:request_fulfillment(status)"
 )
 EVENT_COLUMNS = "delegation_id,id,request_id,actor_id,event_type,from_status,to_status,comment,created_at"
 

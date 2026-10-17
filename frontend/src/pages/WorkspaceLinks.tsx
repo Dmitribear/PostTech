@@ -13,6 +13,7 @@ export function Help() {
 }
 export function HrTools() {
   return <><PageHeader title={t('Инструменты HR')} /><Links items={[
+    ['/hr-workflow', 'clipboard', 'Процессы HR', 'Оформление, импорт, адаптация и напоминания'],
     ['/operations', 'briefcase', 'Управление HR', 'Остатки отпусков, база знаний и интеграции'],
     ['/delegations', 'users', 'Замещение', 'Кто согласует заявки в отсутствие руководителя'],
     ['/course-editor', 'book', 'Редактор курсов', 'Материалы, уроки и тесты'],

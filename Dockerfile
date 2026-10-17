@@ -20,6 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
 
 COPY app ./app
 COPY scripts/integration_worker.py ./scripts/integration_worker.py
+COPY scripts/workflow_worker.py ./scripts/workflow_worker.py
 COPY --from=portal /portal/dist ./frontend/dist
 
 USER app

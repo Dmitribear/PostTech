@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-17T12:14:12.678Z",
+  "backend": "Docker + real Supabase, synthetic test identities",
+  "results": [
+    {
+      "role": "hr",
+      "screen": "jana",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    }
+  ]
+}
