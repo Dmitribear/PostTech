@@ -627,6 +627,22 @@ def test_course_completion_saves_score_and_notifies_manager(workflow_client):
         if item["employee_id"] == MANAGER and item["notification_type"] == "course_completed"
     ]
     assert len(manager_notifications) == 1
+    employee_notifications = [
+        item for item in database.tables["notifications"]
+        if item["employee_id"] == WORKER and item["notification_type"] == "course_completed"
+    ]
+    assert len(employee_notifications) == 1
+    assert "100%" in employee_notifications[0]["body"]
+
+    repeated = client.post(
+        f"/api/v1/academy/courses/{COURSE}/complete",
+        json={"answers": {"q1": 1, "q2": 0}},
+    )
+    assert repeated.status_code == 409
+    assert len([
+        item for item in database.tables["notifications"]
+        if item["notification_type"] == "course_completed"
+    ]) == 2
 
 
 @pytest.mark.parametrize("answers", [{"q1": 1}, {"q1": 1, "q2": 0, "q3": 1}, {"q1": 5, "q2": 0}])

@@ -165,6 +165,8 @@ def complete_course(
     assignment = _find_assignment(course_id, actor.id)
     if assignment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course assignment not found")
+    if assignment["status"] == "completed":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Course is already completed")
     course = _get_course(course_id)
     quiz = course.get("quiz") or []
     if not quiz:
@@ -196,18 +198,25 @@ def complete_course(
             }
         )
         .eq("id", assignment["id"])
+        .eq("status", assignment["status"])
         .execute()
     )
     updated = (result.data or [None])[0]
     if updated is None:
-        raise HTTPException(status_code=500, detail="Course result could not be saved")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Course was already completed")
 
     profile = get_profile(actor.id)
+    create_notification(
+        str(profile["id"]),
+        "Обучение завершено",
+        f"Вы завершили курс «{course['title']}» с результатом {score:g}%.",
+        "course_completed",
+    )
     if profile.get("manager_id"):
         create_notification(
             str(profile["manager_id"]),
             "Обучение завершено",
-            f"{profile['full_name']} завершил(а) курс «{course['title']}» с результатом {score}%.",
+            f"{profile['full_name']} завершил(а) курс «{course['title']}» с результатом {score:g}%.",
             "course_completed",
         )
     return updated

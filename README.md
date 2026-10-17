@@ -27,20 +27,30 @@ All routes except `/`, `/api/v1/health/*`, and `/api/v1/auth/*` require a Supaba
 | `GET /api/v1/admin/employees` | HR administrators list employee profiles and their roles; supports `offset` and `limit`. |
 | `PATCH /api/v1/admin/employees/{employee_id}/role` | HR administrators assign `worker`, `manager`, `director`, or `hr_admin`; all other roles are forbidden. |
 | `GET /api/v1/profile` | Current user's read-only HR fields, manager name, assigned courses/progress, and own notifications in one response. [Response contract](docs/profile-api.md). |
-| `GET /api/v1/employees/{employee_id}` | Own profile; managers can view direct reports; HR can view all. |
-| `GET /api/v1/team` | Direct reports for managers; all profiles for HR. |
+| `GET /api/v1/employees/{employee_id}` | Own profile; managers and directors can view direct reports; HR can view all. |
+| `GET /api/v1/team` | Direct reports for managers and directors; all profiles for HR. |
 | `GET, POST /api/v1/requests` | View permitted requests; create leave or advance requests. |
 | `GET /api/v1/requests/{id}` | Read a request only if its employee profile is visible to the caller. |
-| `PATCH /api/v1/requests/{id}/review` | Manager rejection is final; manager approval moves the request to `pending_hr`, then HR approves/rejects. On final approval, inclusive calendar leave days are deducted from the employee's balance; approval is rejected if the balance is insufficient. |
+| `PATCH /api/v1/requests/{id}/review` | An employee's request goes manager → HR; a manager's own request goes director → HR. HR makes the final decision. On final leave approval, inclusive calendar days are deducted from the balance; insufficient balance prevents approval. |
 | `GET /api/v1/academy/courses` | Active course catalog with the current user's assignment state. |
 | `GET /api/v1/academy/my-courses` | Assigned courses and progress. |
 | `GET /api/v1/academy/courses/{id}` | Course material and quiz; quiz answers are never returned. |
-| `POST /api/v1/academy/assignments` | HR or the employee's manager assigns a course. |
+| `POST /api/v1/academy/assignments` | HR, the employee's manager, or director assigns a course to an eligible employee. |
 | `PATCH /api/v1/academy/courses/{id}/progress` | Save course progress. |
-| `POST /api/v1/academy/courses/{id}/complete` | Submit quiz answers; the API calculates and stores the score. |
-| `GET /api/v1/notifications` | Current user's notifications only. |
+| `POST /api/v1/academy/courses/{id}/complete` | Submit quiz answers; the API calculates and stores the score, then notifies the employee and their manager. Duplicate completion submissions are rejected. |
+| `GET /api/v1/notifications` | Latest 100 notifications for the current user only, including request and training events. |
 | `POST /api/v1/notifications/{id}/read` | Mark own notification as read. |
 | `POST /api/v1/ai/ask` | Jana answers from retrieved knowledge articles, returns sources, or refuses and suggests HR escalation. |
+
+### Implemented business workflows
+
+- **Approval routing:** an ordinary employee's request is reviewed by their manager and then HR. A manager's own request is reviewed by their director and then HR. A rejection ends the workflow. HR receives a notification when a request is ready for its decision.
+- **Vacation balance:** `leave_days` is calculated as inclusive calendar days (both start and end dates count; weekends and holidays are not excluded). The balance is deducted atomically only on HR's final approval. If the balance is too low, approval fails with HTTP 409 and the request remains pending HR review. The database implementation is in migration 0005.
+- **Jana Academy:** employees can see their assigned courses, open course material and take its quiz. The API calculates and stores the score and completion status; a completed course cannot be completed again.
+- **Notifications:** the API notification center returns only the signed-in user's notifications and supports marking them as read. Request status changes notify the employee and relevant HR reviewers. Course assignment notifies the employee; course completion notifies both the employee and their manager with the score.
+- **Role administration:** HR can assign access roles (`worker`, `manager`, `director`, `hr_admin`) to existing profiles. This does not edit official profile data such as job title or department.
+
+This repository implements and documents the backend APIs; a separate frontend UI is maintained outside this project.
 
 Roles are `worker`, `manager`, `director`, and `hr_admin`. HR and platform administration are combined in `hr_admin`: only this role assigns access roles to existing employee profiles. Official profile data is read-only; role assignment changes access settings only. Database row-level security is enabled; direct public-key browser access is denied by default. The backend uses the server-side Supabase key and enforces access in the API, so that key must never be exposed to a client. See [role administration and bootstrap](docs/hr-administration.md).
 
@@ -49,7 +59,7 @@ Roles are `worker`, `manager`, `director`, and `hr_admin`. HR and platform admin
 1. Create a Supabase project and copy `.env.example` to `.env`.
 2. Set `SUPABASE_URL`, the server-side `SUPABASE_KEY`, and the project's public `SUPABASE_ANON_KEY` in `.env`. The anon key is used only by the backend's Supabase Auth signup/login client; keep the server key private and never commit `.env`. Jana runs locally: install dependencies and run `python -m scripts.prepare_jana_local` once. No OpenAI key is used by the HTTP agent; missing local model files produce HTTP 503. The UI mock is a separate explicit process, never an automatic fallback.
 3. Run the SQL files in `database/migrations/` in numeric order through 0005 in the Supabase SQL editor. Existing databases with migrations 0001–0004 applied need only [0005_vacation_balance.sql](database/migrations/0005_vacation_balance.sql) for leave-day calculation and deduction.
-4. In Supabase Auth, create fictional test users with emails `hr@posttech.demo`, `manager@posttech.demo`, and `employee@posttech.demo`. Set local demo passwords in Supabase; no credentials are stored in this repository.
+4. In Supabase Auth, create fictional test users with emails `hr@posttech.demo`, `director@posttech.demo`, `manager@posttech.demo`, and `employee@posttech.demo`. Set local demo passwords in Supabase; no credentials are stored in this repository.
 5. Run [database/seed.sql](database/seed.sql). It creates fictional profiles, two courses, knowledge articles, course assignments, and sample requests/notifications. It uses no real employee data.
 6. Register via `POST /api/v1/auth/register`, confirm the email if Supabase requires it, then sign in via `POST /api/v1/auth/login`. Send the returned `access_token` as `Authorization: Bearer <token>` to protected API routes. HR must link `user_id` from Auth to the employee's existing `auth_user_id` profile field; public registration never accepts a role or edits official employee data. To issue a refreshed session, send its `refresh_token` to `POST /api/v1/auth/refresh`.
 
@@ -63,7 +73,7 @@ For local development, use Python 3.12, install `requirements-dev.txt`, and run 
 
 ## Scope and integration boundary
 
-- **Implemented:** role-aware profile reads, leave/advance request workflow, manager/HR review, notifications, assigned learning with server-side quiz scoring, and source-grounded Jana Q&A/refusal.
+- **Implemented:** role-aware profiles and HR role administration; employee → manager → HR and manager → director → HR request workflows; inclusive leave-day calculation and final-approval balance deduction; LMS assignments, progress and server-side quiz scoring; request/training notifications; source-grounded Jana Q&A/refusal.
 - **Mocked:** employee records are seeded snapshots marked `mock-1c-zup`; courses and HR policy articles are fictional demo data.
 - **Not connected yet:** live 1C:ЗУП and Documentolog integrations. Replace the profile snapshot source with a read-only 1C adapter and add a Documentolog adapter behind service boundaries; do not let either integration make employee-editable official data.
 - **Not included:** production HR policies, real employee data, electronic signatures, original document storage, recruiting, or AI-driven personnel decisions.
@@ -99,8 +109,8 @@ REST-бэкенд на FastAPI для хакатон-прототипа JanaMen 
 | `GET /api/v1/admin/employees` | Только HR/администратор: список профилей сотрудников с ролями; параметры `offset` и `limit`. |
 | `PATCH /api/v1/admin/employees/{employee_id}/role` | Только HR/администратор: назначение роли `worker`, `manager`, `director` или `hr_admin`. |
 | `GET /api/v1/profile` | Личный кабинет одним ответом: Ф. И. О., компания, должность, подразделение, руководитель, дата приёма, остаток отпуска, назначенное обучение и свои уведомления. [Контракт ответа](docs/profile-api.md). |
-| `GET /api/v1/employees/{employee_id}` | Собственный профиль; руководители могут просматривать прямых подчинённых, HR — все профили. |
-| `GET /api/v1/team` | Для руководителей — прямые подчинённые; для HR — все профили. |
+| `GET /api/v1/employees/{employee_id}` | Собственный профиль; руководители и директора могут просматривать прямых подчинённых, HR — все профили. |
+| `GET /api/v1/team` | Для руководителей и директоров — прямые подчинённые; для HR — все профили. |
 | `GET, POST /api/v1/requests` | Просмотр доступных заявок; создание заявок на отпуск или аванс. |
 | `GET /api/v1/requests/{id}` | Просмотр заявки, только если профиль её сотрудника доступен текущему пользователю. |
 | `PATCH /api/v1/requests/{id}/review` | Заявка сотрудника проходит от его руководителя в HR (`pending_hr`); заявка руководителя направляется его директору, а после одобрения — в HR. После финального одобрения HR система списывает календарные дни отпуска (обе даты включительно); при недостаточном остатке вернёт 409. |
@@ -109,10 +119,20 @@ REST-бэкенд на FastAPI для хакатон-прототипа JanaMen 
 | `GET /api/v1/academy/courses/{id}` | Материалы курса и тест; правильные ответы не возвращаются. |
 | `POST /api/v1/academy/assignments` | HR, руководитель или директор назначает курс своим прямым подчинённым. |
 | `PATCH /api/v1/academy/courses/{id}/progress` | Сохранение прогресса по курсу. |
-| `POST /api/v1/academy/courses/{id}/complete` | Отправка ответов на тест; API рассчитывает и сохраняет результат. |
-| `GET /api/v1/notifications` | Только уведомления текущего пользователя. |
+| `POST /api/v1/academy/courses/{id}/complete` | Отправка ответов на тест; API рассчитывает и сохраняет результат, затем уведомляет сотрудника и его руководителя. Повторное завершение отклоняется. |
+| `GET /api/v1/notifications` | До 100 последних уведомлений только текущего пользователя, в том числе о заявках и обучении. |
 | `POST /api/v1/notifications/{id}/read` | Отметить собственное уведомление как прочитанное. |
 | `POST /api/v1/ai/ask` | Jana отвечает на основе найденных статей базы знаний, указывает источники либо отказывается отвечать и рекомендует обратиться в HR. |
+
+### Реализованные бизнес-сценарии
+
+- **Маршрут согласования:** заявка обычного сотрудника проходит к его руководителю, затем в HR. Заявка самого руководителя направляется директору, затем в HR. HR принимает финальное решение; отклонение завершает процесс. Когда заявка готова к рассмотрению HR, HR получает уведомление.
+- **Остаток отпуска:** поле `leave_days` рассчитывается по календарным дням включительно — учитываются дата начала и дата окончания; выходные и праздники отдельно не исключаются. Баланс списывается атомарно только при финальном одобрении HR. Если дней недостаточно, API возвращает HTTP 409, а заявка остаётся в ожидании HR. Логика базы добавлена миграцией 0005.
+- **Jana Academy:** сотрудник видит назначенные курсы, материалы и тест. API проверяет ответы, рассчитывает и сохраняет оценку и завершение; повторное завершение курса отклоняется.
+- **Центр уведомлений:** API показывает только уведомления вошедшего пользователя и позволяет отмечать их прочитанными. Изменение статуса заявки уведомляет сотрудника и соответствующих HR-рассматривающих. О назначении курса уведомляется сотрудник; о завершении курса с результатом — сотрудник и его руководитель.
+- **Управление ролями:** HR может назначать существующим профилям роли доступа `worker`, `manager`, `director` и `hr_admin`. Это не изменяет кадровые поля, например должность или подразделение.
+
+В этом репозитории реализованы и описаны backend API; отдельный интерфейс frontend разрабатывается вне проекта.
 
 Роли: `worker`, `manager`, `director` и `hr_admin`. Менеджер и директор видят только своих прямых подчинённых; директор согласует заявки руководителей, но не обычных сотрудников. Официальные данные профиля доступны только для чтения. В базе включена защита на уровне строк (RLS); прямой доступ из браузера с публичным ключом по умолчанию запрещён. Бэкенд использует серверный ключ Supabase и проверяет права на уровне API, поэтому этот ключ нельзя передавать клиенту.
 
@@ -137,7 +157,7 @@ HR и администратор платформы объединены в ро
 
 ## Область MVP и границы интеграций
 
-- **Реализовано:** просмотр профилей с учётом ролей, процесс заявок на отпуск/аванс (сотрудник → руководитель → HR; руководитель → директор → HR), уведомления, назначенное обучение с серверной проверкой тестов и ответы/отказы Jana на основе источников.
+- **Реализовано:** профили с учётом ролей и управление ролями через HR; заявки (сотрудник → руководитель → HR; руководитель → директор → HR); расчёт календарных дней отпуска и списание остатка после финального одобрения HR; назначения обучения, прогресс и серверная проверка результата теста; уведомления по заявкам и обучению; ответы/отказы Jana на основе источников.
 - **Демонстрационные данные:** профили сотрудников — снимки данных с пометкой `mock-1c-zup`; курсы и статьи HR-политик вымышлены.
 - **Пока не подключено:** действующие интеграции с 1С:ЗУП и Documentolog. Источник снимков профилей следует заменить адаптером 1С только для чтения, а адаптер Documentolog добавить за сервисной границей. Ни одна из интеграций не должна позволять сотрудникам изменять официальные данные.
 - **Не входит в MVP:** реальные HR-политики и данные сотрудников, электронные подписи, хранение оригиналов документов, рекрутинг и решения по персоналу, принимаемые искусственным интеллектом.
