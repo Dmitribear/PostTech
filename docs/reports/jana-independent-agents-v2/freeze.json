@@ -1,0 +1,18 @@
+{
+  "frozen_at": "2026-10-16T23:03:23.392541+00:00",
+  "status": "questions_and_rubric_frozen_before_first_inference",
+  "suite_path": "knowledge_base/demo/independent_agents_v2.json",
+  "suite_sha256": "c7d1b520ad9bce74d140e33a02b0f882a9eec2d782fc3b5e9a94c232393316db",
+  "planned_total": 50,
+  "runtime_freeze_sha256": "6a230088360f7b2c048c940574db34c7bf2cadb98a696fe1dc0bb373d2653981",
+  "protocol_sha256": "1228d26777fa5eca5e73256545378d18f041e2eade07fb9c6417175460f3b57b",
+  "novelty_check_sha256": "63ec7982fc8bc69bfa9c1642102556f7003f9c3e1c019bab95791e154e44fc5d",
+  "author_source_sha256": "bcda78d36b5d30968531cc3ad8118dbbd0eb030f541b6cf02f860fab1c4b5494",
+  "author_files_sha256": {
+    "author-a.json": "d6cf237adef2cf79126f22135f67bd692127c10269abee25afc355a56ee50200",
+    "author-b.json": "f254bc57f8f94b66c2ca63e61283e910b50a3ecc52e1eae288d0754f21d2850c"
+  },
+  "label_review_sha256": "5b5f831d8e876f419f702ca8c9db7e452e10171b8e9a542d6c93dd924365e391",
+  "runner_sha256": "69460546158e6650b71e129434bb42f9e009cfbab89f528adcdf4c6b91e70160",
+  "runtime_unchanged_at_freeze": true
+}

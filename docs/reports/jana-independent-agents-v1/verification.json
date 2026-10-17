@@ -1,0 +1,35 @@
+{
+  "verified_at": "2026-10-16T22:26:45.759318+00:00",
+  "total": 50,
+  "automated_passed_local": 30,
+  "automated_passed_http": 30,
+  "identical_answers_and_outcomes": true,
+  "runtime_and_source_files_unchanged": true,
+  "source_articles_verified": 11,
+  "anonymous_access_denied": true,
+  "http_completed": true,
+  "suite_sha256": "2a6ca52e403129b3ed49c3909358a4d9513fc08625277c671a15ca5a13927206",
+  "report_sha256": {
+    "first-local.json": "1ab3684d755653c263955cd43bff5f196bae46b4fb615ce1b9fbc77a4a611931",
+    "first-http.json": "853b5a16efd83084eb9f2a6e97057622a3f6da9fc3b632f04c0c9914149a3e80"
+  },
+  "notice": "Automated outcomes validate card/source/contract. Completeness is reviewed separately against facts frozen before inference.",
+  "additional_novelty_check": {
+    "scope": "Frontend *.test.* and *.spec.* source text",
+    "checked_files": [
+      "frontend/src/lib/api.test.ts",
+      "frontend/src/lib/jana.test.ts",
+      "frontend/e2e/jana.spec.ts",
+      "frontend/e2e/portal.spec.ts"
+    ],
+    "matches": [],
+    "phase": "after_first_run; no question or expectation changed"
+  },
+  "content_review_sha256": "a48a5d95594371764abafbdda71b502a4454b0d35d3c1da97fbdad803352c9ec",
+  "content_review_summary": {
+    "primary_passed": 30,
+    "strict_required_facts_passed": 22,
+    "total": 50,
+    "ambiguous_questions_with_specific_clarification": 0
+  }
+}

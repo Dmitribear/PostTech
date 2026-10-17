@@ -1,0 +1,59 @@
+{
+  "created_at": "2026-10-16T22:20:10.300972+00:00",
+  "git_commit": "0651f35ccd506bd0be02ecb784cf4735539e635d",
+  "min_score": 0.72,
+  "margin": 0.045,
+  "sha256": {
+    "app/core/config.py": "f0d86b8874959c1005a9c6acdd56a4972853c4ec2f45f3bc412a758348c274ea",
+    "app/schemas/jana.py": "2a259c3c17ab255ae4efbfc97e6cbb870d2b2388466d0856ef4204404b0fd55c",
+    "app/services/jana_local.py": "862b414b4fbc6bb7ee0a9375082b4671c03420884c32b690a129887dcf1ffe45",
+    "app/services/jana_guardrails.py": "6ded6fdef2efcf985bf76d947fb7821c8de19606f1331ea3dfaf83e09c5a2e35",
+    "app/services/jana_text.py": "a133b587bdfbcfe0e4e066be64a246f5b3473ea5bd94462998a4421975bddd2e",
+    "app/services/local_embeddings.py": "2658a677be2e3e4e1d26ac1f86faa064a4c9b057c3c119978a970643c05fe606",
+    "app/services/jana_errors.py": "66f5e0b12b9008d4c00b420b5c194c825c6db543bc317c5e624cde7aaa7a287e",
+    "scripts/evaluate_jana_local.py": "e817919e90ed0a114cca33d7fa082769f1d0fe307159c4303be0d7f70c30afa3",
+    "scripts/check_jana_release.py": "f6e7435e154d0a96db3dcc65fb3e9aa2c43a32009558038b120c9a84a33e7718",
+    "scripts/evaluate_jana_http.py": "0fbf2e7994211a487dbcb6bf6c6d22303bfa92e8418a536fc53636b7738e1ee9",
+    "knowledge_base/faq.json": "1e65bb7c82493c733696ed5185a9831fe5b1bdde4a057834ff76ddb7a94c63d5",
+    "knowledge_base/demo/articles.json": "af1d51100ddfc75490367de9291b86d7bbbb50ba1c0a91554536f3130af2e691"
+  },
+  "author_source_sha256": "5e9af94d3a31fb36ff71b3ceee165b0fd7e49fca3163e635cf5ed5e962f70529",
+  "frozen_at": "2026-10-16T22:25:01.796692+00:00",
+  "suite_path": "knowledge_base\\demo\\independent_agents_v1.json",
+  "suite_sha256": "2a6ca52e403129b3ed49c3909358a4d9513fc08625277c671a15ca5a13927206",
+  "author_files_sha256": {
+    "author-a.json": "6578bdb538e0a6bfa6da2b0144f5096d916807a342185457f83d181291208998",
+    "author-b.json": "8e4233ebcdae1895cbe3d27c3f2959a32a48e05a8c7d150ffb4c383548b38740"
+  },
+  "label_reviews_sha256": {
+    "review-a.json": "7143bee63b9d577b865db88722823fa440753e0ffb0db1ef6a3a0956d7ef5eb5",
+    "review-b.json": "fc4b3e49ae751fb81ec340de551bbb041b07a5ea0430d493f13c186af7ee0751"
+  },
+  "planned_total": 50,
+  "supported": 30,
+  "refusals": 20,
+  "categories": {
+    "typo": 13,
+    "normal_paraphrase": 17,
+    "missing_fact": 9,
+    "injection": 2,
+    "ambiguous": 6,
+    "personal_data": 1,
+    "action_request": 2
+  },
+  "duplicate_check": {
+    "normalization": "NFKC, casefold, yo-to-e, word tokens",
+    "existing_normalized_strings": 1728,
+    "duplicate_questions": 0,
+    "within_suite_duplicates": 0,
+    "scope": "Existing knowledge_base/demo JSON, FAQ, Python string constants in tests"
+  },
+  "current_excerpt_coverage": {
+    "none": 6,
+    "full": 22,
+    "partial": 2,
+    "not_applicable": 20
+  },
+  "author_isolation": "Two fresh agents with no conversation history read only sources-only.json. Initial attempts that saw demo_questions were discarded before producing accepted questions.",
+  "status": "frozen_before_first_inference"
+}

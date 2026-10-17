@@ -1,0 +1,145 @@
+{
+  "created_at": "2026-10-16T22:54:04.728441+00:00",
+  "earlier_http_attempt": {
+    "report": "final-http/manifest.json",
+    "complete": false,
+    "answered": 203,
+    "planned": 285,
+    "http_error": 503,
+    "cause": "not established"
+  },
+  "all_checks_passed": true,
+  "frozen_50_unchanged": true,
+  "old_285_unchanged_vs_previous_release": true,
+  "first_local_and_http_reports_unchanged": true,
+  "source_articles_unchanged": true,
+  "local_runtime_matches_final_files": true,
+  "complete_identical_local_http_answers": 335,
+  "strict_score": {
+    "passed": 334,
+    "total": 335
+  },
+  "known_label_mismatch": {
+    "id": "A04",
+    "expected_card": "request_status",
+    "actual_card": "leave_apply",
+    "reason": "The required reviewer roles are explicitly stated in source 001. Frozen labels and scorer are preserved.",
+    "content_review": "final-content-review.json"
+  },
+  "new_supported_answers": 30,
+  "new_safe_refusals": 20,
+  "refusal_helpfulness_notice": "Safe refusal is not a complete clarification; see separate content review.",
+  "new_false_refusals": 0,
+  "faq_examples": 196,
+  "exact_normalized_example_gold_duplicates": 0,
+  "thresholds": {
+    "min_score": 0.72,
+    "margin": 0.045
+  },
+  "faq_sha256": "bfc9cfb7163a4c1dec3ae8e8121cdea38dc2dcd18d5b4b60d4c9c1207cbff33a",
+  "runtime_sha256": {
+    "app/core/config.py": "f0d86b8874959c1005a9c6acdd56a4972853c4ec2f45f3bc412a758348c274ea",
+    "app/schemas/jana.py": "2a259c3c17ab255ae4efbfc97e6cbb870d2b2388466d0856ef4204404b0fd55c",
+    "app/services/jana_local.py": "2c24f51632b70121ca088686bd278e3d917d5199f3a8ec452b66da833aea6b7b",
+    "app/services/jana_guardrails.py": "c706c8951b32a1c0e616092dc42577c89c5fa81ebb605976916f62444e9c12ee",
+    "app/services/jana_text.py": "7e9bf2712b32a1fb78d917fa63d86cc8e1fe61765430eaf9c126c3e9993bc6b5",
+    "app/services/local_embeddings.py": "2658a677be2e3e4e1d26ac1f86faa064a4c9b057c3c119978a970643c05fe606",
+    "app/services/jana_errors.py": "66f5e0b12b9008d4c00b420b5c194c825c6db543bc317c5e624cde7aaa7a287e",
+    "scripts/evaluate_jana_local.py": "e817919e90ed0a114cca33d7fa082769f1d0fe307159c4303be0d7f70c30afa3",
+    "scripts/check_jana_release.py": "f6e7435e154d0a96db3dcc65fb3e9aa2c43a32009558038b120c9a84a33e7718"
+  },
+  "pytest": {
+    "tests": 561,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 37,
+    "passed": 524
+  },
+  "suite_comparisons": [
+    {
+      "suite": "acceptance_v1",
+      "identical_complete_answers": 50,
+      "strict_passes": 50,
+      "total": 50
+    },
+    {
+      "suite": "acceptance_v2",
+      "identical_complete_answers": 60,
+      "strict_passes": 60,
+      "total": 60
+    },
+    {
+      "suite": "acceptance_v3",
+      "identical_complete_answers": 30,
+      "strict_passes": 30,
+      "total": 30
+    },
+    {
+      "suite": "local_evaluation",
+      "identical_complete_answers": 44,
+      "strict_passes": 44,
+      "total": 44
+    },
+    {
+      "suite": "local_holdout",
+      "identical_complete_answers": 24,
+      "strict_passes": 24,
+      "total": 24
+    },
+    {
+      "suite": "request_status_v1",
+      "identical_complete_answers": 20,
+      "strict_passes": 20,
+      "total": 20
+    },
+    {
+      "suite": "profile_fix_v1",
+      "identical_complete_answers": 20,
+      "strict_passes": 20,
+      "total": 20
+    },
+    {
+      "suite": "safety_v1",
+      "identical_complete_answers": 35,
+      "strict_passes": 35,
+      "total": 35
+    },
+    {
+      "suite": "review_regression_v1",
+      "identical_complete_answers": 2,
+      "strict_passes": 2,
+      "total": 2
+    },
+    {
+      "suite": "independent_agents_v1",
+      "identical_complete_answers": 50,
+      "strict_passes": 49,
+      "total": 50
+    }
+  ],
+  "report_sha256": {
+    "docs/reports/jana-independent-fixes-v1/faq-iteration3-old-local/acceptance_v1.json": "56151c3bef363d796fa855e29675c78df6c3bbcda7470dfc9657709f3bc4daf4",
+    "docs/reports/jana-independent-fixes-v1/final-http-sequential/acceptance_v1.json": "863caa288b0b0e2c9337e50e8e5a8974afc00f63b4f0e95ffd30559249112ce1",
+    "docs/reports/jana-independent-fixes-v1/faq-iteration3-old-local/acceptance_v2.json": "32bf4d0af768c31156e36a97062172493670f16abb7bb1081ade5532e34f278e",
+    "docs/reports/jana-independent-fixes-v1/final-http-sequential/acceptance_v2.json": "e8c633a7a11bc6d505b456394c19694171a723587586b0d19defd71c72952e14",
+    "docs/reports/jana-independent-fixes-v1/faq-iteration3-old-local/acceptance_v3.json": "e95e0c137bca529327cbd8822c92754fb3dc96b7247cfc7f181e1ed2c5d2d887",
+    "docs/reports/jana-independent-fixes-v1/final-http-sequential/acceptance_v3.json": "e2d69cd4bb0686f635d9b1d4d116dadfbe30dc83610d87c616e45596dfe9081a",
+    "docs/reports/jana-independent-fixes-v1/faq-iteration3-old-local/local_evaluation.json": "66aa0e270e8de9f5bf2617a9382d3e057d5d60ac0a68f9b0b0984598cb7cf9da",
+    "docs/reports/jana-independent-fixes-v1/final-http-sequential/local_evaluation.json": "dd0462b5eca4fab8ba0782b3748a818489b0a96f46d45974007f77f73c90e526",
+    "docs/reports/jana-independent-fixes-v1/faq-iteration3-old-local/local_holdout.json": "905b144b8890d2b1f78b30adbeb46e31106eb907a7294ed6c00d39316b8d55c0",
+    "docs/reports/jana-independent-fixes-v1/final-http-sequential/local_holdout.json": "96db5a858320506d2de63fbde7178930e2d6e83640155a21dd7de85c9295c22d",
+    "docs/reports/jana-independent-fixes-v1/faq-iteration3-old-local/request_status_v1.json": "f81e8447d181c5d6b9269626051daf90e66fac54c0d78e9baf7d6c8e0564b2a5",
+    "docs/reports/jana-independent-fixes-v1/final-http-sequential/request_status_v1.json": "5194142643a6838bf82f615574424068c2b96f4a4c31d3c5dc1ef54ee41c349c",
+    "docs/reports/jana-independent-fixes-v1/faq-iteration3-old-local/profile_fix_v1.json": "0ad10d2106ad497bd557a3fc0bc83f0b66663e5514fd612a2a4395da4284043e",
+    "docs/reports/jana-independent-fixes-v1/final-http-sequential/profile_fix_v1.json": "f3baae8a2ce06653a62d4cc416e1c107c6a1fd43846d5475a7be82d0109ada31",
+    "docs/reports/jana-independent-fixes-v1/faq-iteration3-old-local/safety_v1.json": "ee03dda608190580e4aca6a0e6d1d850194b95161380585b3262b2b8d6f02f14",
+    "docs/reports/jana-independent-fixes-v1/final-http-sequential/safety_v1.json": "1a94f5fab9b83a5b2b519210b36ce71a9960db900805336fb2de2a58b0bbcefe",
+    "docs/reports/jana-independent-fixes-v1/faq-iteration3-old-local/review_regression_v1.json": "f5089665b39ada0ad9a4e0143be614d733bd681772aeff7333bbcdad26ac3c8c",
+    "docs/reports/jana-independent-fixes-v1/final-http-sequential/review_regression_v1.json": "0be169075c0bc30675b12cee85b4f06f0163e87a6871d226a3245e1b84ea2d7e",
+    "docs/reports/jana-independent-fixes-v1/faq-iteration3-independent-local.json": "ff3fe3112bbbb44aa7a4bae9506dcd8fb3f860813bd33d165b56cfe3645084db",
+    "docs/reports/jana-independent-fixes-v1/final-independent-http.json": "ddb7be16bda4217d8df952cf603c94cf4b9ce1f81ed8553a1afca27f5eed6ec7",
+    "docs/reports/jana-independent-fixes-v1/final-content-review.json": "1e279587c73d621a5e1bd82a6e75a162fba068edda0ae55b824f8d125195c3fd",
+    "docs/reports/jana-independent-fixes-v1/backend-final.xml": "93ab05106a5bc518b544bc789d4ae3df45be69e595be0151031f3fac4363c37e",
+    "docs/reports/jana-independent-fixes-v1/final-http-sequential/manifest.json": "388d4502f9b750044cf3d4d33408052a74144b4a6101c875aaa622420e27aba6"
+  }
+}

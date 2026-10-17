@@ -1,0 +1,33 @@
+# VS Code REST Client / compatible HTTP client.
+# Default target: explicitly selected, local demo mock; no credentials needed.
+# For live API use port 8000 and set accessToken locally. Never commit a real token.
+@baseUrl = http://127.0.0.1:8001
+@accessToken = LOCAL_MOCK_UNUSED
+
+### Answer and source
+POST {{baseUrl}}/api/v1/ai/ask
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{"question":"Как оформить отпуск?"}
+
+### Read the article
+GET {{baseUrl}}/api/v1/ai/sources/20000000-0000-4000-8000-000000000001
+Authorization: Bearer {{accessToken}}
+
+### Unknown question: mock refusal (live behavior requires evaluation)
+POST {{baseUrl}}/api/v1/ai/ask
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{"question":"Какая погода завтра?"}
+
+### Validation error, HTTP 422
+POST {{baseUrl}}/api/v1/ai/ask
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{"question":"   "}
+
+### Mock-only list of supported example questions
+GET {{baseUrl}}/demo/questions

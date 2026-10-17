@@ -1,0 +1,12 @@
+The local model is downloaded separately and is not committed to this repository.
+
+Model: sentence-transformers/paraphrase-multilingual-mpnet-base-v2
+Publisher: Sentence Transformers
+License declared by the publisher: Apache License 2.0
+Model card: https://huggingface.co/sentence-transformers/paraphrase-multilingual-mpnet-base-v2
+Pinned revision: 4328cf26390c98c5e3c738b4460a05b95f4911f5
+License text: https://www.apache.org/licenses/LICENSE-2.0
+
+The ONNX model is the publisher's quantized AVX2 export. PostTech does not
+modify the weights. File SHA-256 values are pinned in local_embeddings.py.
+Preserve the upstream license and attribution when distributing the model.

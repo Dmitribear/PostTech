@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1520" height="1050" viewBox="0 0 1520 1050" role="img" aria-labelledby="title desc">
+<title id="title">PostTech — архитектура Integration и локальной Jana</title>
+<desc id="desc">Работающие React, FastAPI, Supabase, локальная ONNX-модель и FAQ. Справа пунктиром обозначены будущие адаптеры 1С:ЗУП и Documentolog. Google Calendar подключается ручным импортом ICS.</desc>
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto-start-reverse"><path d="M0 0L8 4L0 8Z" fill="#49705b"/></marker>
+  <marker id="future-arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto-start-reverse"><path d="M0 0L8 4L0 8Z" fill="#818a99"/></marker>
+  <style>
+    text{font-family:Arial,'DejaVu Sans',sans-serif;fill:#173b2a}
+    .heading{font-size:23px;font-weight:700}.label{font-size:18px}.small{font-size:15px;fill:#52665b}
+    .node{fill:#fff;stroke:#4b9470;stroke-width:2}.data{fill:#edf4ff;stroke:#6c8cb5;stroke-width:2}
+    .future{fill:#fff;stroke:#929baa;stroke-width:2;stroke-dasharray:7 5}
+    .edge{fill:none;stroke:#49705b;stroke-width:2;marker-end:url(#arrow)}
+    .later{fill:none;stroke:#818a99;stroke-width:2;stroke-dasharray:7 5;marker-end:url(#future-arrow)}
+  </style>
+</defs>
+<rect width="1520" height="1050" fill="#fff"/>
+<rect x="40" y="37" width="8" height="55" rx="4" fill="#19834d"/>
+<text x="66" y="61" style="font-size:32px;font-weight:700">PostTech · локальная Jana в общем HR-портале</text>
+<text x="66" y="91" class="label">Integration · состояние на 17 октября 2026 года · тестовые сотрудники и учебная база знаний</text>
+
+<rect x="40" y="125" width="1000" height="750" rx="18" fill="#f5faf7" stroke="#d8e7dd"/>
+<text x="65" y="161" class="heading">Работает сейчас</text>
+<rect x="1100" y="125" width="380" height="750" rx="18" fill="#f5f6f8" stroke="#c6ccd5" stroke-dasharray="8 6"/>
+<text x="1125" y="161" class="heading" style="fill:#536071">Будущее подключение</text>
+
+<path class="edge" d="M310 250H390"/>
+<text x="320" y="231" class="small">/api/v1</text>
+<path class="edge" d="M430 305V335H185V370"/>
+<path class="edge" d="M510 305V370"/>
+<path class="edge" d="M850 305V370"/>
+<path class="edge" d="M185 490V565"/>
+<text x="197" y="535" class="small">поиск</text>
+<path class="edge" d="M310 430H345V625H390"/>
+<text x="370" y="548" class="small" transform="rotate(-90 370 548)">чтение FAQ</text>
+<path class="edge" d="M850 490V565"/>
+<text x="862" y="535" class="small">права и RPC</text>
+
+<rect class="node" x="60" y="195" width="250" height="110" rx="12"/>
+<text x="80" y="230" class="heading">React-портал</text>
+<text x="80" y="260" class="label">Сотрудник · руководитель</text>
+<text x="80" y="285" class="label">HR / администратор</text>
+
+<rect class="node" x="390" y="195" width="600" height="110" rx="12"/>
+<text x="412" y="230" class="heading">FastAPI · единая граница доступа</text>
+<text x="412" y="260" class="label">Вход, Bearer-токен, HR-профиль и проверка прав</text>
+<text x="412" y="285" class="small">Серверные ключи остаются на бэкенде</text>
+
+<rect class="node" x="60" y="370" width="250" height="120" rx="12"/>
+<text x="80" y="406" class="heading">AI Jana</text>
+<text x="80" y="434" class="label">Поиск по смыслу</text>
+<text x="80" y="457" class="small">Проверка цитаты и SHA-256</text>
+<text x="80" y="480" class="small">Цитата + ссылка или отказ</text>
+
+<rect class="data" x="390" y="370" width="240" height="120" rx="12"/>
+<text x="410" y="406" class="heading">Supabase Auth</text>
+<text x="410" y="435" class="label">Учётные записи</text>
+<text x="410" y="461" class="label">и сессии пользователей</text>
+
+<rect class="node" x="710" y="370" width="280" height="120" rx="12"/>
+<text x="730" y="406" class="heading">HR-сервисы</text>
+<text x="730" y="435" class="label">Профили · заявки · Academy</text>
+<text x="730" y="461" class="label">История и уведомления</text>
+
+<rect class="node" x="60" y="565" width="250" height="120" rx="12"/>
+<text x="80" y="600" class="heading">Локальные файлы</text>
+<text x="80" y="629" class="label">ONNX MPNet + FAQ</text>
+<text x="80" y="655" class="label">CPU · без платы за токены</text>
+
+<rect class="data" x="390" y="565" width="240" height="120" rx="12"/>
+<text x="410" y="599" class="heading">База знаний</text>
+<text x="410" y="628" class="label">knowledge_articles</text>
+<text x="410" y="654" class="label">Общие активные FAQ</text>
+
+<rect class="data" x="710" y="565" width="280" height="120" rx="12"/>
+<text x="730" y="599" class="heading">Данные HR</text>
+<text x="730" y="628" class="label">Профили, заявки, обучение,</text>
+<text x="730" y="654" class="label">события и уведомления</text>
+<path d="M402 700V712H978V700" fill="none" stroke="#6c8cb5" stroke-width="2"/>
+<text x="489" y="738" class="small">Таблицы одной базы Supabase Postgres</text>
+
+<rect x="60" y="773" width="930" height="75" rx="12" fill="#e6f2eb"/>
+<text x="80" y="803" class="label" style="font-weight:700">Одобренный отпуск → файл .ics → Google Calendar</text>
+<text x="80" y="829" class="small">Сотрудник импортирует файл вручную. Автоматической синхронизации нет.</text>
+
+<rect class="future" x="1120" y="195" width="340" height="95" rx="12"/>
+<text x="1142" y="232" class="heading">1С:ЗУП</text>
+<text x="1142" y="261" class="label">Официальные кадровые данные</text>
+<path class="later" d="M1290 290V335"/>
+<rect class="future" x="1120" y="335" width="340" height="100" rx="12"/>
+<text x="1142" y="371" class="heading">Адаптер чтения 1С</text>
+<text x="1142" y="402" class="label">Профили и остаток отпуска</text>
+<path class="later" d="M1120 385H1020V607H990"/>
+
+<path class="later" marker-start="url(#future-arrow)" d="M990 455H1070V550H1120"/>
+<rect class="future" x="1120" y="500" width="340" height="120" rx="12"/>
+<text x="1142" y="536" class="heading">Адаптер документов</text>
+<text x="1142" y="565" class="label">Передача согласованной заявки</text>
+<text x="1142" y="591" class="label">Внешний ID и статус обратно</text>
+<path class="later" marker-start="url(#future-arrow)" d="M1290 620V670"/>
+<rect class="future" x="1120" y="670" width="340" height="95" rx="12"/>
+<text x="1142" y="707" class="heading">Documentolog</text>
+<text x="1142" y="736" class="label">Кадровый документооборот</text>
+<text x="1123" y="807" class="small">Адаптеры пока не реализованы.</text>
+<text x="1123" y="832" class="small">В MVP используются тестовые данные.</text>
+
+<rect x="40" y="905" width="1440" height="105" rx="14" fill="#f6f8fb" stroke="#e1e6ed"/>
+<text x="65" y="938" class="heading">Границы ИИ</text>
+<text x="65" y="968" class="label">Jana не читает персональные сведения и не меняет заявки. Каждый ответ проверяется по цитате и SHA-256 источника.</text>
+<text x="65" y="993" class="small">Для Auth и базы нужен интернет. Полная схема доступа, ограничения и будущие контракты — в docs/architecture.md.</text>
+</svg>

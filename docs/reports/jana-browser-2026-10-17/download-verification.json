@@ -1,0 +1,15 @@
+{
+  "file": "leave-00ccb0c2-2eb5-4797-ad3f-c038528486a2.ics",
+  "size_bytes": 586,
+  "event_count": 1,
+  "start_inclusive": "2026-11-10",
+  "end_exclusive": "2026-11-13",
+  "calendar_days": 3,
+  "status": "CONFIRMED",
+  "summary": "Отпуск — JanaPost",
+  "uid": "leave-00ccb0c2-2eb5-4797-ad3f-c038528486a2@posttech.local",
+  "classification": "PRIVATE",
+  "no_attendees_or_organizer": true,
+  "no_account_email_or_test_comment": true,
+  "download_method": "Actual browser button, download event via CUA"
+}
