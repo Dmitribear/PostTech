@@ -179,3 +179,7 @@
  .req-conflict-heading{padding:14px}
  .req-conflict-list{padding:0 14px}
 }
+
+.cal-page .page-actions{flex-wrap:wrap;justify-content:flex-end}
+.cal-export-steps{padding-left:22px;line-height:1.65}
+@media(max-width:600px){.cal-page .page-actions{justify-content:flex-start}.cal-page .page-actions .btn{max-width:100%;white-space:normal;text-align:left}}

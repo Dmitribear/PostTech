@@ -1,0 +1,44 @@
+{
+  "feature": "Aggregate calendar ICS export from Calendar page",
+  "shared_supabase_used": false,
+  "contract": "GET /api/v1/requests/calendar.ics?scope=mine|team&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD",
+  "unit": {
+    "command": "npm test --prefix frontend",
+    "passed": 51,
+    "failed": 0
+  },
+  "build": {
+    "command": "npm run build --prefix frontend",
+    "status": "passed"
+  },
+  "browser": [
+    {
+      "command": "npm run test:e2e --prefix frontend -- calendar-export.spec.ts --reporter=list",
+      "passed": 2,
+      "failed": 0,
+      "projects": [
+        "desktop",
+        "mobile"
+      ],
+      "duration_seconds": 11.2
+    },
+    {
+      "command": "npm run test:e2e --prefix frontend -- calendar-export.spec.ts jana.spec.ts --reporter=list",
+      "jana_spec_passed": 4,
+      "jana_spec_failed": 0,
+      "note": "Initial new calendar test fixture lacked session metadata, then its team locator was ambiguous; corrected test fixture/locator and reran calendar tests successfully."
+    }
+  ],
+  "checks": [
+    "Authenticated download with selected scope and month",
+    "Unchanged full dates for crossing leave in downloaded bytes",
+    "Explicit manual-import instructions and no-sync warning",
+    "Failure shown without downloaded error file",
+    "Individual request calendar export retained",
+    "Mobile 320px no horizontal overflow"
+  ],
+  "limitations": [
+    "Contract-mocked browser checks; real Docker browser verification follows rebuild.",
+    "Empty export is a valid empty calendar."
+  ]
+}

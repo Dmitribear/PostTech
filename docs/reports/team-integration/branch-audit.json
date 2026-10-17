@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-17",
+  "branches": {
+    "main": {
+      "commit": "55f5c09",
+      "integration": "merged",
+      "preserved": [
+        "director role",
+        "two-stage HR approval",
+        "single vacation debit",
+        "HR role administration"
+      ]
+    },
+    "Integration": {
+      "commit": "eb03c8c",
+      "integration": "merged",
+      "preserved": [
+        "local Jana",
+        "versioned citations",
+        "ICS calendar",
+        "retrieval checks"
+      ]
+    },
+    "test": {
+      "commit": "16f1c27",
+      "integration": "merged",
+      "preserved": [
+        "frontend",
+        "HR fulfillment",
+        "employee import",
+        "onboarding tracks",
+        "scoped summaries",
+        "reminders"
+      ]
+    },
+    "ver2": {
+      "commit": "f113562",
+      "integration": "reviewed all 13 unique-commit files; merge records already-integrated fixes without reverting modern contracts",
+      "preserved": [
+        "auth configuration diagnostics",
+        "isolated auth clients",
+        "atomic workflow intent",
+        "source validation"
+      ],
+      "superseded": [
+        "notification triggers replaced by atomic RPCs",
+        "one-stage requests replaced by manager/director then HR",
+        "OpenAI/FAQ fallbacks replaced by local full-knowledge reader",
+        "old completion contracts replaced by scored idempotent completion"
+      ],
+      "excluded_sql": "0002_atomic_workflows.sql would duplicate notification/event triggers; current migration explicitly rejects that legacy schema"
+    }
+  },
+  "shared_supabase_modified": false
+}

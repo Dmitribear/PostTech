@@ -192,7 +192,9 @@ services:
     ports: ["127.0.0.1:${POSTTECH_HTTP_PORT:-8000}:80"]
     depends_on:
       api: {condition: service_healthy}
-    networks: [private]
+    # Docker Desktop needs a normal bridge for host-published ports. Only the
+    # reverse proxy joins edge; API, database and model remain internal-only.
+    networks: [edge, private]
     restart: unless-stopped
     healthcheck:
       test: [CMD, wget, -q, --spider, http://127.0.0.1/healthz]
@@ -201,6 +203,7 @@ services:
       retries: 10
 
 networks:
+  edge: {}
   private:
     internal: true
   download: {}

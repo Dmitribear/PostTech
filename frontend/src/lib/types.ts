@@ -158,6 +158,13 @@ export interface RequestFilters {
   offset?: number;
 }
 
+export interface CalendarExportFilters {
+  scope?: 'mine' | 'team' | 'all';
+  employee_id?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
 export interface RequestEvent {
   id: string;
   request_id: string;
@@ -314,6 +321,7 @@ export interface HrApi {
   getCourseAttempts(id: string): Promise<CourseAttempt[]>;
   getTeamCourses(filters?: { employee_id?: string; course_id?: string }): Promise<TeamCourseAssignment[]>;
   getLeaveCalendar(id: string): Promise<Blob>;
+  getCalendarExport(filters: CalendarExportFilters): Promise<Blob>;
   askJana(question: string): Promise<JanaAnswer>;
   getKnowledgeSource(id: string, version?: string | null): Promise<KnowledgeSource>;
 }

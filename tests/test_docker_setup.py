@@ -4,7 +4,10 @@ import hashlib
 import hmac
 import importlib.util
 import json
+import os
 from pathlib import Path
+import shutil
+import subprocess
 
 import pytest
 
@@ -70,3 +73,29 @@ def test_transaction_wrapper_preserves_plpgsql_blocks(bootstrap):
     assert "DO $$\nbegin\n perform 1;\nend $$;" in result
     assert not result.strip().lower().startswith("begin;")
     assert not result.strip().lower().endswith("commit;")
+
+
+@pytest.mark.parametrize("gpu", [False, True])
+def test_compose_exposes_only_frontend_and_keeps_data_and_ai_private(tmp_path, gpu):
+    docker = shutil.which("docker")
+    if docker is None:
+        pytest.skip("Docker Compose CLI is required; the Docker daemon is not used")
+    config = prepare(tmp_path)
+    command = [docker, "compose", "--env-file", str(config), "-f", str(ROOT / "compose.yaml")]
+    if gpu:
+        command += ["-f", str(ROOT / "compose.gpu.yaml")]
+    # Never read actual local/shared secrets, including exported shell values.
+    environment = {key: value for key, value in os.environ.items()
+                   if not key.startswith(("POSTTECH_", "COMPOSE_", "JANA_READER_"))}
+    result = subprocess.run(command + ["config", "--format", "json"], cwd=ROOT, env=environment,
+                            capture_output=True, text=True, encoding="utf-8", check=True, timeout=30)
+    parsed = json.loads(result.stdout)
+    services = parsed["services"]
+    assert parsed["networks"]["private"]["internal"] is True
+    assert not parsed["networks"]["edge"].get("internal", False)
+    assert set(services["frontend"]["networks"]) == {"edge", "private"}
+    assert {name for name, service in services.items() if service.get("ports")} == {"frontend"}
+    assert services["frontend"]["ports"][0]["host_ip"] == "127.0.0.1"
+    for name in ("api", "db", "auth", "rest", "supabase", "jana-reader", "bootstrap", "workflow-worker"):
+        assert set(services[name]["networks"]) == {"private"}
+    assert set(services["model-init"]["networks"]) == {"download"}

@@ -6,6 +6,7 @@ from the validated Auth session, never from request bodies.
 """
 
 import logging
+from datetime import date
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -95,6 +96,8 @@ def list_requests(
     limit: int = 50,
     offset: int = 0,
     scope: Literal["all", "mine", "review"] = "all",
+    start_date: date | None = None,
+    end_date: date | None = None,
 ) -> list[dict]:
     client = _client()
     principals = _principals(actor)
@@ -120,6 +123,11 @@ def list_requests(
         query = query.eq("status", request_status)
     if request_type is not None:
         query = query.eq("request_type", request_type)
+    # Export full leave dates when a leave overlaps the requested calendar range.
+    if start_date is not None:
+        query = query.gte("end_date", start_date.isoformat())
+    if end_date is not None:
+        query = query.lte("start_date", end_date.isoformat())
     records = _execute(
         query.order("created_at", desc=True).order("id", desc=True).range(offset, offset + limit - 1)
     ) or []

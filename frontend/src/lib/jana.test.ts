@@ -52,6 +52,22 @@ describe('authenticated Jana and calendar', () => {
     await expect(api.getLeaveCalendar(id)).rejects.toMatchObject({ status });
   });
 
+  it('exports the complete selected calendar through the authenticated aggregate endpoint', async () => {
+    const transport = vi.fn<typeof fetch>(async (_input, init) => {
+      expect(new Headers(init?.headers).get('Accept')).toBe('text/calendar');
+      expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer old-access');
+      return file();
+    });
+    const api = createLiveApi({ fetch: transport, storage: storage() });
+    expect(await (await api.getCalendarExport({ scope: 'team', start_date: '2026-12-01', end_date: '2026-12-31' })).text()).toBe(ics);
+    expect(transport.mock.calls[0][0]).toBe('/api/v1/requests/calendar.ics?scope=team&start_date=2026-12-01&end_date=2026-12-31');
+  });
+
+  it.each([403, 413, 503])('keeps aggregate export failure %s as an error rather than a file', async status => {
+    const api = createLiveApi({ storage: storage(), fetch: vi.fn(async () => json({ detail: 'Export unavailable' }, status)) });
+    await expect(api.getCalendarExport({ scope: 'mine' })).rejects.toMatchObject({ status });
+  });
+
   it('does not save the SPA HTML as an ICS file', async () => {
     const api = createLiveApi({ storage: storage(), fetch: vi.fn(async () => new Response('<html/>', { headers: { 'Content-Type': 'text/html' } })) });
     await expect(api.getLeaveCalendar(id)).rejects.toMatchObject({ status: 502 });

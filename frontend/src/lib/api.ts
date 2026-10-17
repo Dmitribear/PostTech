@@ -3,7 +3,7 @@ import type {
   AssignedCourse, AuthResponse, AuthSession, Course, CourseAssignment, CourseDetail,
   EmployeeProfile, HrApi, HrRequest, JanaAnswer, Notification, NotificationFilters,
   RegistrationResponse, RequestCreate, RequestEvent, RequestFilters, RequestReview,
-  RequestRouting, CourseAttempt, TeamCourseAssignment, KnowledgeSource,
+  RequestRouting, CourseAttempt, TeamCourseAssignment, KnowledgeSource, CalendarExportFilters,
   InvitationPreview, RegistrationInput, RegistrationVerification, InvitationCompletion,
   InvitationInput, IssuedInvitation, InvitationRecord,
 } from './types';
@@ -16,6 +16,11 @@ const translatedErrors: Record<string, string> = {
   'Jana knowledge base is temporarily unavailable': 'База знаний Jana временно недоступна. Попробуйте позже.',
   'Source not found': 'Источник больше не опубликован или был удалён. Уточните информацию в HR.',
   'Calendar export requires an approved leave request': 'Файл доступен только для одобренного отпуска. Обновите карточку заявки.',
+  'Team calendar requires a reviewer role': 'Календарь команды доступен руководителю, директору или HR.',
+  'Unknown calendar scope': 'Выберите свой календарь или календарь команды.',
+  'Calendar end date must not precede its start date': 'Дата окончания периода не может быть раньше даты начала.',
+  'Too many leave events; choose a narrower date range or employee': 'Слишком много отпусков. Выберите более короткий период или одного сотрудника.',
+  'Calendar changed while loading; retry the export': 'Календарь изменился во время загрузки. Повторите экспорт.',
   'Leave dates are missing or invalid': 'Не удалось получить корректные даты отпуска. Обратитесь в HR.',
 
   "HR role required": "Раздел доступен HR",
@@ -411,6 +416,7 @@ export class LiveApi implements HrApi {
   completeCourse(id: string, answers: Record<string, number>, idempotencyKey = crypto.randomUUID()): Promise<CourseAssignment> { return this.send(`/academy/courses/${encodeURIComponent(id)}/complete`, { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify({ answers }) }); }
   getCourseAttempts(id: string): Promise<CourseAttempt[]> { return this.send(`/academy/courses/${encodeURIComponent(id)}/attempts`); }
   getTeamCourses(filters: { employee_id?: string; course_id?: string } = {}): Promise<TeamCourseAssignment[]> { return this.send(`/academy/team${queryString(filters)}`); }
+  getCalendarExport(filters: CalendarExportFilters): Promise<Blob> { return this.send(`/requests/calendar.ics${queryString(filters)}`, {}, true, true, 'calendar'); }
   getLeaveCalendar(id: string): Promise<Blob> { return this.send(`/requests/${encodeURIComponent(id)}/calendar.ics`, {}, true, true, 'calendar'); }
   askJana(question: string): Promise<JanaAnswer> { return this.send('/ai/ask', { method: 'POST', body: JSON.stringify({ question }) }); }
   async getKnowledgeSource(id: string, version?: string | null): Promise<KnowledgeSource> { return this.send(`${janaSourcePath(id)}${version ? `?version=${encodeURIComponent(version)}` : ''}`); }

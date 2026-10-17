@@ -347,6 +347,7 @@ export class DemoApi implements HrApi {
     if (question.trim().length < 3 || question.length > 2000) throw new ApiError(422, 'Напишите вопрос длиной от 3 до 2000 символов.');
     return this.localJana().askJana(question);
   }
+  async getCalendarExport(): Promise<Blob> { throw new ApiError(503, 'Общий экспорт доступен после входа в портал.'); }
   async getLeaveCalendar(id: string): Promise<Blob> {
     const record = await this.getRequest(id);
     if (record.request_type !== 'leave' || record.status !== 'approved') throw new ApiError(409, 'Calendar export requires an approved leave request');

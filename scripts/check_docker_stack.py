@@ -22,7 +22,7 @@ EMAILS = {"worker": "employee@posttech.demo", "manager": "manager@posttech.demo"
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--scope", choices=("core", "jana", "all"), default="all")
+    parser.add_argument("--scope", choices=("core", "calendar", "jana", "all"), default="all")
     args = parser.parse_args()
     config = dotenv_values(ROOT / ".local/docker.env")
     if config.get("COMPOSE_PROJECT_NAME") != "posttech-local":
@@ -82,7 +82,9 @@ def main():
                 request("director", "GET", f"/api/v1/requests/{rid}", expected=403)
                 review = {"status": "approved", "reviewer_comment": "LOCAL DOCKER SMOKE"}
                 request("worker", "PATCH", f"/api/v1/requests/{rid}/review", expected=403, json=review)
-                request("hr_admin", "PATCH", f"/api/v1/requests/{rid}/review", expected=403, json=review)
+                request("hr_admin", "PATCH", f"/api/v1/requests/{rid}/review", expected=409, json=review)
+                unchanged = request("worker", "GET", f"/api/v1/requests/{rid}").json()
+                check("Premature HR review leaves request pending", unchanged["status"] == "pending")
                 first = request("manager", "PATCH", f"/api/v1/requests/{rid}/review", json=review).json()
                 check("Manager forwards to HR", first["status"] == "pending_hr")
                 request("worker", "GET", f"/api/v1/requests/{rid}/calendar.ics", expected=409)
@@ -124,6 +126,32 @@ def main():
                 request("hr_admin", "POST", "/api/v1/workspace/workflow-policy/run")
                 policy = request("hr_admin", "GET", "/api/v1/workspace/workflow-policy").json()
                 check("Reminder worker cycle recorded", bool(policy.get("last_run_at")))
+
+            if args.scope in {"calendar", "all"}:
+                request(None, "GET", "/api/v1/requests/calendar.ics", expected=401)
+                request("worker", "GET", "/api/v1/requests/calendar.ics?scope=team", expected=403)
+                request("worker", "GET", "/api/v1/requests/calendar.ics?start_date=2026-12-31&end_date=2026-01-01", expected=422)
+                for role in EMAILS:
+                    allowed, offset = [], 0
+                    while True:
+                        page = request(role, "GET", f"/api/v1/requests?scope=all&request_type=leave&status=approved&limit=100&offset={offset}").json()
+                        allowed.extend(page)
+                        if len(page) < 100:
+                            break
+                        offset += len(page)
+                    for scope in (["mine", "all"] if role == "worker" else ["mine", "team", "all"]):
+                        expected = [row for row in allowed if scope == "all" or
+                                    (row["employee_id"] == profiles[role]["id"]) == (scope == "mine")]
+                        response = request(role, "GET", f"/api/v1/requests/calendar.ics?scope={scope}")
+                        exported = Calendar.from_ical(response.content).walk("VEVENT")
+                        by_id = {str(event["uid"])[6:].removesuffix("@posttech.local"): event for event in exported}
+                        check(f"Project calendar scope {role}/{scope}", set(by_id) == {row["id"] for row in expected}, event_count=len(exported))
+                        check(f"Project calendar count {role}/{scope}", response.headers.get("x-calendar-event-count") == str(len(expected)))
+                        for row in expected:
+                            event = by_id[row["id"]]
+                            check(f"Project dates {role}/{scope}/{row['id']}",
+                                  event.decoded("dtstart") == date.fromisoformat(row["start_date"]) and
+                                  event.decoded("dtend") == date.fromisoformat(row["end_date"]) + timedelta(days=1))
 
             if args.scope in {"jana", "all"}:
                 question = "Кто окончательно одобряет отпуск?"

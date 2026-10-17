@@ -1,0 +1,309 @@
+{
+  "scope": "core",
+  "base_url": "http://127.0.0.1:8000",
+  "shared_supabase_used": false,
+  "transport": "Real nginx, FastAPI, GoTrue, PostgREST and PostgreSQL containers",
+  "checks": [
+    {
+      "name": "Built portal served",
+      "passed": true
+    },
+    {
+      "name": "anonymous GET /api/v1/health/ready",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "anonymous GET /api/v1/profile",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "anonymous POST /api/v1/auth/login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "worker GET /api/v1/profile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Verified role worker",
+      "passed": true
+    },
+    {
+      "name": "anonymous POST /api/v1/auth/login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "manager GET /api/v1/profile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Verified role manager",
+      "passed": true
+    },
+    {
+      "name": "anonymous POST /api/v1/auth/login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "director GET /api/v1/profile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Verified role director",
+      "passed": true
+    },
+    {
+      "name": "anonymous POST /api/v1/auth/login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "hr_admin GET /api/v1/profile",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Verified role hr_admin",
+      "passed": true
+    },
+    {
+      "name": "worker GET /api/v1/workspace/leave-balance",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "worker GET /api/v1/requests?scope=mine&limit=100",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "worker POST /api/v1/requests",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "Leave starts pending",
+      "passed": true
+    },
+    {
+      "name": "director GET /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "worker PATCH /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/review",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "hr_admin PATCH /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/review",
+      "passed": true,
+      "status": 409
+    },
+    {
+      "name": "worker GET /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Premature HR review leaves request pending",
+      "passed": true
+    },
+    {
+      "name": "manager PATCH /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/review",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Manager forwards to HR",
+      "passed": true
+    },
+    {
+      "name": "worker GET /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/calendar.ics",
+      "passed": true,
+      "status": 409
+    },
+    {
+      "name": "hr_admin PATCH /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/review",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "HR makes final decision",
+      "passed": true
+    },
+    {
+      "name": "hr_admin PATCH /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/review",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "worker GET /api/v1/workspace/leave-balance",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Exactly one two-day debit",
+      "passed": true,
+      "official_before": 18.0,
+      "official_after": 16.0
+    },
+    {
+      "name": "Final approval closes the hold",
+      "passed": true
+    },
+    {
+      "name": "worker GET /api/v1/requests/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a/calendar.ics",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Calendar includes both boundary dates",
+      "passed": true,
+      "start": "2026-12-08",
+      "end": "2026-12-09"
+    },
+    {
+      "name": "Calendar response is a download",
+      "passed": true
+    },
+    {
+      "name": "hr_admin GET /api/v1/workspace/fulfillment/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Approval creates HR document queue",
+      "passed": true
+    },
+    {
+      "name": "hr_admin POST /api/v1/workspace/fulfillment/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "passed": true,
+      "status": 409
+    },
+    {
+      "name": "hr_admin POST /api/v1/workspace/fulfillment/1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Manual local document completed",
+      "passed": true
+    },
+    {
+      "name": "worker GET /api/v1/workspace/leave-balance",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Document does not debit twice",
+      "passed": true
+    },
+    {
+      "name": "manager POST /api/v1/requests",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "director PATCH /api/v1/requests/7efe794d-d14e-4750-91ce-cb7aba86703f/review",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Director reviews direct report",
+      "passed": true
+    },
+    {
+      "name": "hr_admin PATCH /api/v1/requests/7efe794d-d14e-4750-91ce-cb7aba86703f/review",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "worker GET /api/v1/workspace/summary",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Scoped summary worker",
+      "passed": true
+    },
+    {
+      "name": "manager GET /api/v1/workspace/summary",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Scoped summary manager",
+      "passed": true
+    },
+    {
+      "name": "director GET /api/v1/workspace/summary",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Scoped summary director",
+      "passed": true
+    },
+    {
+      "name": "hr_admin GET /api/v1/workspace/summary",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Scoped summary hr_admin",
+      "passed": true
+    },
+    {
+      "name": "worker GET /api/v1/workspace/employee-import/template",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "hr_admin GET /api/v1/workspace/employee-import/template",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "hr_admin GET /api/v1/workspace/tracks",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "worker GET /api/v1/workspace/my-tracks",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "worker GET /api/v1/academy/courses",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "hr_admin POST /api/v1/workspace/workflow-policy/run",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "hr_admin GET /api/v1/workspace/workflow-policy",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "Reminder worker cycle recorded",
+      "passed": true
+    }
+  ],
+  "run_id": "304f95b4-40d6-4a65-ae9a-b8e1ef42b9d4",
+  "leave_request_id": "1c7d1e82-62e1-4c53-b8e0-3a0f194d830a",
+  "director_review_request_id": "7efe794d-d14e-4750-91ce-cb7aba86703f",
+  "result": "passed"
+}
