@@ -28,7 +28,14 @@ def test_readiness_reports_ready_when_supabase_client_is_available(
 
     assert response.status_code == 200
     assert response.json() == {"status": "ready", "dependency": "supabase"}
-    database.table.return_value.select.return_value.limit.return_value.execute.assert_called_once()
+    assert 'integration_outbox' in [c.args[0] for c in database.table.call_args_list]
+
+
+def test_old_schema_is_not_ready(monkeypatch):
+    database = MagicMock()
+    database.table.return_value.select.return_value.limit.return_value.execute.side_effect = [None, RuntimeError('missing lessons')]
+    monkeypatch.setattr(health, 'get_supabase_client', lambda: database)
+    assert client.get('/api/v1/health/ready').status_code == 503
 
 
 def test_readiness_catches_database_outage_without_exposing_diagnostics(monkeypatch):

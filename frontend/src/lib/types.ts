@@ -191,6 +191,7 @@ export interface NotificationFilters {
 }
 
 export interface CourseAssignmentSummary {
+  completed_lesson_ids?: string[];
   course_id: string;
   status: CourseStatus;
   progress_percent: number;
@@ -231,6 +232,7 @@ export interface QuizQuestion {
 }
 
 export interface CourseDetail extends CourseSummary {
+  lessons?: {id: string; title: string; material_markdown: string}[];
   material_markdown: string;
   quiz: QuizQuestion[];
   active: boolean;
@@ -305,5 +307,5 @@ export interface HrApi {
   getCourseAttempts(id: string): Promise<CourseAttempt[]>;
   getTeamCourses(filters?: { employee_id?: string; course_id?: string }): Promise<TeamCourseAssignment[]>;
   askJana(question: string): Promise<JanaAnswer>;
-  getKnowledgeSource(id: string): Promise<KnowledgeSource>;
+  getKnowledgeSource(id: string, version?: string | null): Promise<KnowledgeSource>;
 }

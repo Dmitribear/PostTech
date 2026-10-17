@@ -1,0 +1,17 @@
+{
+  "measured_at": "2026-10-17T10:36:10.601799+00:00",
+  "scope": "local PostgreSQL SQL-only; excludes HTTP/Auth/AI/external services",
+  "counts": {
+    "employee_profiles": 156,
+    "hr_requests": 453,
+    "integration_outbox": 300
+  },
+  "calls": 400,
+  "workers": 16,
+  "errors": 0,
+  "elapsed_seconds": 0.436,
+  "operations_per_second": 917.4,
+  "median_ms": 0.77,
+  "p95_ms": 7.8,
+  "max_ms": 10.56
+}

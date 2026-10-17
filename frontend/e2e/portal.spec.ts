@@ -20,12 +20,23 @@ async function enterDemo(page: Page, role: Role = 'worker') {
 }
 
 async function navigate(page: Page, label: string) {
-  const nav = page.getByRole('navigation', { name: 'Главная навигация' });
-  await expect(nav).toBeAttached();
-  const menu = page.getByRole('button', { name: 'Открыть меню', exact: true });
-  if (await menu.isVisible() && await menu.getAttribute('aria-expanded') !== 'true') await menu.click();
-  const container = label === 'Настройки' ? page.locator('.sidebar-bottom') : nav;
-  await container.getByRole('link', { name: new RegExp(`^${label}`) }).click();
+  if (label === 'Уведомления') { await page.getByRole('link', { name: /^Уведомления:/ }).click(); return; }
+  if (['Профиль', 'Настройки', 'Календарь'].includes(label)) {
+    await page.getByLabel('Меню профиля', { exact: true }).click();
+    await page.locator('.account-popover').getByRole('link', { name: label === 'Профиль' ? 'Мой профиль' : label, exact: true }).click(); return;
+  }
+  const nav = page.getByRole('navigation', { name: (page.viewportSize()?.width ?? 1440) <= 900 ? 'Быстрая навигация' : 'Главная навигация' });
+  if (label === 'Сотрудники') {
+    const workspace = page.locator((page.viewportSize()?.width ?? 1440) <= 900 ? '.workspace-switch-mobile' : '.workspace-switch-desktop');
+    await workspace.getByRole('button', { name: 'Команда', exact: true }).click();
+    await nav.getByRole('link', { name: 'Команда', exact: true }).click(); return;
+  }
+  if (label === 'AI Jana') {
+    if ((page.viewportSize()?.width ?? 1440) <= 900) await nav.getByRole('link', { name: 'Помощь', exact: true }).click();
+    else await page.locator('.sidebar-bottom').getByRole('link', { name: 'Помощь', exact: true }).click();
+    await page.locator('.workspace-links').getByRole('link', { name: /^Спросить Jana/ }).click(); return;
+  }
+  await nav.getByRole('link', { name: label, exact: true }).click();
 }
 
 async function confirmRequest(page: Page) {
@@ -108,7 +119,7 @@ test('calendar navigation and range selection carry dates into request review', 
   await page.getByText('Ввести даты вручную', { exact: true }).click();
   await page.getByLabel('Дата начала', { exact: true }).fill('2030-11-03');
   await page.getByLabel('Дата окончания', { exact: true }).fill('2030-11-06');
-  await expect(page.locator('.cal-selected-period')).toContainText('4 календарных дня');
+  await expect(page.locator('.cal-selected-period')).toContainText('4 дня');
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
   await expect(page).toHaveURL(/\/requests\/new\?/);
   await expect(page.getByRole('heading', { name: 'Проверьте заявку', exact: true })).toBeVisible();
@@ -167,7 +178,7 @@ test('Jana cites supported answers and explicitly handles unknown questions', as
   await chat.getByRole('textbox', { name: 'Ваш вопрос Jana' }).fill('Какова температура поверхности Венеры?');
   await chat.getByRole('button', { name: 'Отправить вопрос' }).click();
   await expect(conversation).toContainText('нет подтверждённой информации');
-  await expect(conversation.locator('.support-message-refusal')).toContainText('обратитесь в ваш HR-отдел');
+  await expect(conversation.getByRole('button', { name: 'Передать вопрос в HR' })).toBeVisible();
   await chat.getByRole('button', { name: 'Новый диалог' }).click();
   await expect(chat.getByRole('heading', { name: 'Чем помочь?' })).toBeVisible();
   await chat.getByRole('button', { name: 'Закрыть AI Jana' }).click();
@@ -213,18 +224,18 @@ test('manager cannot review own request and can review a teammate request', asyn
 test('manager assigns an available course and duplicate assignment stays an error', async ({ page }) => {
   await enterDemo(page, 'manager');
   await navigate(page, 'Сотрудники');
-  const employee = page.locator('article').filter({ has: page.getByRole('heading', { name: 'Алия Серикова', exact: true }) });
-  await employee.getByRole('button', { name: 'Профиль', exact: true }).click();
+  const openEmployee = () => page.getByRole('button', { name: 'Профиль: Алия Серикова', exact: true }).click();
+  await openEmployee();
   await expect(page.getByRole('dialog')).toContainText('данные обновляет HR');
   await expect(page.getByRole('dialog').locator('input, textarea, select')).toHaveCount(0);
-  await page.getByRole('dialog').getByRole('button', { name: 'Закрыть', exact: true }).click();
-  await employee.getByRole('button', { name: 'Назначить курс' }).click();
-  await page.getByRole('dialog').getByRole('combobox').selectOption({ label: 'Эффективная работа в команде · 40 мин' });
+  await page.getByRole('dialog').getByRole('button', { name: 'Назначить курс', exact: true }).click();
+  await page.getByRole('dialog').getByRole('radio', { name: /Эффективная работа в команде/ }).check();
   await page.getByRole('dialog').getByRole('button', { name: 'Назначить курс', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('.toast')).toContainText('Курс назначен');
-  await employee.getByRole('button', { name: 'Назначить курс' }).click();
-  await page.getByRole('dialog').getByRole('combobox').selectOption({ label: 'Эффективная работа в команде · 40 мин' });
+  await openEmployee();
+  await page.getByRole('dialog').getByRole('button', { name: 'Назначить курс', exact: true }).click();
+  await page.getByRole('dialog').getByRole('radio', { name: /Эффективная работа в команде/ }).check();
   await page.getByRole('dialog').getByRole('button', { name: 'Назначить курс', exact: true }).click();
   await expect(page.getByRole('dialog').getByRole('alert')).toContainText('уже назначен');
 });
@@ -241,6 +252,7 @@ test('live login uses bearer auth and retries an uncertain request after reload 
     const respond = (body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
     if (path === '/auth/login') return respond({ user_id: 'test-auth-user', email: profile.email, access_token: 'test-access-token', refresh_token: 'test-refresh-token', token_type: 'bearer', expires_in: 3600 });
     protectedHeaders.push(request.headers().authorization);
+    if (path === '/workspace/leave-balance') return respond({employee_id:profile.id,official_days:24,pending_days:0,approved_unreconciled_days:0,available_days:24,request_days:0,holds:[]});
     if (path === '/profile') return respond(profile);
     if (path === '/requests/routing') return respond({ can_submit: true, route: 'manager', approvers: [{ id: '40000000-0000-4000-8000-000000000003', full_name: 'Тестовый Руководитель', role: 'manager' }], message: null, today: '2026-10-16', policy: 'Заявку рассматривает руководитель.' });
     if (path === '/requests' && request.method() === 'POST') {
@@ -261,7 +273,7 @@ test('live login uses bearer auth and retries an uncertain request after reload 
   await expect(page.getByRole('heading', { name: 'Новый пароль', exact: true })).toBeVisible();
   await page.getByRole('textbox', { name: 'Код подтверждения', exact: true }).fill('12345678');
   await expect(page.locator('.onboarding-otp-cell')).toHaveCount(8);
-  await page.getByLabel('Новый пароль', { exact: true }).fill('NotSubmittedPassword123!');
+  await page.locator('input[autocomplete="new-password"]').fill('NotSubmittedPassword123!');
   await page.getByRole('button', { name: 'Назад', exact: true }).click();
   await expect(page.getByLabel('Рабочая почта', { exact: true })).toHaveValue(profile.email);
   await page.getByRole('button', { name: 'Назад', exact: true }).click();

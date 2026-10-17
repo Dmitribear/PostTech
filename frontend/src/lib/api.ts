@@ -399,7 +399,7 @@ export class LiveApi implements HrApi {
   getCourseAttempts(id: string): Promise<CourseAttempt[]> { return this.send(`/academy/courses/${encodeURIComponent(id)}/attempts`); }
   getTeamCourses(filters: { employee_id?: string; course_id?: string } = {}): Promise<TeamCourseAssignment[]> { return this.send(`/academy/team${queryString(filters)}`); }
   askJana(question: string): Promise<JanaAnswer> { return this.send('/ai/ask', { method: 'POST', body: JSON.stringify({ question }) }); }
-  getKnowledgeSource(id: string): Promise<KnowledgeSource> { return this.send(`/ai/sources/${encodeURIComponent(id)}`); }
+  getKnowledgeSource(id: string, version?: string | null): Promise<KnowledgeSource> { return this.send(`/ai/sources/${encodeURIComponent(id)}${version ? `?version=${encodeURIComponent(version)}` : ''}`); }
 }
 
 export function createLiveApi(options: LiveApiOptions = {}): LiveApi { return new LiveApi(options); }

@@ -14,9 +14,15 @@ def liveness() -> dict[str, str]:
 
 @router.get("/ready", response_model=None)
 def readiness() -> dict[str, str] | JSONResponse:
-    """Read one public knowledge row to check connectivity and the current schema."""
+    """Check required extension columns too; an old schema must not appear ready."""
     try:
-        get_supabase_client().table("knowledge_articles").select("id,version,reviewed_at,review_due_at").limit(1).execute()
+        client = get_supabase_client()
+        for table, columns in (
+            ('knowledge_articles','id,version,reviewed_at,review_due_at,revision,draft'),
+            ('courses','id,lessons'), ('course_assignments','id,completed_lesson_ids'),
+            ('leave_holds','request_id,state'), ('integration_outbox','id,status'),
+        ):
+            client.table(table).select(columns).limit(1).execute()
     except Exception:
         return JSONResponse(
             status_code=503,
