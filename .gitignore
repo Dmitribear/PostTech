@@ -16,3 +16,4 @@ frontend/test-results/
 .npm-cache/
 *.tsbuildinfo
 .local/
+.models/

@@ -156,16 +156,22 @@ test('assigned course records server-scored quiz completion', async ({ page }) =
 
 test('Jana cites supported answers and explicitly handles unknown questions', async ({ page }) => {
   await enterDemo(page);
-  await navigate(page, 'AI Jana');
-  await page.getByRole('button', { name: 'Как оформить отпуск?', exact: true }).click();
-  const conversation = page.getByRole('log', { name: 'Сообщения диалога' });
+  const currentUrl = page.url();
+  await page.getByRole('button', { name: 'Открыть AI Jana' }).click();
+  const chat = page.getByRole('dialog', { name: 'Чат с AI Jana' });
+  await expect(chat).toBeVisible();
+  expect(page.url()).toBe(currentUrl);
+  await chat.getByRole('button', { name: 'Как оформить отпуск?', exact: true }).click();
+  const conversation = chat.getByRole('log', { name: 'Сообщения диалога' });
   await expect(conversation).toContainText('Демо: порядок оформления отпуска');
-  await page.getByRole('textbox', { name: 'Ваш вопрос Jana' }).fill('Какова температура поверхности Венеры?');
-  await page.getByRole('button', { name: 'Отправить вопрос' }).click();
+  await chat.getByRole('textbox', { name: 'Ваш вопрос Jana' }).fill('Какова температура поверхности Венеры?');
+  await chat.getByRole('button', { name: 'Отправить вопрос' }).click();
   await expect(conversation).toContainText('нет подтверждённой информации');
   await expect(conversation.locator('.support-message-refusal')).toContainText('обратитесь в ваш HR-отдел');
-  await page.getByRole('button', { name: 'Новый диалог' }).click();
-  await expect(page.getByRole('heading', { name: 'Чем помочь?' })).toBeVisible();
+  await chat.getByRole('button', { name: 'Новый диалог' }).click();
+  await expect(chat.getByRole('heading', { name: 'Чем помочь?' })).toBeVisible();
+  await chat.getByRole('button', { name: 'Закрыть AI Jana' }).click();
+  await expect(chat).toBeHidden();
 });
 
 test('notification read state updates and density preference survives reload', async ({ page }) => {

@@ -67,19 +67,21 @@ export default function App() {
 
 
 const nav = [
-  ['/', 'home', 'Главная'], ['/requests', 'clipboard', 'Заявки'], ['/calendar', 'calendar', 'Календарь'], ['/academy', 'book', 'Обучение'], ['/jana', 'bot', 'AI Jana'], ['/notifications', 'bell', 'Уведомления'], ['/profile', 'user', 'Профиль'], ['/support', 'message', 'Обращения в HR'],
+  ['/', 'home', 'Главная'], ['/requests', 'clipboard', 'Заявки'], ['/calendar', 'calendar', 'Календарь'], ['/academy', 'book', 'Обучение'], ['/notifications', 'bell', 'Уведомления'], ['/profile', 'user', 'Профиль'], ['/support', 'message', 'Обращения в HR'],
 ];
 const mobileNav = [nav[0], nav[1], nav[2], nav[6]];
 function Shell() {
   const { profile, api, mode, logout, refreshKey } = usePortal();
   const [open, setOpen] = useState(false);
+  const [janaOpen, setJanaOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [search, setSearch] = useState('');
   const sidebar = useRef<HTMLElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const janaLauncher = useRef<HTMLButtonElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  useEffect(() => { setOpen(false); window.scrollTo(0, 0); }, [location.pathname, location.search]);
+  useEffect(() => { setOpen(false); setJanaOpen(false); window.scrollTo(0, 0); }, [location.pathname, location.search]);
   useEffect(() => {
     if (!open) return;
     const before = document.body.style.overflow;
@@ -98,10 +100,21 @@ function Shell() {
     document.addEventListener('keydown', onKey); desktop.addEventListener('change', closeOnDesktop);
     return () => { document.body.style.overflow = before; document.removeEventListener('keydown', onKey); desktop.removeEventListener('change', closeOnDesktop); };
   }, [open]);
+  useEffect(() => {
+    if (!janaOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setJanaOpen(false);
+        janaLauncher.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [janaOpen]);
   useEffect(() => { let active = true; api.getNotifications({ unread_only: true, limit: 100 }).then(n => { if (active) setUnread(n.length); }).catch(() => {}); return () => { active = false; }; }, [api, refreshKey, location.pathname]);
   const review = location.pathname === '/requests' && location.search.includes('scope=review');
   const teamLearning = location.pathname === '/academy' && location.search.includes('tab=team');
-  const current = review ? 'На согласование' : teamLearning ? 'Обучение команды' : nav.find(([path]) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path))?.[2] || (location.pathname === '/team' ? 'Команда' : location.pathname === '/delegations' ? 'Замещение' : location.pathname === '/course-editor' ? 'Редактор курсов' : 'Настройки');
+  const current = review ? 'На согласование' : teamLearning ? 'Обучение команды' : location.pathname.startsWith('/jana') ? 'AI Jana' : nav.find(([path]) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path))?.[2] || (location.pathname === '/team' ? 'Команда' : location.pathname === '/delegations' ? 'Замещение' : location.pathname === '/course-editor' ? 'Редактор курсов' : 'Настройки');
   const closeMenu = () => { setOpen(false); menuButton.current?.focus(); };
   return <div className="portal">
     <a className="skip-link" href="#main-content">{t("Перейти к содержимому")}</a>
@@ -129,5 +142,15 @@ function Shell() {
       </Routes></Suspense></main>
       <nav className="mobile-bottom-nav" aria-label={t("Быстрая навигация")}>{tx(mobileNav.map(([path, icon, label]) => <NavLink key={path} to={path} end={path === '/'} className={({isActive}) => isActive ? 'active' : ''}><Icon name={icon} size={22} /><span>{tx(label)}</span></NavLink>))}</nav>
     </div>
+    {!location.pathname.startsWith('/jana') && <>
+      {janaOpen && <div id="jana-floating-chat" className="jana-widget" role="dialog" aria-label={t("Чат с AI Jana")}>
+        <Suspense fallback={<div className="jana-widget-loading"><LoadingState /></div>}>
+          <Jana embedded onClose={() => { setJanaOpen(false); janaLauncher.current?.focus(); }} />
+        </Suspense>
+      </div>}
+      <button ref={janaLauncher} type="button" className="jana-launcher" onClick={() => setJanaOpen(value => !value)} aria-label={t(janaOpen ? "Закрыть AI Jana" : "Открыть AI Jana")} title={t(janaOpen ? "Закрыть AI Jana" : "Открыть AI Jana")} aria-expanded={janaOpen} aria-controls="jana-floating-chat">
+        <Icon name={janaOpen ? 'x' : 'bot'} size={25} />
+      </button>
+    </>}
   </div>;
 }

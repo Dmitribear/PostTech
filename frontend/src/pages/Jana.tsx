@@ -22,7 +22,7 @@ function safeSourceUrl(url: string | null): string | null {
   catch { return null; }
 }
 
-export default function Jana() {
+export default function Jana({ embedded = false, onClose }: { embedded?: boolean; onClose?: () => void } = {}) {
   const { api, profile, mode } = usePortal();
   const [escalation, setEscalation] = useState<{question:string;context:string}|null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -39,6 +39,7 @@ export default function Jana() {
   const sending = useRef(false);
   const counter = useRef(0);
   useEffect(() => () => { generation.current += 1; }, []);
+  useEffect(() => { if (embedded) composer.current?.focus(); }, [embedded]);
   useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, [messages, busy]);
   async function ask(value: string) {
     const text = value.trim();
@@ -66,11 +67,11 @@ export default function Jana() {
   function keyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void ask(question); }
   }
-  return <div className={`support-page support-jana-page${mode === 'demo' ? ' support-jana-demo' : ''}`}>
-    <PageHeader title="AI Jana" description={t("Помощник по рабочим вопросам")} />
+  return <div className={`support-page support-jana-page${mode === 'demo' ? ' support-jana-demo' : ''}${embedded ? ' support-jana-embedded' : ''}`}>
+    {!embedded && <PageHeader title="AI Jana" description={t("Помощник по рабочим вопросам")} />}
     <div className="support-chat-layout">
       <section className="card support-chat" aria-label={t("Чат с AI Jana")}>
-        <div className="support-chat-top"><div className="support-chat-identity"><span className="support-jana-icon"><Icon name="bot" size={21} /></span><div><h2>Jana</h2><p>{tx(mode === 'demo' ? 'Демонстрационная база знаний' : 'По материалам компании')}</p></div></div><button className="btn btn-ghost" disabled={busy || !messages.length} onClick={() => { generation.current += 1; setMessages([]); setError(''); setQuestion(''); composer.current?.focus(); }}><Icon name="plus" size={16} />{t("Новый диалог")}</button></div>
+        <div className="support-chat-top"><div className="support-chat-identity"><span className="support-jana-icon"><Icon name="bot" size={21} /></span><div><h2>Jana</h2><p>{tx(mode === 'demo' ? 'Демонстрационная база знаний' : 'По материалам компании')}</p></div></div><button className="btn btn-ghost" disabled={busy || !messages.length} onClick={() => { generation.current += 1; setMessages([]); setError(''); setQuestion(''); composer.current?.focus(); }}><Icon name="plus" size={16} />{t("Новый диалог")}</button>{embedded && <button type="button" className="icon-btn support-widget-close" onClick={onClose} aria-label={t("Закрыть AI Jana")}><Icon name="x" size={19} /></button>}</div>
         {!messages.length && !busy ? <div className="support-chat-welcome"><div className="support-jana-icon"><Icon name="sparkles" size={31} /></div><h2>{t("Чем помочь?")}</h2><p>{t("Отпуск, аванс или правила компании — спросите Jana.")}</p><div className="support-prompts">{prompts.map(prompt => <button className="support-prompt" key={t(prompt.text)} aria-label={t(prompt.text)} onClick={() => void ask(t(prompt.text))}><Icon name={prompt.icon} size={20} /><span className="support-prompt-full">{t(prompt.text)}</span><span className="support-prompt-short" aria-hidden="true">{t(prompt.short)}</span><Icon name="arrow-right" size={15} /></button>)}</div></div> : <div className="support-chat-messages" role="log" aria-label={t("Сообщения диалога")} aria-live="polite" aria-relevant="additions text">
           {messages.map(message => <div key={message.id} className={`support-message ${message.role}`}>
             {message.role === 'user' ? <Avatar name={profile.full_name} size={29} /> : <span className="support-jana-icon"><Icon name="bot" size={18} /></span>}
@@ -85,7 +86,7 @@ export default function Jana() {
           <div className="support-composer-caption"><span>{t("Не отправляйте пароли и личные данные")}</span><span>{tx(question.length)} / 2000</span></div>
         </form>
       </section>
-      <details className="support-jana-help"><summary><Icon name="shield" size={15} />{t("Ответы с проверяемыми источниками")}<Icon name="chevron-down" size={14} /></summary><p>{t("Jana отвечает по базе знаний и показывает источники. Если ответа нет — направит в HR. Каждый вопрос рассматривается отдельно: добавляйте контекст при уточнении. Кадровые данные доступны в ")}<Link to="/profile">{t("профиле")}</Link>.</p><p>{t("Enter — отправить · Shift + Enter — новая строка.")}</p></details>
+      {!embedded && <details className="support-jana-help"><summary><Icon name="shield" size={15} />{t("Ответы с проверяемыми источниками")}<Icon name="chevron-down" size={14} /></summary><p>{t("Jana отвечает по базе знаний и показывает источники. Если ответа нет — направит в HR. Каждый вопрос рассматривается отдельно: добавляйте контекст при уточнении. Кадровые данные доступны в ")}<Link to="/profile">{t("профиле")}</Link>.</p><p>{t("Enter — отправить · Shift + Enter — новая строка.")}</p></details>}
     </div>
     {tx(escalation && <Escalation {...escalation} onClose={() => setEscalation(null)} />)}
     {sourceId && <Modal title={source?.source_title || "Источник ответа"} onClose={() => setSourceId(null)} wide>{sourceError ? <ErrorState error={sourceError} /> : !source ? <LoadingState /> : <><h2>{tx(source.title)}</h2><div className="source-metadata"><span>{tx(source.version ? `Версия ${source.version}` : 'Версия не указана')}</span>{tx(source.updated_at && <span>{t("Обновлён ")}{tx(formatDate(source.updated_at))}</span>)}<strong className={source.freshness === 'reviewed' ? 'source-reviewed' : 'source-unverified'}>{tx(source.freshness === 'reviewed' ? `Проверен ${formatDate(source.reviewed_at)}` : source.freshness === 'review_overdue' ? 'Требуется повторная проверка' : 'Дата проверки не указана')}</strong>{tx(source.review_due_at && <span>{t("Проверить до ")}{tx(formatDate(source.review_due_at))}</span>)}</div><div className="source-document">{source.content}</div>{tx(safeSourceUrl(source.source_url) && <a className="text-link" href={safeSourceUrl(source.source_url)!} target="_blank" rel="noopener noreferrer">{t("Открыть оригинал")}<Icon name="arrow-right" size={14} /></a>)}</>}</Modal>}
