@@ -12,6 +12,7 @@ from app.schemas.digital_hr import (
     QuizSubmission,
 )
 from app.services.notifications import create_notification
+from app.services.learning import get_assigned_courses
 
 router = APIRouter(prefix="/academy", tags=["Jana Academy"])
 
@@ -76,21 +77,7 @@ def list_courses(actor: UserContext = Depends(get_current_user)) -> list[dict]:
 
 @router.get("/my-courses")
 def my_courses(actor: UserContext = Depends(get_current_user)) -> list[dict]:
-    client = get_supabase_client()
-    assignment_result = (
-        client.table("course_assignments")
-        .select("*")
-        .eq("employee_id", actor.id)
-        .order("assigned_at", desc=True)
-        .execute()
-    )
-    assignments = assignment_result.data or []
-    if not assignments:
-        return []
-    course_ids = [row["course_id"] for row in assignments]
-    course_result = client.table("courses").select("id,title,description,duration_minutes").in_("id", course_ids).execute()
-    courses = {row["id"]: row for row in course_result.data or []}
-    return [{**row, "course": courses.get(row["course_id"])} for row in assignments]
+    return get_assigned_courses(get_supabase_client(), actor.id)
 
 
 @router.get("/courses/{course_id}")

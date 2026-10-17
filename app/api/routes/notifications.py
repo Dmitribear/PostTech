@@ -5,22 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.core.security import get_current_user
 from app.db.supabase import get_supabase_client
 from app.schemas.common import UserContext
+from app.services.notifications import list_employee_notifications
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
 @router.get("")
 def list_notifications(actor: UserContext = Depends(get_current_user)) -> list[dict]:
-    response = (
-        get_supabase_client()
-        .table("notifications")
-        .select("*")
-        .eq("employee_id", actor.id)
-        .order("created_at", desc=True)
-        .limit(100)
-        .execute()
-    )
-    return response.data or []
+    return list_employee_notifications(get_supabase_client(), actor.id)
 
 
 @router.post("/{notification_id}/read")

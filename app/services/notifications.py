@@ -1,4 +1,19 @@
+from supabase import Client
+
 from app.db.supabase import get_supabase_client
+
+
+def list_employee_notifications(client: Client, employee_id: str) -> list[dict]:
+    """Load the latest 100 notifications for the authorized employee."""
+    response = (
+        client.table("notifications")
+        .select("*")
+        .eq("employee_id", employee_id)
+        .order("created_at", desc=True)
+        .limit(100)
+        .execute()
+    )
+    return response.data or []
 
 
 def create_notification(

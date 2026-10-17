@@ -17,14 +17,16 @@ Real agent: [semantic evidence selection, verification and live evaluation](docs
 
 ## Implemented API
 
-All routes except `/` and `/api/v1/health/*` require a Supabase Auth bearer access token.
+All routes except `/`, `/api/v1/health/*`, and `/api/v1/auth/*` require a Supabase Auth bearer access token.
 
 | Endpoint | Purpose and access |
 | --- | --- |
 | `POST /api/v1/auth/register` | Register email/password in Supabase Auth. Email confirmation may be required; HR must link the Auth account to an employee profile before it can use HR endpoints. |
 | `POST /api/v1/auth/login` | Sign in and receive `access_token` and `refresh_token`. |
 | `POST /api/v1/auth/refresh` | Exchange a refresh token for a new session. |
-| `GET /api/v1/profile` | Current user's read-only HR profile. |
+| `GET /api/v1/admin/employees` | HR administrators list employee profiles and their roles; supports `offset` and `limit`. |
+| `PATCH /api/v1/admin/employees/{employee_id}/role` | HR administrators assign `worker`, `manager`, `director`, or `hr_admin`; all other roles are forbidden. |
+| `GET /api/v1/profile` | Current user's read-only HR fields, manager name, assigned courses/progress, and own notifications in one response. [Response contract](docs/profile-api.md). |
 | `GET /api/v1/employees/{employee_id}` | Own profile; managers can view direct reports; HR can view all. |
 | `GET /api/v1/team` | Direct reports for managers; all profiles for HR. |
 | `GET, POST /api/v1/requests` | View permitted requests; create leave or advance requests. |
@@ -40,13 +42,13 @@ All routes except `/` and `/api/v1/health/*` require a Supabase Auth bearer acce
 | `POST /api/v1/notifications/{id}/read` | Mark own notification as read. |
 | `POST /api/v1/ai/ask` | Jana answers from retrieved knowledge articles, returns sources, or refuses and suggests HR escalation. |
 
-Roles are `worker`, `manager`, and `hr_admin`. Official profile data is read-only. Database row-level security is enabled; direct public-key browser access is denied by default. The backend uses the server-side Supabase key and enforces access in the API, so that key must never be exposed to a client.
+Roles are `worker`, `manager`, `director`, and `hr_admin`. HR and platform administration are combined in `hr_admin`: only this role assigns access roles to existing employee profiles. Official profile data is read-only; role assignment changes access settings only. Database row-level security is enabled; direct public-key browser access is denied by default. The backend uses the server-side Supabase key and enforces access in the API, so that key must never be exposed to a client. See [role administration and bootstrap](docs/hr-administration.md).
 
 ## Supabase setup and demo data
 
 1. Create a Supabase project and copy `.env.example` to `.env`.
 2. Set `SUPABASE_URL`, the server-side `SUPABASE_KEY`, and the project's public `SUPABASE_ANON_KEY` in `.env`. The anon key is used only by the backend's Supabase Auth signup/login client; keep the server key private and never commit `.env`. Jana runs locally: install dependencies and run `python -m scripts.prepare_jana_local` once. No OpenAI key is used by the HTTP agent; missing local model files produce HTTP 503. The UI mock is a separate explicit process, never an automatic fallback.
-3. Run [database/migrations/0001_digital_hr.sql](database/migrations/0001_digital_hr.sql), then [database/migrations/0002_request_hr_review.sql](database/migrations/0002_request_hr_review.sql) in the Supabase SQL editor.
+3. Run the SQL files in `database/migrations/` in numeric order, through [0004_hr_role_administration.sql](database/migrations/0004_hr_role_administration.sql), in the Supabase SQL editor. Existing databases with migrations 0001–0003 already applied need only 0004 for role administration.
 4. In Supabase Auth, create fictional test users with emails `hr@posttech.demo`, `manager@posttech.demo`, and `employee@posttech.demo`. Set local demo passwords in Supabase; no credentials are stored in this repository.
 5. Run [database/seed.sql](database/seed.sql). It creates fictional profiles, two courses, knowledge articles, course assignments, and sample requests/notifications. It uses no real employee data.
 6. Register via `POST /api/v1/auth/register`, confirm the email if Supabase requires it, then sign in via `POST /api/v1/auth/login`. Send the returned `access_token` as `Authorization: Bearer <token>` to protected API routes. HR must link `user_id` from Auth to the employee's existing `auth_user_id` profile field; public registration never accepts a role or edits official employee data. To issue a refreshed session, send its `refresh_token` to `POST /api/v1/auth/refresh`.
@@ -87,14 +89,16 @@ REST-бэкенд на FastAPI для хакатон-прототипа JanaMen 
 
 ## Реализованный API
 
-Для всех маршрутов, кроме `/` и `/api/v1/health/*`, требуется Bearer access-токен Supabase Auth.
+Для всех маршрутов, кроме `/`, `/api/v1/health/*` и `/api/v1/auth/*`, требуется Bearer access-токен Supabase Auth.
 
 | Эндпоинт | Назначение и права доступа |
 | --- | --- |
 | `POST /api/v1/auth/register` | Регистрация по email и паролю в Supabase Auth. Может потребоваться подтверждение email; HR должен связать Auth-пользователя с профилем сотрудника, прежде чем тот сможет пользоваться HR-эндпоинтами. |
 | `POST /api/v1/auth/login` | Вход и получение `access_token` и `refresh_token`. |
 | `POST /api/v1/auth/refresh` | Обмен refresh-токена на новую сессию. |
-| `GET /api/v1/profile` | Только для чтения: HR-профиль текущего пользователя. |
+| `GET /api/v1/admin/employees` | Только HR/администратор: список профилей сотрудников с ролями; параметры `offset` и `limit`. |
+| `PATCH /api/v1/admin/employees/{employee_id}/role` | Только HR/администратор: назначение роли `worker`, `manager`, `director` или `hr_admin`. |
+| `GET /api/v1/profile` | Личный кабинет одним ответом: Ф. И. О., компания, должность, подразделение, руководитель, дата приёма, остаток отпуска, назначенное обучение и свои уведомления. [Контракт ответа](docs/profile-api.md). |
 | `GET /api/v1/employees/{employee_id}` | Собственный профиль; руководители могут просматривать прямых подчинённых, HR — все профили. |
 | `GET /api/v1/team` | Для руководителей — прямые подчинённые; для HR — все профили. |
 | `GET, POST /api/v1/requests` | Просмотр доступных заявок; создание заявок на отпуск или аванс. |
@@ -112,11 +116,13 @@ REST-бэкенд на FastAPI для хакатон-прототипа JanaMen 
 
 Роли: `worker`, `manager`, `director` и `hr_admin`. Менеджер и директор видят только своих прямых подчинённых; директор согласует заявки руководителей, но не обычных сотрудников. Официальные данные профиля доступны только для чтения. В базе включена защита на уровне строк (RLS); прямой доступ из браузера с публичным ключом по умолчанию запрещён. Бэкенд использует серверный ключ Supabase и проверяет права на уровне API, поэтому этот ключ нельзя передавать клиенту.
 
+HR и администратор платформы объединены в роли `hr_admin`: только она назначает роли существующим профилям сотрудников. Это настройка прав доступа; кадровые поля (Ф. И. О., должность, подразделение и остаток отпуска) через этот API не изменяются. [Инструкция по выдаче ролей и созданию первого администратора](docs/hr-administration.md).
+
 ## Настройка Supabase и демонстрационные данные
 
 1. Создайте проект Supabase и скопируйте `.env.example` в `.env`.
 2. Укажите в `.env` значения `SUPABASE_URL`, серверный `SUPABASE_KEY` и публичный `SUPABASE_ANON_KEY` проекта. Anon-ключ используется только серверным клиентом Supabase Auth для регистрации и входа; храните серверный ключ в секрете и никогда не коммитьте `.env`. Jana работает локально: установите зависимости и один раз выполните `python -m scripts.prepare_jana_local`. HTTP-агент не использует OpenAI-ключ; при отсутствии локальной модели возвращается HTTP 503. Mock для интерфейса запускается отдельно и не подменяет настоящий сервис при ошибке.
-3. Для нового проекта выполните [database/migrations/0001_digital_hr.sql](database/migrations/0001_digital_hr.sql), [database/migrations/0002_request_hr_review.sql](database/migrations/0002_request_hr_review.sql), затем [database/migrations/0003_director_approval.sql](database/migrations/0003_director_approval.sql) в SQL Editor проекта Supabase. Для уже работающей базы, где применены первые две миграции, выполните только миграцию 0003.
+3. Для нового проекта выполните SQL-файлы `database/migrations/` по порядку: 0001, 0002, 0003, затем [0004_hr_role_administration.sql](database/migrations/0004_hr_role_administration.sql) в SQL Editor проекта Supabase. Если первые три миграции уже применены, для управления ролями нужна только 0004.
 4. В Supabase Auth создайте вымышленных тестовых пользователей с адресами `hr@posttech.demo`, `director@posttech.demo`, `manager@posttech.demo` и `employee@posttech.demo`. Задайте им демонстрационные пароли в Supabase; учётные данные не хранятся в этом репозитории.
 5. Выполните [database/seed.sql](database/seed.sql). Скрипт создаёт вымышленные профили, два курса, статьи базы знаний, назначения курсов и примеры заявок/уведомлений. Реальные данные сотрудников не используются.
 6. Зарегистрируйтесь через `POST /api/v1/auth/register`, при необходимости подтвердите email, затем войдите через `POST /api/v1/auth/login`. Передавайте полученный `access_token` в защищённые маршруты в заголовке `Authorization: Bearer <token>`. HR должен связать `user_id` из Auth с полем `auth_user_id` существующего профиля сотрудника. Публичная регистрация не позволяет назначать роль или изменять официальные данные сотрудника. Для обновления сессии отправьте её `refresh_token` в `POST /api/v1/auth/refresh`.
