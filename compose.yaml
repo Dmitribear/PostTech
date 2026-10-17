@@ -9,6 +9,8 @@ x-api-environment: &api-environment
   JANA_READER_ALLOW_DOCKER_HOST: "true"
   JANA_READER_MODEL: jana-reader
   JANA_READER_TIMEOUT_SECONDS: "300"
+  # Local demonstration never sends external invitation email.
+  RESEND_API_KEY: ""
   INTEGRATION_1C_ENABLED: "false"
   INTEGRATION_DOCUMENTOLOG_ENABLED: "false"
 

@@ -18,6 +18,7 @@ class RefreshRequest(BaseModel):
 
 
 class InvitationCode(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     invitation_code: str = Field(min_length=8, max_length=200)
 
     @field_validator("invitation_code")

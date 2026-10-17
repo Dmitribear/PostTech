@@ -10,6 +10,7 @@ from postgrest.exceptions import APIError
 from app.db.supabase import get_supabase_client
 from app.schemas.auth import IssueInvitationRequest
 from app.schemas.common import UserContext
+from app.services import invitation_email
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,38 @@ def issue(actor: UserContext, payload: IssueInvitationRequest) -> dict:
     code = "JP-" + secrets.token_urlsafe(24)
     result = _rpc("issue_registration_invitation", {"p_actor_id": actor.id, "p_token_hash": code_hash(code),
         "p_details": payload.model_dump(mode="json")})
-    return {**result, "invitation_code": code}
+    if not invitation_email.configured():
+        return {**result, "invitation_code": code, "email_status": "not_configured"}
+    try:
+        return _send(actor, result["id"], code)
+    except HTTPException:
+        # Creation is already committed. Preserve the recoverable code if the
+        # separate delivery transaction is unavailable; never suggest re-creation.
+        logger.warning("Created invitation could not start email delivery")
+        return {**result, "invitation_code": code, "email_status": "not_sent"}
+
+
+def _send(actor: UserContext, invitation_id: str, code: str) -> dict:
+    digest = code_hash(code)
+    result = _rpc("begin_invitation_email", {"p_actor_id": actor.id,
+        "p_invitation_id": invitation_id, "p_token_hash": digest})
+    status = invitation_email.send(result, code, digest)
+    try:
+        _rpc("finish_invitation_email", {"p_invitation_id": invitation_id,
+            "p_token_hash": digest, "p_status": status})
+    except HTTPException:
+        # Sending may have succeeded; don't turn this into a duplicate create attempt.
+        logger.warning("Invitation email status could not be recorded")
+    return {**result, "invitation_code": code, "email_status": status}
+
+
+def resend(actor: UserContext, invitation_id: str) -> dict:
+    if actor.role != "hr_admin":
+        raise HTTPException(status_code=403, detail="HR administrator role required")
+    if not invitation_email.configured():
+        raise HTTPException(status_code=503, detail="Invitation email sender is not configured")
+    # No plaintext secret is persisted. Re-sending rotates the code, not the role/email.
+    return _send(actor, invitation_id, "JP-" + secrets.token_urlsafe(24))
 
 
 def revoke(actor: UserContext, invitation_id: str) -> dict:

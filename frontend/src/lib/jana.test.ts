@@ -63,6 +63,13 @@ describe('authenticated Jana and calendar', () => {
     expect(transport.mock.calls[0][0]).toBe('/api/v1/requests/calendar.ics?scope=team&start_date=2026-12-01&end_date=2026-12-31');
   });
 
+  it('exports all permitted leave without date filters when all is selected', async () => {
+    const transport = vi.fn<typeof fetch>(async () => file());
+    const api = createLiveApi({ fetch: transport, storage: storage() });
+    await api.getCalendarExport({ scope: 'all' });
+    expect(transport.mock.calls[0][0]).toBe('/api/v1/requests/calendar.ics?scope=all');
+  });
+
   it.each([403, 413, 503])('keeps aggregate export failure %s as an error rather than a file', async status => {
     const api = createLiveApi({ storage: storage(), fetch: vi.fn(async () => json({ detail: 'Export unavailable' }, status)) });
     await expect(api.getCalendarExport({ scope: 'mine' })).rejects.toMatchObject({ status });

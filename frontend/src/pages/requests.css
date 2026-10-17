@@ -183,3 +183,5 @@
 .cal-page .page-actions{flex-wrap:wrap;justify-content:flex-end}
 .cal-export-steps{padding-left:22px;line-height:1.65}
 @media(max-width:600px){.cal-page .page-actions{justify-content:flex-start}.cal-page .page-actions .btn{max-width:100%;white-space:normal;text-align:left}}
+
+.cal-export-range{border:0;padding:0;margin:16px 0;display:grid;gap:10px}.cal-export-range legend{font-weight:600;margin-bottom:10px}.cal-export-range label{display:flex;align-items:center;gap:8px;min-height:32px}

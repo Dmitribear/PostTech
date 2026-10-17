@@ -3,6 +3,7 @@ import { LanguageSwitch } from '../lib/i18n';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ApiError, errorMessage, type LiveApi } from '../lib/api';
 import type { AppRole } from '../lib/types';
+import { roleLabels } from '../lib/format';
 import { Brand } from '../components/Brand';
 import { Icon, Modal } from '../components/ui';
 import '../auth.css';
@@ -77,7 +78,7 @@ export default function Auth({ api, onLogin, onDemo }: { api: LiveApi; onLogin: 
   function start(demoMode: boolean) {
     setDemo(demoMode); setInvitation(null); setError(''); setNotice(''); setPassword(demoMode ? 'Posttech2026' : '');
     setInviteCode(demoMode ? DEMO_INVITE : ''); setFirstName(demoMode ? 'Алексей' : ''); setLastName(demoMode ? 'Ким' : '');
-    setRole('worker'); updateOtp(''); attemptedOtp.current = ''; setResendAt(0); setStage('invitation');
+    setRole('worker'); updateOtp(''); attemptedOtp.current = ''; setResendAt(0); setStage(demoMode ? 'role' : 'invitation');
   }
   function returnToLogin() {
     if (submitting.current) return;
@@ -182,7 +183,7 @@ export default function Auth({ api, onLogin, onDemo }: { api: LiveApi; onLogin: 
     await run(async () => {
       if (demo) {
         if (token !== DEMO_TOKEN) throw new Error('Неверный код. Код для демо: 472916.');
-        setStage('role');
+        setStage('welcome');
       } else {
         await api.verifyRegistration({ invitation_code: inviteCode.trim(), token });
         setStage('welcome');
@@ -227,12 +228,12 @@ export default function Auth({ api, onLogin, onDemo }: { api: LiveApi; onLogin: 
     else if (stage === 'account') go('invitation');
     else if (stage === 'recovery') { setPassword(''); go(recoveryFrom); }
     else if (stage === 'verification') { setPassword(''); go('account'); }
-    else if (stage === 'role') go('invitation');
+    else if (stage === 'role') returnToLogin();
     else if (stage === 'welcome') { if (demo) go('role'); else onLogin(); }
   }
   const headings: Record<Stage, string> = {
     login: 'Вход в PostTech', invitation: 'Активация приглашения', account: 'Создайте аккаунт',
-    verification: 'Проверьте почту', recovery: 'Завершите активацию', role: 'Выберите роль', welcome: 'Добро пожаловать\nв PostTech!',
+    verification: 'Проверьте почту', recovery: 'Завершите активацию', role: 'Демонстрация портала', welcome: 'Добро пожаловать\nв PostTech!',
     'password-reset': 'Восстановить пароль', 'password-reset-confirm': 'Новый пароль', 'password-reset-success': 'Пароль изменён',
   };
   const branded = ['login', 'role', 'welcome'].includes(stage);
@@ -305,6 +306,7 @@ export default function Auth({ api, onLogin, onDemo }: { api: LiveApi; onLogin: 
 
       {stage === 'account' && invitation && <>
         <p className="onboarding-description onboarding-account-description">{t("Заполните основные данные")}</p>
+        <p className="onboarding-description">{t('HR назначил вам роль: ')}<strong>{tx(roleLabels[invitation.role])}</strong><br />{tx(invitation.department)}</p>
         <form className="onboarding-form onboarding-account-form" onSubmit={submitAccount}>
           <div className="onboarding-name-row"><label className="onboarding-field"><span>{t("Имя")}</span><input autoComplete="given-name" placeholder={t("Имя")} value={firstName} onChange={event => setFirstName(event.target.value)} maxLength={80} required disabled={busy} /></label><label className="onboarding-field"><span>{t("Фамилия")}</span><input autoComplete="family-name" placeholder={t("Фамилия")} value={lastName} onChange={event => setLastName(event.target.value)} maxLength={80} required disabled={busy} /></label></div>
           <label className="onboarding-field"><span>Email</span><input type="email" autoComplete="email" value={invitation.email} readOnly /></label>
@@ -339,13 +341,13 @@ export default function Auth({ api, onLogin, onDemo }: { api: LiveApi; onLogin: 
       </>}
 
       {tx(stage === 'role' && demo && <>
-        <p className="onboarding-description onboarding-role-description">{t("Это демо-версия. Вы можете выбрать роль для знакомства с системой.")}</p>
+        <p className="onboarding-description onboarding-role-description">{t("Тестовые кабинеты для знакомства с порталом. В рабочем аккаунте роль назначает HR.")}</p>
         <fieldset className="onboarding-roles"><legend className="sr-only">{t("Роль в демоверсии")}</legend>{tx(roleOptions.map(option => <label key={option.role} className={`onboarding-role ${role === option.role ? 'is-selected' : ''}`}><input type="radio" name="demo-role" value={option.role} checked={role === option.role} onChange={() => setRole(option.role)} /><span className={`onboarding-role-icon onboarding-role-icon-${option.role}`}><Icon name={option.icon} size={23} /></span><span className="onboarding-role-copy"><strong>{tx(option.title)}</strong><span>{tx(option.detail)}</span></span><span className="onboarding-role-check">{tx(role === option.role && <Icon name="check" size={12} />)}</span></label>))}</fieldset>
-        <button className="onboarding-primary onboarding-push-bottom" onClick={() => go('welcome')}>{t("Продолжить")}</button>
+        <button className="onboarding-primary onboarding-push-bottom" onClick={() => onDemo(role)}>{t("Открыть демо")}</button>
       </>)}
 
       {tx(stage === 'welcome' && <>
-        <p className="onboarding-description">{tx(demo ? 'Теперь вы можете познакомиться со всеми возможностями платформы.' : 'Ваш аккаунт активирован. Теперь вы можете использовать все возможности платформы.')}</p>
+        <p className="onboarding-description">{t('Ваш аккаунт активирован.')}{invitation && <><br />{t('Ваша роль: ')}<strong>{tx(roleLabels[invitation.role])}</strong></>}</p>
         <button className="onboarding-primary onboarding-push-bottom" onClick={() => { setPassword(''); if (demo) onDemo(role); else onLogin(); }}>{t("Перейти на главную")}</button>
       </>)}
     </section>

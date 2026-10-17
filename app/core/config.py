@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AnyHttpUrl, Field, SecretStr
+from pydantic import AnyHttpUrl, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     jana_faq_path: Path = Path(__file__).resolve().parents[2] / "knowledge_base/faq.json"
     jana_min_score: float = Field(default=0.72, ge=0, le=1)
     jana_score_margin: float = Field(default=0.045, ge=0, le=1)
+    resend_api_key: SecretStr | None = None
+    invitation_email_from: str = "PostTech <onboarding@resend.dev>"
+    portal_public_url: AnyHttpUrl | None = None
+
+    @field_validator("portal_public_url", mode="before")
+    @classmethod
+    def empty_portal_url(cls, value):
+        return value or None
 
 
 @lru_cache

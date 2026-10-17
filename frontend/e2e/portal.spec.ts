@@ -6,14 +6,10 @@ const ids = { own: '00000000-0000-4000-8000-000000000201', teammate: '00000000-0
 async function enterDemo(page: Page, role: Role = 'worker') {
   await page.goto('/login');
   await page.getByRole('button', { name: 'Демо-вход', exact: true }).click();
-  await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
-  await page.getByRole('button', { name: 'Создать аккаунт', exact: true }).click();
-  await page.getByRole('textbox', { name: 'Код подтверждения', exact: true }).fill('472916');
-  await expect(page.getByRole('heading', { name: 'Выберите роль', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Демонстрация портала', exact: true })).toBeVisible();
   const labels = { worker: /^Сотрудник/, manager: /^Руководитель/, hr_admin: /^HR-администратор/ };
   await page.getByRole('radio', { name: labels[role] }).check();
-  await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
-  await page.getByRole('button', { name: 'Перейти на главную', exact: true }).click();
+  await page.getByRole('button', { name: 'Открыть демо', exact: true }).click();
   await expect(page.locator('.demo-banner')).toContainText('Демоверсия');
   await expect(page.locator('#main-content h1')).toBeVisible();
   await expect(page.locator('#main-content .loading-state')).toHaveCount(0);

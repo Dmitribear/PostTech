@@ -17,6 +17,7 @@
     "database/migrations/main/0005_vacation_balance.sql",
     "database/migrations/0011_team_workflow.sql",
     "database/migrations/0011_hr_workflows.sql",
-    "database/migrations/0012_employee_import.sql"
+    "database/migrations/0012_employee_import.sql",
+    "database/migrations/0013_invitation_email.sql"
   ]
 }

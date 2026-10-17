@@ -109,6 +109,11 @@ def list_invitations(actor: UserContext = Depends(get_current_user)) -> list[dic
     return invitations.list_invitations(actor)
 
 
+@router.post("/invitations/{invitation_id}/send")
+def send_invitation(invitation_id: UUID, actor: UserContext = Depends(get_current_user)) -> dict[str, Any]:
+    return invitations.resend(actor, str(invitation_id))
+
+
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(payload: RegistrationRequest) -> dict[str, Any]:
     """Register the invitation's immutable email; only verified Auth can activate."""

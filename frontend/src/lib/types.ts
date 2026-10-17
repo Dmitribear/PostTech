@@ -89,9 +89,12 @@ export interface InvitationInput {
 export interface IssuedInvitation extends InvitationPreview {
   id: string;
   invitation_code: string;
+  email_status?: 'not_configured' | 'accepted' | 'failed' | 'unknown' | 'not_sent' | 'sending';
 }
 
 export interface InvitationRecord extends InvitationPreview {
+  email_status?: IssuedInvitation['email_status'];
+  email_attempted_at?: string | null;
   id: string;
   employee_code: string;
   created_at: string;

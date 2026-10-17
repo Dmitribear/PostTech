@@ -33,6 +33,13 @@ test('calendar exports its month and scope, explains manual import, and never do
   expect(contents).toBe(ics);
   expect(exports[0]).toBe('?scope=mine&start_date=2026-11-01&end_date=2026-11-30');
   await expect(dialog.getByRole('status')).toContainText('Файл скачан');
+  await dialog.getByRole('radio', { name: 'Все доступные отпуска', exact: true }).check();
+  await expect(dialog).toContainText('Права доступа проверяет сервер');
+  const allReady = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: 'Скачать календарь (.ics)', exact: true }).click();
+  expect((await allReady).suggestedFilename()).toBe('janapost-all-leaves.ics');
+  expect(exports[1]).toBe('?scope=all');
+
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
   await page.keyboard.press('Escape');
   await page.locator('#main-content').getByRole('button', { name: 'Команда', exact: true }).click();
@@ -44,6 +51,6 @@ test('calendar exports its month and scope, explains manual import, and never do
   page.on('download', () => { unexpectedDownload = true; });
   await dialog.getByRole('button', { name: 'Скачать календарь (.ics)', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('Экспорт временно недоступен');
-  expect(exports[1]).toBe('?scope=team&start_date=2026-12-01&end_date=2026-12-31');
+  expect(exports[2]).toBe('?scope=team&start_date=2026-12-01&end_date=2026-12-31');
   expect(unexpectedDownload).toBe(false);
 });
