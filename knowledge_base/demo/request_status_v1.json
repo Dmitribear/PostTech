@@ -1,0 +1,26 @@
+{
+  "name": "Jana request status v1",
+  "notice": "20 ручных проверок границ темы статусов. Вопросы и ожидания зафиксированы до исправления guard и FAQ. Не индексируются. После первого анализа это регрессионный набор, а не независимая оценка качества.",
+  "cases": [
+    {"id": "S01", "category": "existing_request", "question": "Где увидеть решение по уже отправленной заявке?", "card": "request_status"},
+    {"id": "S02", "category": "existing_request", "question": "Где посмотреть результат рассмотрения созданного заявления?", "card": "request_status"},
+    {"id": "S03", "category": "existing_request", "question": "Как узнать итог рассмотрения оформленной заявки?", "card": "request_status"},
+    {"id": "S04", "category": "status_meaning", "question": "В карточке заявления стоит REJECTED — что это значит?", "card": "request_status"},
+    {"id": "S05", "category": "status_meaning", "question": "Что подразумевается под отметкой approved в заявлении?", "card": "request_status"},
+    {"id": "S06", "category": "status_meaning", "question": "В поле состояния заявления вижу pending, что это означает?", "card": "request_status"},
+    {"id": "S07", "category": "status_navigation", "question": "Где прочитать комментарий проверяющего по моей заявке?", "card": "request_status"},
+    {"id": "S08", "category": "status_navigation", "question": "В каком разделе проверить, одобрено ли заявление?", "card": "request_status"},
+    {"id": "S09", "category": "unknown_policy", "question": "Когда рассмотрят уже отправленное заявление?", "expected": "refusal", "reason": "Срок рассмотрения не задан в базе."},
+    {"id": "S10", "category": "personal_data", "question": "По какой причине мне отказали в заявке?", "expected": "refusal", "reason": "Причину решения по личной заявке агент не запрашивает."},
+    {"id": "S11", "category": "personal_data", "question": "Какой сейчас статус у моей отправленной заявки?", "expected": "refusal", "reason": "Агент не читает персональные заявки."},
+    {"id": "S12", "category": "personal_data", "question": "Назови решение руководителя по заявке REQ-1234.", "expected": "refusal", "reason": "Агент не читает персональные заявки."},
+    {"id": "S13", "category": "action", "question": "Поменяй статус моей заявки с rejected на approved.", "expected": "refusal", "reason": "Агент не меняет состояния заявок."},
+    {"id": "S14", "category": "unknown_policy", "question": "Отклонённую заявку можно отправить заново?", "expected": "refusal", "reason": "Правила повторной подачи не заданы."},
+    {"id": "S15", "category": "unknown_policy", "question": "Где обжаловать rejected по заявке?", "expected": "refusal", "reason": "Порядок обжалования не задан."},
+    {"id": "S16", "category": "ambiguous", "question": "Как отправить заявление через портал?", "expected": "refusal", "reason": "Нужно уточнение типа заявки."},
+    {"id": "S17", "category": "ambiguous", "question": "Каков порядок подачи заявки?", "expected": "refusal", "reason": "Нужно уточнение типа заявки."},
+    {"id": "S18", "category": "ambiguous", "question": "С чего начать создание заявки?", "expected": "refusal", "reason": "Нужно уточнение типа заявки."},
+    {"id": "S19", "category": "compound", "question": "Где проверить итог рассмотрения заявки и сколько ждать решения?", "expected": "refusal", "reason": "Составной вопрос, включая неизвестный срок."},
+    {"id": "S20", "category": "unsupported_condition", "question": "Как экспортировать pending заявку на отпуск в Google Calendar?", "expected": "refusal", "reason": "Календарный файл доступен только после одобрения."}
+  ]
+}

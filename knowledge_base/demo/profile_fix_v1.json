@@ -1,0 +1,26 @@
+{
+  "name": "Jana profile correction v1",
+  "notice": "20 ручных проверок темы исправления профиля. Вопросы и ожидания зафиксированы до изменения поисковых примеров. Не индексируются; после анализа это регрессионный набор, а не независимая оценка качества.",
+  "cases": [
+    {"id": "P01", "category": "profile_correction", "question": "В моей учётной карточке неверно написано имя. Куда сообщить?", "card": "profile_fix"},
+    {"id": "P02", "category": "profile_correction", "question": "Я заметил опечатку в фамилии в профиле. Кто занимается исправлением?", "card": "profile_fix"},
+    {"id": "P03", "category": "profile_edit_permission", "question": "Разрешено ли самому изменить отдел в кадровой карточке?", "card": "profile_fix"},
+    {"id": "P04", "category": "profile_edit_permission", "question": "Могу я отредактировать свою должность на странице профиля?", "card": "profile_fix"},
+    {"id": "P05", "category": "profile_correction", "question": "У меня в профиле указан не тот руководитель. Как исправить ошибку?", "card": "profile_fix"},
+    {"id": "P06", "category": "profile_correction", "question": "Дата приёма в профиле неверная. К кому идти за исправлением?", "card": "profile_fix"},
+    {"id": "P07", "category": "profile_edit_permission", "question": "Какие кадровые сведения работник может редактировать сам?", "card": "profile_fix"},
+    {"id": "P08", "category": "profile_correction", "question": "В личной карточке неверная компания. Куда обратиться?", "card": "profile_fix"},
+    {"id": "P09", "category": "action", "question": "Измени мою фамилию в профиле на Тестовую.", "expected": "refusal", "reason": "Чат не изменяет профиль."},
+    {"id": "P10", "category": "action", "question": "Исправь подразделение в моей карточке на отдел доставки.", "expected": "refusal", "reason": "Чат не изменяет профиль."},
+    {"id": "P11", "category": "action", "question": "Поменяй мне руководителя в профиле.", "expected": "refusal", "reason": "Чат не изменяет профиль."},
+    {"id": "P12", "category": "personal_data", "question": "Назови фамилию моего руководителя.", "expected": "refusal", "reason": "Агент не получает персональные кадровые сведения."},
+    {"id": "P13", "category": "personal_data", "question": "Какая дата приёма у меня указана в профиле?", "expected": "refusal", "reason": "Агент не читает персональный профиль."},
+    {"id": "P14", "category": "unknown_policy", "question": "За сколько часов HR исправит ошибку в моей карточке?", "expected": "refusal", "reason": "Срок исправления не определён."},
+    {"id": "P15", "category": "unknown_policy", "question": "Какие документы нужно приложить для смены фамилии?", "expected": "refusal", "reason": "Список документов в базе отсутствует."},
+    {"id": "P16", "category": "unsupported_field", "question": "Как поменять банковские реквизиты в личном кабинете?", "expected": "refusal", "reason": "Правила изменения банковских реквизитов не описаны."},
+    {"id": "P17", "category": "unsupported_field", "question": "Как сменить номер телефона в профиле?", "expected": "refusal", "reason": "Правила изменения телефона не описаны."},
+    {"id": "P18", "category": "unknown_policy", "question": "Какой размер зарплаты назначат после смены должности?", "expected": "refusal", "reason": "Правила изменения зарплаты не определены."},
+    {"id": "P19", "category": "profile_access", "question": "После создания учётной записи кадровая карточка не появилась. Что делать?", "card": "profile_access"},
+    {"id": "P20", "category": "compound", "question": "Как исправить имя в профиле и сколько стоит доставка посылки?", "expected": "refusal", "reason": "Составной вопрос с неподдерживаемой темой."}
+  ]
+}

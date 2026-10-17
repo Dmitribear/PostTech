@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from supabase_auth.errors import AuthInvalidJwtError
 
 from app.api.routes import profile
 from app.core import security
@@ -53,7 +54,7 @@ def secured_api(monkeypatch):
         if token == "unlinked":
             return SimpleNamespace(user=SimpleNamespace(id="auth-unlinked"))
         if token not in PROFILES:
-            raise ValueError("invalid token")
+            raise AuthInvalidJwtError("invalid token")
         return SimpleNamespace(user=SimpleNamespace(
             id=PROFILES[token]["auth_user_id"],
             user_metadata={"role": "hr_admin"}, role="hr_admin",

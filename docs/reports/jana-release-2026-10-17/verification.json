@@ -1,0 +1,119 @@
+{
+  "verified_at": "2026-10-16T21:39:26.702073+00:00",
+  "complete": true,
+  "passed": 285,
+  "total": 285,
+  "supported": {
+    "passed": 138,
+    "total": 138
+  },
+  "refusals": {
+    "passed": 147,
+    "total": 147
+  },
+  "faq_sha256": "1e65bb7c82493c733696ed5185a9831fe5b1bdde4a057834ff76ddb7a94c63d5",
+  "articles_sha256": "af1d51100ddfc75490367de9291b86d7bbbb50ba1c0a91554536f3130af2e691",
+  "runtime_sha256": {
+    "app/core/config.py": "f0d86b8874959c1005a9c6acdd56a4972853c4ec2f45f3bc412a758348c274ea",
+    "app/schemas/jana.py": "2a259c3c17ab255ae4efbfc97e6cbb870d2b2388466d0856ef4204404b0fd55c",
+    "app/services/jana_local.py": "862b414b4fbc6bb7ee0a9375082b4671c03420884c32b690a129887dcf1ffe45",
+    "app/services/jana_guardrails.py": "6ded6fdef2efcf985bf76d947fb7821c8de19606f1331ea3dfaf83e09c5a2e35",
+    "app/services/jana_text.py": "a133b587bdfbcfe0e4e066be64a246f5b3473ea5bd94462998a4421975bddd2e",
+    "app/services/local_embeddings.py": "2658a677be2e3e4e1d26ac1f86faa064a4c9b057c3c119978a970643c05fe606",
+    "app/services/jana_errors.py": "66f5e0b12b9008d4c00b420b5c194c825c6db543bc317c5e624cde7aaa7a287e",
+    "scripts/evaluate_jana_local.py": "e817919e90ed0a114cca33d7fa082769f1d0fe307159c4303be0d7f70c30afa3",
+    "scripts/check_jana_release.py": "f6e7435e154d0a96db3dcc65fb3e9aa2c43a32009558038b120c9a84a33e7718"
+  },
+  "additional_server_files_sha256": {
+    "app/core/security.py": "f055f841964fe1a62fdc91f024493e87f849e08e2d3be0e076bcfef3ff6f18f5",
+    "app/api/routes/ai.py": "4c252b7f1ab8bc004930b23d90e0880eed4b8b62890f3cbfa9cc9986b2a7d1cf"
+  },
+  "all_local_http_answers_identical": true,
+  "anonymous_question_and_source_denied": true,
+  "published_source_count": 11,
+  "source_hashes_match_local_articles": true,
+  "http_seconds": {
+    "median": 0.884,
+    "max": 5.776
+  },
+  "code_tests": {
+    "backend_passed": 457,
+    "backend_skipped": 37,
+    "frontend_passed": 29
+  },
+  "suites": [
+    {
+      "name": "acceptance_v1",
+      "passed": 50,
+      "total": 50,
+      "identical_answers": true,
+      "local_report_sha256": "50abc3099df17115c79f1e20c385a7eef6a6affa041ca9bb7774446072f3060a",
+      "http_report_sha256": "487a44891a9502817582dcf8ab6fd3f73e76500f3338114835d0d73bcb0801f9"
+    },
+    {
+      "name": "acceptance_v2",
+      "passed": 60,
+      "total": 60,
+      "identical_answers": true,
+      "local_report_sha256": "27b2b24bdfb9169c17c47ba7c294cd4c0caa3ffae7c220cd7afac4080a46aaf9",
+      "http_report_sha256": "a3ab1fcd56d9b5bab7262450f82251930b0098b7f37fd1d18927d87d871017b1"
+    },
+    {
+      "name": "acceptance_v3",
+      "passed": 30,
+      "total": 30,
+      "identical_answers": true,
+      "local_report_sha256": "2fe1577d6b297960dac6cbc22a08c0d8fa3f144cef78a11b4777596905faaca7",
+      "http_report_sha256": "232aa6bf35e7d9dd58145438efce1f2abdb21162da7b914a789d52bde3d740fe"
+    },
+    {
+      "name": "local_evaluation",
+      "passed": 44,
+      "total": 44,
+      "identical_answers": true,
+      "local_report_sha256": "10317a2f4bb408f87d7f194749618a0073dd5a015a37e40abf4a7af870d6901d",
+      "http_report_sha256": "bef341d5169586f562fe67c5c7cf3b57f38453fabc123786b8fe19d294b77ae6"
+    },
+    {
+      "name": "local_holdout",
+      "passed": 24,
+      "total": 24,
+      "identical_answers": true,
+      "local_report_sha256": "eda8e98f4623712c65b783d4eeb91cdfdb4756d5108ecfb3184e62da82a3b8bd",
+      "http_report_sha256": "c2c7cceac2f6b38873f5410bd788a04a75da39e8a77bdbecd615794482258162"
+    },
+    {
+      "name": "request_status_v1",
+      "passed": 20,
+      "total": 20,
+      "identical_answers": true,
+      "local_report_sha256": "17d3d20259411025d169be54d85efeeb111df503870003f6b04d461a1d5f82eb",
+      "http_report_sha256": "35a8b5f4b9fea003f210c435c63fcd8ed889487a32b75c0f51b39191547e1293"
+    },
+    {
+      "name": "profile_fix_v1",
+      "passed": 20,
+      "total": 20,
+      "identical_answers": true,
+      "local_report_sha256": "175dee16d2bbeca2fc3bf72712782f557fb80602b4dd486bbfcfae200eafaa18",
+      "http_report_sha256": "81e5de89f6c185cfb94433e4ccd6108a4e1506ba78b3f4d320804720481358b8"
+    },
+    {
+      "name": "safety_v1",
+      "passed": 35,
+      "total": 35,
+      "identical_answers": true,
+      "local_report_sha256": "ebfc67aa806a9c8a16e8d4c695d3ae9de0165594d2cd7829b1ffa5c2eb755299",
+      "http_report_sha256": "f7e153d2d592c7dd2cd7c3b5b7734a369046050572169a62cb7ecaee3600ebf6"
+    },
+    {
+      "name": "review_regression_v1",
+      "passed": 2,
+      "total": 2,
+      "identical_answers": true,
+      "local_report_sha256": "9c47670fdb0e73f82018bdc00f217521d425b908fc740a1aaec5febd4b117de1",
+      "http_report_sha256": "7a71d8267265b184bcd14c05d140326f0d1606d688976834aa41e0122f4d6cf0"
+    }
+  ],
+  "notice": "Read-only HTTP calls through Vite to the restarted local API and shared Supabase. Runtime files stayed unchanged after the local evaluation; server settings are not introspected. This is regression evidence, not a guarantee for unseen questions. PostgreSQL integration tests were skipped; no browser clicks or Google import performed in this run."
+}

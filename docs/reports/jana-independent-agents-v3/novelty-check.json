@@ -1,0 +1,28 @@
+{
+  "comparison": "casefold, ё→е, punctuation and whitespace normalization; exact duplicates prohibited; SequenceMatcher >=0.88 flagged for surface review, shared subject matter is expected",
+  "previous_unique_questions": 644,
+  "new_count": 50,
+  "exact_duplicates": [],
+  "within_set_duplicates": [],
+  "near_matches": [],
+  "inputs_sha256": {
+    "knowledge_base/faq.json": "bfc9cfb7163a4c1dec3ae8e8121cdea38dc2dcd18d5b4b60d4c9c1207cbff33a",
+    "knowledge_base/demo/acceptance_v1.json": "888760bfd55c3344b16522f570bde61f873312ca2d1d42c9acc2674a3789d8b3",
+    "knowledge_base/demo/acceptance_v2.json": "32c7ca88b27e8ddd6d0c7a430195d108e4313413b4cde8e2a3e6a076282dcefa",
+    "knowledge_base/demo/acceptance_v3.json": "e88807752619de4ffea9623896338c740cc12f9d6415a2e977875cab4b40c9e5",
+    "knowledge_base/demo/articles.json": "af1d51100ddfc75490367de9291b86d7bbbb50ba1c0a91554536f3130af2e691",
+    "knowledge_base/demo/evaluation.json": "e29dcea2c5f775392475b8ee24a75044e6107572f85a4c191ab9262a9cf80f77",
+    "knowledge_base/demo/independent_agents_v1.json": "2a6ca52e403129b3ed49c3909358a4d9513fc08625277c671a15ca5a13927206",
+    "knowledge_base/demo/independent_agents_v2.json": "c7d1b520ad9bce74d140e33a02b0f882a9eec2d782fc3b5e9a94c232393316db",
+    "knowledge_base/demo/local_evaluation.json": "2c485beb2256381bdf4b4afe00dd907ba251fc30d48b380b31158a9eea266ed7",
+    "knowledge_base/demo/local_holdout.json": "1777ac65c5a87280a055ed2d31efcecacb8e721124d4edecf412154ec491582e",
+    "knowledge_base/demo/profile_fix_v1.json": "02bd90a3bc3ebae42401a6381ae53bb67754329c9116c6c825e3a7b0ae2e25f4",
+    "knowledge_base/demo/request_status_v1.json": "1308977eb3014e17aa88242e814d2b181f017c0f60cf0ba242e8374067811d38",
+    "knowledge_base/demo/review_regression_v1.json": "3da1f899d47b3f273e43820bc041aa8f9acc9011155b963a3a3c9f27bbb4239b",
+    "knowledge_base/demo/safety_v1.json": "593340b2e8dd896b8c34d2c330c0882df5f7e734dececed8d429c8aeb3f06ece"
+  },
+  "author_sha256": {
+    "author-a.json": "5a701f166973baa0abe4be07c5acca4917350c87f7ee4f1e9668e5066b4f89a2",
+    "author-b.json": "5e5d016ca4ea667b2947448299ef97fb966ba55c6b1b4162717db44173fd2870"
+  }
+}

@@ -19,6 +19,7 @@
 @employeeNotificationId = replace-with-own-notification-uuid
 # Generate a NEW UUID for each NEW request; reuse this value for retries only.
 @idempotencyKey = 6e3d6480-f4ce-4791-b63e-138409431901
+# Choose future dates within two years with no existing pending/approved leave.
 @startDate = 2026-11-09
 @endDate = 2026-11-13
 # Optional negative scenario: REAL records in another fictional team, not random UUIDs.
@@ -93,7 +94,7 @@ Authorization: Bearer {{managerToken}}
 GET {{baseUrl}}/requests?request_type=leave&status=pending&limit=20&offset=0
 Authorization: Bearer {{managerToken}}
 
-### 12. Manager approves — 200; repeat exact request for idempotent 200.
+### 12. Manager approves first stage — 200, pending_hr; repeat is idempotent.
 PATCH {{baseUrl}}/requests/{{requestId}}/review
 Authorization: Bearer {{managerToken}}
 Content-Type: application/json
@@ -103,11 +104,31 @@ Content-Type: application/json
   "reviewer_comment": "Отпуск согласован"
 }
 
-### 13. Employee sees final decision — 200, approved and reviewer metadata.
+### 12a. HR login — 200; copy access_token to hrToken.
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{hrEmail}}",
+  "password": "{{hrPassword}}"
+}
+
+### 12b. HR gives final approval — 200, approved; balance debited only once.
+PATCH {{baseUrl}}/requests/{{requestId}}/review
+Authorization: Bearer {{hrToken}}
+Content-Type: application/json
+
+{
+  "status": "approved",
+  "reviewer_comment": "Окончательно согласовано HR"
+}
+
+### 13. Employee sees final decision — 200, approved and both reviewers.
 GET {{baseUrl}}/requests/{{requestId}}
 Authorization: Bearer {{employeeToken}}
 
-### 14. Final history — 200, created and approved, no duplicate retry event.
+### 14. Final history — 200, created, pending_hr and approved transitions.
+# Inspect to_status; retries must not duplicate events.
 GET {{baseUrl}}/requests/{{requestId}}/history
 Authorization: Bearer {{employeeToken}}
 
@@ -142,7 +163,8 @@ GET {{baseUrl}}/requests/{{requestId}}/history
 Authorization: Bearer {{hrToken}}
 
 ### Optional HR rejection: create ANOTHER leave request first with a NEW key.
-# Set hrRejectionRequestId to that new PENDING request; run this block separately.
+# First obtain manager approval (pending_hr), or use a request routed directly to HR.
+# Set hrRejectionRequestId to that request; run this block separately.
 # Expected 200, rejected event and employee notification.
 PATCH {{baseUrl}}/requests/{{hrRejectionRequestId}}/review
 Authorization: Bearer {{hrToken}}

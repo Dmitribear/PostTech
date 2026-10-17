@@ -3,6 +3,16 @@
 -- rolls back the request mutation as well. Only the trusted API may call it.
 begin;
 
+-- ver2 owns a different history format and writes notifications via triggers.
+-- Combining it with these RPCs would duplicate side effects. Stop atomically.
+do $$
+begin
+    if exists (select 1 from pg_trigger where tgname = 'hr_requests_record_events' and not tgisinternal) then
+        raise exception 'Incompatible ver2 request trigger is installed. Reconcile migrations before installing the test branch request workflow.';
+    end if;
+end;
+$$;
+
 alter table public.hr_requests add column idempotency_key uuid;
 alter table public.hr_requests
     add constraint hr_requests_employee_idempotency_key

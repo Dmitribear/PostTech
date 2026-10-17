@@ -1,0 +1,275 @@
+{
+  "created_at": "2026-10-16T22:35:38.364990+00:00",
+  "execution": "local_cpu_demo_articles",
+  "model": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+  "revision": "4328cf26390c98c5e3c738b4460a05b95f4911f5",
+  "model_files_sha256": {
+    "onnx/model_quint8_avx2.onnx": "82f6b58b509e6f87a3c181fd08a94376499faa6c344eea0b36214d47d3943e61",
+    "tokenizer.json": "2c3387be76557bd40970cec13153b3bbf80407865484b209e655e5e4729076b8"
+  },
+  "model_loaded": true,
+  "python": "3.12.14",
+  "planned_suites": [
+    "acceptance_v1",
+    "acceptance_v2",
+    "acceptance_v3",
+    "local_evaluation",
+    "local_holdout",
+    "request_status_v1",
+    "profile_fix_v1",
+    "safety_v1",
+    "review_regression_v1"
+  ],
+  "planned_total": 285,
+  "suites": [
+    {
+      "name": "acceptance_v1",
+      "report": "acceptance_v1.json",
+      "complete": true,
+      "passed": 47,
+      "total": 50,
+      "planned_total": 50
+    },
+    {
+      "name": "acceptance_v2",
+      "report": "acceptance_v2.json",
+      "complete": true,
+      "passed": 54,
+      "total": 60,
+      "planned_total": 60
+    },
+    {
+      "name": "acceptance_v3",
+      "report": "acceptance_v3.json",
+      "complete": true,
+      "passed": 26,
+      "total": 30,
+      "planned_total": 30
+    },
+    {
+      "name": "local_evaluation",
+      "report": "local_evaluation.json",
+      "complete": true,
+      "passed": 42,
+      "total": 44,
+      "planned_total": 44
+    },
+    {
+      "name": "local_holdout",
+      "report": "local_holdout.json",
+      "complete": true,
+      "passed": 24,
+      "total": 24,
+      "planned_total": 24
+    },
+    {
+      "name": "request_status_v1",
+      "report": "request_status_v1.json",
+      "complete": true,
+      "passed": 20,
+      "total": 20,
+      "planned_total": 20
+    },
+    {
+      "name": "profile_fix_v1",
+      "report": "profile_fix_v1.json",
+      "complete": true,
+      "passed": 19,
+      "total": 20,
+      "planned_total": 20
+    },
+    {
+      "name": "safety_v1",
+      "report": "safety_v1.json",
+      "complete": true,
+      "passed": 33,
+      "total": 35,
+      "planned_total": 35
+    },
+    {
+      "name": "review_regression_v1",
+      "report": "review_regression_v1.json",
+      "complete": true,
+      "passed": 2,
+      "total": 2,
+      "planned_total": 2
+    }
+  ],
+  "errors": [],
+  "notice": "Synthetic FAQ regression results, not a guarantee on unseen questions. No HTTP or database calls.",
+  "min_score": 0.72,
+  "margin": 0.045,
+  "faq_sha256": "6910d8a480f31fc39d5f7b0cc8756807942f29994beb0bc06219e73f7c28d99f",
+  "articles_sha256": "af1d51100ddfc75490367de9291b86d7bbbb50ba1c0a91554536f3130af2e691",
+  "source_preflight": {
+    "checked_cards": 15,
+    "issues": []
+  },
+  "runtime_sha256": {
+    "app/core/config.py": "f0d86b8874959c1005a9c6acdd56a4972853c4ec2f45f3bc412a758348c274ea",
+    "app/schemas/jana.py": "2a259c3c17ab255ae4efbfc97e6cbb870d2b2388466d0856ef4204404b0fd55c",
+    "app/services/jana_local.py": "4de8f4869950fcea950a45baf6e0d4ad02b9a69bba199fc870f491c032c51c8a",
+    "app/services/jana_guardrails.py": "e2a99d0ff6a5b19f15ea07950ddfc11511490c02e5f9b8660c3eb510ebdc275d",
+    "app/services/jana_text.py": "7e9bf2712b32a1fb78d917fa63d86cc8e1fe61765430eaf9c126c3e9993bc6b5",
+    "app/services/local_embeddings.py": "2658a677be2e3e4e1d26ac1f86faa064a4c9b057c3c119978a970643c05fe606",
+    "app/services/jana_errors.py": "66f5e0b12b9008d4c00b420b5c194c825c6db543bc317c5e624cde7aaa7a287e",
+    "scripts/evaluate_jana_local.py": "e817919e90ed0a114cca33d7fa082769f1d0fe307159c4303be0d7f70c30afa3",
+    "scripts/check_jana_release.py": "f6e7435e154d0a96db3dcc65fb3e9aa2c43a32009558038b120c9a84a33e7718"
+  },
+  "packages": {
+    "numpy": "2.5.4",
+    "onnxruntime": "1.31.0",
+    "tokenizers": "0.23.3",
+    "pydantic": "2.14.1"
+  },
+  "suite_sha256": {
+    "acceptance_v1": "888760bfd55c3344b16522f570bde61f873312ca2d1d42c9acc2674a3789d8b3",
+    "acceptance_v2": "32c7ca88b27e8ddd6d0c7a430195d108e4313413b4cde8e2a3e6a076282dcefa",
+    "acceptance_v3": "e88807752619de4ffea9623896338c740cc12f9d6415a2e977875cab4b40c9e5",
+    "local_evaluation": "2c485beb2256381bdf4b4afe00dd907ba251fc30d48b380b31158a9eea266ed7",
+    "local_holdout": "1777ac65c5a87280a055ed2d31efcecacb8e721124d4edecf412154ec491582e",
+    "request_status_v1": "1308977eb3014e17aa88242e814d2b181f017c0f60cf0ba242e8374067811d38",
+    "profile_fix_v1": "02bd90a3bc3ebae42401a6381ae53bb67754329c9116c6c825e3a7b0ae2e25f4",
+    "safety_v1": "593340b2e8dd896b8c34d2c330c0882df5f7e734dececed8d429c8aeb3f06ece",
+    "review_regression_v1": "3da1f899d47b3f273e43820bc041aa8f9acc9011155b963a3a3c9f27bbb4239b"
+  },
+  "card_coverage": {
+    "covered": [
+      "advance_apply",
+      "calendar_import",
+      "calendar_sync",
+      "capabilities",
+      "course_assign",
+      "course_find",
+      "course_finish",
+      "hr_contact",
+      "leave_apply",
+      "leave_balance",
+      "notification_find",
+      "profile_access",
+      "profile_fix",
+      "request_status",
+      "visibility"
+    ],
+    "missing": []
+  },
+  "load_seconds": 5.478,
+  "total": 285,
+  "passed": 267,
+  "summary": {
+    "outcomes": {
+      "wrong_card": 2,
+      "pass": 267,
+      "false_refusal": 14,
+      "unexpected_answer": 2
+    },
+    "supported": {
+      "passed": 122,
+      "total": 138
+    },
+    "refusals": {
+      "passed": 145,
+      "total": 147
+    },
+    "categories": {
+      "action": {
+        "passed": 17,
+        "total": 17
+      },
+      "ambiguous": {
+        "passed": 10,
+        "total": 10
+      },
+      "compound": {
+        "passed": 7,
+        "total": 7
+      },
+      "existing_request": {
+        "passed": 3,
+        "total": 3
+      },
+      "injection": {
+        "passed": 2,
+        "total": 2
+      },
+      "negation": {
+        "passed": 2,
+        "total": 2
+      },
+      "off_topic": {
+        "passed": 8,
+        "total": 8
+      },
+      "paraphrase": {
+        "passed": 54,
+        "total": 66
+      },
+      "personal": {
+        "passed": 3,
+        "total": 4
+      },
+      "personal_data": {
+        "passed": 13,
+        "total": 14
+      },
+      "positive": {
+        "passed": 7,
+        "total": 8
+      },
+      "profile_access": {
+        "passed": 1,
+        "total": 1
+      },
+      "profile_correction": {
+        "passed": 4,
+        "total": 5
+      },
+      "profile_edit_permission": {
+        "passed": 3,
+        "total": 3
+      },
+      "prompt_injection": {
+        "passed": 6,
+        "total": 6
+      },
+      "request_status": {
+        "passed": 1,
+        "total": 1
+      },
+      "role_visibility": {
+        "passed": 1,
+        "total": 1
+      },
+      "status_meaning": {
+        "passed": 3,
+        "total": 3
+      },
+      "status_navigation": {
+        "passed": 2,
+        "total": 2
+      },
+      "typo": {
+        "passed": 9,
+        "total": 9
+      },
+      "uncategorized": {
+        "passed": 66,
+        "total": 68
+      },
+      "unknown_policy": {
+        "passed": 32,
+        "total": 32
+      },
+      "unsupported_condition": {
+        "passed": 11,
+        "total": 11
+      },
+      "unsupported_field": {
+        "passed": 2,
+        "total": 2
+      }
+    }
+  },
+  "complete": true,
+  "exit_code": 1
+}

@@ -1,0 +1,515 @@
+{
+  "created_at": "2026-10-16T21:34:55.389540+00:00",
+  "execution": "local_cpu_demo_articles",
+  "model": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+  "revision": "4328cf26390c98c5e3c738b4460a05b95f4911f5",
+  "model_files_sha256": {
+    "onnx/model_quint8_avx2.onnx": "82f6b58b509e6f87a3c181fd08a94376499faa6c344eea0b36214d47d3943e61",
+    "tokenizer.json": "2c3387be76557bd40970cec13153b3bbf80407865484b209e655e5e4729076b8"
+  },
+  "model_loaded": true,
+  "python": "3.12.14",
+  "notice": "Synthetic FAQ regression results, not a guarantee on unseen questions. No HTTP or database calls.",
+  "min_score": 0.72,
+  "margin": 0.045,
+  "faq_sha256": "1e65bb7c82493c733696ed5185a9831fe5b1bdde4a057834ff76ddb7a94c63d5",
+  "articles_sha256": "af1d51100ddfc75490367de9291b86d7bbbb50ba1c0a91554536f3130af2e691",
+  "source_preflight": {
+    "checked_cards": 15,
+    "issues": []
+  },
+  "runtime_sha256": {
+    "app/core/config.py": "f0d86b8874959c1005a9c6acdd56a4972853c4ec2f45f3bc412a758348c274ea",
+    "app/schemas/jana.py": "2a259c3c17ab255ae4efbfc97e6cbb870d2b2388466d0856ef4204404b0fd55c",
+    "app/services/jana_local.py": "862b414b4fbc6bb7ee0a9375082b4671c03420884c32b690a129887dcf1ffe45",
+    "app/services/jana_guardrails.py": "6ded6fdef2efcf985bf76d947fb7821c8de19606f1331ea3dfaf83e09c5a2e35",
+    "app/services/jana_text.py": "a133b587bdfbcfe0e4e066be64a246f5b3473ea5bd94462998a4421975bddd2e",
+    "app/services/local_embeddings.py": "2658a677be2e3e4e1d26ac1f86faa064a4c9b057c3c119978a970643c05fe606",
+    "app/services/jana_errors.py": "66f5e0b12b9008d4c00b420b5c194c825c6db543bc317c5e624cde7aaa7a287e",
+    "scripts/evaluate_jana_local.py": "e817919e90ed0a114cca33d7fa082769f1d0fe307159c4303be0d7f70c30afa3",
+    "scripts/check_jana_release.py": "f6e7435e154d0a96db3dcc65fb3e9aa2c43a32009558038b120c9a84a33e7718"
+  },
+  "packages": {
+    "numpy": "2.5.4",
+    "onnxruntime": "1.31.0",
+    "tokenizers": "0.23.3",
+    "pydantic": "2.14.1"
+  },
+  "card_coverage": {
+    "covered": [
+      "advance_apply",
+      "calendar_import",
+      "calendar_sync",
+      "capabilities",
+      "course_assign",
+      "course_find",
+      "course_finish",
+      "hr_contact",
+      "leave_apply",
+      "leave_balance",
+      "notification_find",
+      "profile_access",
+      "profile_fix",
+      "request_status",
+      "visibility"
+    ],
+    "missing": []
+  },
+  "load_seconds": 4.383,
+  "suite_name": "Jana request status v1",
+  "suite_sha256": "1308977eb3014e17aa88242e814d2b181f017c0f60cf0ba242e8374067811d38",
+  "planned_total": 20,
+  "complete": true,
+  "total": 20,
+  "passed": 20,
+  "results": [
+    {
+      "id": "S01",
+      "category": "existing_request",
+      "question": "Где увидеть решение по уже отправленной заявке?",
+      "expected_card": "request_status",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000004",
+            "title": "Демо: статусы заявок",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000004",
+            "excerpt": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0135
+    },
+    {
+      "id": "S02",
+      "category": "existing_request",
+      "question": "Где посмотреть результат рассмотрения созданного заявления?",
+      "expected_card": "request_status",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000004",
+            "title": "Демо: статусы заявок",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000004",
+            "excerpt": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0109
+    },
+    {
+      "id": "S03",
+      "category": "existing_request",
+      "question": "Как узнать итог рассмотрения оформленной заявки?",
+      "expected_card": "request_status",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000004",
+            "title": "Демо: статусы заявок",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000004",
+            "excerpt": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0116
+    },
+    {
+      "id": "S04",
+      "category": "status_meaning",
+      "question": "В карточке заявления стоит REJECTED — что это значит?",
+      "expected_card": "request_status",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000004",
+            "title": "Демо: статусы заявок",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000004",
+            "excerpt": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0162
+    },
+    {
+      "id": "S05",
+      "category": "status_meaning",
+      "question": "Что подразумевается под отметкой approved в заявлении?",
+      "expected_card": "request_status",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000004",
+            "title": "Демо: статусы заявок",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000004",
+            "excerpt": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0155
+    },
+    {
+      "id": "S06",
+      "category": "status_meaning",
+      "question": "В поле состояния заявления вижу pending, что это означает?",
+      "expected_card": "request_status",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000004",
+            "title": "Демо: статусы заявок",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000004",
+            "excerpt": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0146
+    },
+    {
+      "id": "S07",
+      "category": "status_navigation",
+      "question": "Где прочитать комментарий проверяющего по моей заявке?",
+      "expected_card": "request_status",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000004",
+            "title": "Демо: статусы заявок",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000004",
+            "excerpt": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0135
+    },
+    {
+      "id": "S08",
+      "category": "status_navigation",
+      "question": "В каком разделе проверить, одобрено ли заявление?",
+      "expected_card": "request_status",
+      "expected": null,
+      "result": {
+        "answer": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан. [1]",
+        "sources": [
+          {
+            "id": "20000000-0000-4000-8000-000000000004",
+            "title": "Демо: статусы заявок",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000004",
+            "excerpt": "В демо-прототипе откройте раздел «Мои заявки» или «Заявки» и выберите нужную карточку. Pending означает, что заявка ожидает рассмотрения, approved — одобрена, rejected — отклонена, cancelled — отозвана сотрудником. В карточке заявки отображается комментарий руководителя или HR, рассмотревшего заявку, если он указан."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0133
+    },
+    {
+      "id": "S09",
+      "category": "unknown_policy",
+      "question": "Когда рассмотрят уже отправленное заявление?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0132
+    },
+    {
+      "id": "S10",
+      "category": "personal_data",
+      "question": "По какой причине мне отказали в заявке?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0133
+    },
+    {
+      "id": "S11",
+      "category": "personal_data",
+      "question": "Какой сейчас статус у моей отправленной заявки?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0139
+    },
+    {
+      "id": "S12",
+      "category": "personal_data",
+      "question": "Назови решение руководителя по заявке REQ-1234.",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0154
+    },
+    {
+      "id": "S13",
+      "category": "action",
+      "question": "Поменяй статус моей заявки с rejected на approved.",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0151
+    },
+    {
+      "id": "S14",
+      "category": "unknown_policy",
+      "question": "Отклонённую заявку можно отправить заново?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "Уточните тип заявки: на отпуск или на аванс?",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0003
+    },
+    {
+      "id": "S15",
+      "category": "unknown_policy",
+      "question": "Где обжаловать rejected по заявке?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "В базе нет подтверждённого ответа. Уточните у HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0001
+    },
+    {
+      "id": "S16",
+      "category": "ambiguous",
+      "question": "Как отправить заявление через портал?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "Уточните тип заявки: на отпуск или на аванс?",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0002
+    },
+    {
+      "id": "S17",
+      "category": "ambiguous",
+      "question": "Каков порядок подачи заявки?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "Уточните тип заявки: на отпуск или на аванс?",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0002
+    },
+    {
+      "id": "S18",
+      "category": "ambiguous",
+      "question": "С чего начать создание заявки?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "Уточните тип заявки: на отпуск или на аванс?",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0002
+    },
+    {
+      "id": "S19",
+      "category": "compound",
+      "question": "Где проверить итог рассмотрения заявки и сколько ждать решения?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "Задайте один короткий вопрос, чтобы я мог подобрать точный ответ.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0
+    },
+    {
+      "id": "S20",
+      "category": "unsupported_condition",
+      "question": "Как экспортировать pending заявку на отпуск в Google Calendar?",
+      "expected_card": null,
+      "expected": "refusal",
+      "result": {
+        "answer": "Файл календаря доступен только в карточке одобренной заявки на отпуск.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "outcome": "pass",
+      "checks_passed": true,
+      "seconds": 0.0001
+    }
+  ],
+  "summary": {
+    "outcomes": {
+      "pass": 20
+    },
+    "supported": {
+      "passed": 8,
+      "total": 8
+    },
+    "refusals": {
+      "passed": 12,
+      "total": 12
+    },
+    "categories": {
+      "action": {
+        "passed": 1,
+        "total": 1
+      },
+      "ambiguous": {
+        "passed": 3,
+        "total": 3
+      },
+      "compound": {
+        "passed": 1,
+        "total": 1
+      },
+      "existing_request": {
+        "passed": 3,
+        "total": 3
+      },
+      "personal_data": {
+        "passed": 3,
+        "total": 3
+      },
+      "status_meaning": {
+        "passed": 3,
+        "total": 3
+      },
+      "status_navigation": {
+        "passed": 2,
+        "total": 2
+      },
+      "unknown_policy": {
+        "passed": 3,
+        "total": 3
+      },
+      "unsupported_condition": {
+        "passed": 1,
+        "total": 1
+      }
+    }
+  },
+  "errors": []
+}

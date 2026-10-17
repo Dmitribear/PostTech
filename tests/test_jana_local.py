@@ -12,7 +12,8 @@ from app.services.local_embeddings import LocalEmbedder
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = FAQCatalog.model_validate_json((ROOT / "knowledge_base/faq.json").read_text(encoding="utf-8"))
-ARTICLES = json.loads((ROOT / "knowledge_base/demo/articles.json").read_text(encoding="utf-8"))["articles"]
+# Frozen articles for the retired FAQ engine; live Jana reads the current team knowledge base.
+ARTICLES = json.loads((ROOT / "tests/fixtures/jana_legacy_articles.json").read_text(encoding="utf-8"))["articles"]
 
 
 def index_with(ranks):
@@ -46,6 +47,38 @@ def test_similarly_likely_answers_ask_for_clarification_instead_of_guessing():
     result = answer_from_faq("Как подать заявление?", ARTICLES, index_with([(0, .87), (1, .85), (-1, .3)]))
     assert result["mode"] == "refusal"
     assert "Уточните" in result["answer"] and "отпуск" in result["answer"] and "аванс" in result["answer"]
+
+
+@pytest.mark.parametrize("description", ["отправленной", "созданной", "оформленной"])
+def test_existing_request_description_does_not_trigger_submission_clarification(description):
+    question = f"Где найти решение по {description} заявке?"
+    card_index = next(i for i, card in enumerate(CATALOG.cards) if card.id == "request_status")
+    result = answer_from_faq(question, ARTICLES, index_with([(card_index, .91), (-1, .5)]))
+    assert result["mode"] == "excerpts"
+    assert result["answer"] == CATALOG.cards[card_index].excerpt + " [1]"
+
+
+@pytest.mark.parametrize("question", [
+    "Как подать заявку?", "Как подавать заявление?", "Как оформить заявку?",
+    "Как оформлять заявление?", "Как отправить заявку?", "Как отправлять заявление?",
+    "Как создать заявку?", "Как создавать заявления?", "Каков порядок подачи заявления?",
+    "Где инструкция по оформлению заявки?", "С чего начать отправку заявления?",
+    "Где инструкция по созданию заявки?",
+])
+def test_submission_without_request_kind_still_requires_clarification(question):
+    def unexpected(_question):
+        pytest.fail("An unspecified request kind must be clarified before search")
+    result = answer_from_faq(question, ARTICLES, SimpleNamespace(rank=unexpected))
+    assert result == {"answer": "Уточните тип заявки: на отпуск или на аванс?",
+                      "sources": [], "grounded": False,
+                      "escalation_suggested": True, "mode": "refusal"}
+
+
+def test_existing_request_description_does_not_bypass_semantic_confidence():
+    card_index = next(i for i, card in enumerate(CATALOG.cards) if card.id == "request_status")
+    result = answer_from_faq("Где найти решение по отправленной заявке?", ARTICLES,
+                             index_with([(card_index, .71), (-1, .3)]))
+    assert result["mode"] == "refusal" and not result["sources"]
 
 
 @pytest.mark.parametrize("rows", [[], [{**ARTICLES[0], "active": False}],
@@ -97,3 +130,90 @@ def test_local_settings_do_not_require_an_api_key():
     settings = Settings(_env_file=None, openai_api_key=None)
     assert settings.jana_min_score == .72
     assert settings.jana_model_dir.name == "mpnet"
+
+
+def test_reviewed_typo_is_repaired_before_missing_request_type_clarification():
+    seen = []
+    def rank(question):
+        seen.append(question)
+        return [(0, .96), (-1, .3)]
+    result = answer_from_faq("Как оформить заявку на отпск?", ARTICLES,
+                             SimpleNamespace(catalog=CATALOG, rank=rank))
+    assert seen == ["Как оформить заявку на отпуск?"]
+    assert result["mode"] == "excerpts"
+
+
+def test_repaired_question_is_checked_again_for_unknown_qualifications():
+    def unexpected(_question):
+        pytest.fail("Typo correction must not bypass scope checks")
+    result = answer_from_faq("Как оформить отпск по совместительству?", ARTICLES,
+                             SimpleNamespace(rank=unexpected))
+    assert result["mode"] == "refusal" and not result["sources"]
+
+
+@pytest.mark.parametrize("question,wrong_card", [
+    ("Где посмотреть статус моей заявки на отпуск?", "leave_apply"),
+    ("Где найти решение по заявлению на аванс?", "advance_apply"),
+    ("Будет ли Google Calendar автоматически синхронизировать изменения отпуска?", "calendar_import"),
+])
+def test_confident_but_inapplicable_instruction_is_not_returned(question, wrong_card):
+    card_index = next(i for i, card in enumerate(CATALOG.cards) if card.id == wrong_card)
+    result = answer_from_faq(question, ARTICLES, index_with([(card_index, .99), (-1, .3)]))
+    assert result["mode"] == "refusal" and not result["sources"]
+
+
+def card_position(card_id):
+    return next(i for i, card in enumerate(CATALOG.cards) if card.id == card_id)
+
+
+def test_incompatible_import_does_not_hide_a_confident_sync_answer():
+    question = "Синхронизируются ли изменения отпуска с Google Calendar?"
+    ranks = [(card_position("calendar_import"), .94),
+             (card_position("calendar_sync"), .91), (-1, .5)]
+    result = answer_from_faq(question, ARTICLES, index_with(ranks))
+    assert result["mode"] == "excerpts"
+    assert result["sources"][0]["excerpt"] == CATALOG.cards[card_position("calendar_sync")].excerpt
+
+
+@pytest.mark.parametrize("negative_score", [.96, .9])
+def test_filtering_incompatible_cards_preserves_unsupported_competitors(negative_score):
+    ranks = sorted([(card_position("calendar_import"), .99),
+                    (card_position("calendar_sync"), .93), (-1, negative_score)],
+                   key=lambda item: item[1], reverse=True)
+    result = answer_from_faq("Синхронизируются ли изменения отпуска с Google Calendar?",
+                             ARTICLES, index_with(ranks))
+    assert result["mode"] == "refusal" and not result["sources"]
+
+
+def test_filtering_incompatible_cards_does_not_lower_minimum_confidence():
+    ranks = [(card_position("calendar_import"), .99),
+             (card_position("calendar_sync"), .719), (-1, .4)]
+    result = answer_from_faq("Синхронизируются ли изменения отпуска с Google Calendar?",
+                             ARTICLES, index_with(ranks))
+    assert result["mode"] == "refusal" and not result["sources"]
+
+
+@pytest.mark.parametrize("mutation", ["missing", "inactive", "changed", "duplicate"])
+def test_source_failure_never_falls_back_to_another_confident_card(mutation):
+    winner = card_position("request_status")
+    source_id = str(CATALOG.cards[winner].article_id)
+    articles = [dict(article) for article in ARTICLES]
+    source = next(article for article in articles if article["id"] == source_id)
+    if mutation == "missing":
+        articles.remove(source)
+    elif mutation == "inactive":
+        source["active"] = False
+    elif mutation == "changed":
+        source["content"] += " Новое условие, требующее проверки."
+    else:
+        articles.append(dict(source))
+    ranks = [(winner, .99), (card_position("notification_find"), .9), (-1, .3)]
+    result = answer_from_faq("Где посмотреть решение по заявке?", articles, index_with(ranks))
+    assert result["mode"] == "refusal" and not result["sources"]
+    assert "Источник" in result["answer"]
+
+
+def test_all_incompatible_candidates_refuse_without_an_index_error():
+    result = answer_from_faq("Синхронизируются ли изменения отпуска с Google Calendar?",
+                             ARTICLES, index_with([(card_position("calendar_import"), .99)]))
+    assert result["mode"] == "refusal" and not result["sources"]

@@ -1,0 +1,80 @@
+[
+  {
+    "path": ".dockerignore",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "Union of branch exclusions; preserves local models and private environment exclusions.",
+    "different_from_old_integration": true
+  },
+  {
+    "path": ".env.example",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "Local reader + test integration gateway options; blank Supabase URL and 180s cold-start budget.",
+    "different_from_old_integration": true
+  },
+  {
+    "path": ".gitignore",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "Union of branch ignores including local runtimes and frontend artifacts.",
+    "different_from_old_integration": true
+  },
+  {
+    "path": "Dockerfile",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "Test portal/worker build plus Integration knowledge directory; no cloud reader.",
+    "different_from_old_integration": true
+  },
+  {
+    "path": "compose.yaml",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "Test API/worker configuration; local-only Jana, legacy embedding mounts removed.",
+    "different_from_old_integration": true
+  },
+  {
+    "path": "README.md",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "New combined workflow and safe local instructions, including migration limitations.",
+    "different_from_old_integration": true
+  },
+  {
+    "path": "app/core/config.py",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "Integration local reader configuration retained with measured cold-start timeout adjustment.",
+    "different_from_old_integration": true
+  },
+  {
+    "path": "app/services/jana.py",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "Integration local reader plus test publication/review freshness and source snapshot versions.",
+    "different_from_old_integration": true
+  },
+  {
+    "path": "database/seed_jana_demo.sql",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "Generated from new 13-article corpus with publication metadata and local database guard.",
+    "different_from_old_integration": true
+  },
+  {
+    "path": "docs/ai-jana-agent.md",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "Accurate combined architecture and acknowledged model quality limitations.",
+    "different_from_old_integration": true
+  },
+  {
+    "path": "docs/architecture.md",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "Current agreed roles, transactions, exact evidence and local test boundaries.",
+    "different_from_old_integration": true
+  },
+  {
+    "path": "examples/jana_local_demo.py",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "Integration real local reader and ICS, extended with publication and source versions.",
+    "different_from_old_integration": true
+  },
+  {
+    "path": "knowledge_base/demo/articles.json",
+    "resolution": "reviewed combined HEAD implementation",
+    "reason": "New agreed workflow, debit, Academy passing score, invitations, HR consent and current source policy.",
+    "different_from_old_integration": true
+  }
+]

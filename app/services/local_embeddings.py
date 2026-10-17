@@ -57,10 +57,13 @@ class LocalEmbedder:
     def encode(self, texts: list[str]) -> np.ndarray:
         batches = []
         try:
-            # Bound CPU/memory use and serialize tokenizer + inference access.
+            # Dynamic quantization is sensitive to the other texts/padding in
+            # a batch. Encode each phrase independently, just like a query, so
+            # adding/reordering FAQ examples cannot change existing vectors.
+            # Serialize tokenizer + inference access and bound memory use.
             with self.lock:
-                for offset in range(0, len(texts), 16):
-                    tokens = self.tokenizer.encode_batch(texts[offset:offset + 16])
+                for text in texts:
+                    tokens = self.tokenizer.encode_batch([text])
                     if any(len(item.ids) > MAX_TOKENS for item in tokens):
                         raise ValueError("Text exceeds the model token limit")
                     fields = {

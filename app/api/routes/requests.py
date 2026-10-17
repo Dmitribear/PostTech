@@ -75,7 +75,15 @@ def request_history(
     return workflow.request_history(actor, request_id)
 
 
-@router.get("/{request_id}/calendar.ics", response_class=Response)
+@router.get("/{request_id}/calendar.ics", response_class=Response, responses={
+    200: {"description": "iCalendar file; import manually into Google Calendar",
+          "content": {"text/calendar": {"schema": {"type": "string", "format": "binary"}}}},
+    401: {"description": "Authentication required"},
+    403: {"description": "No access to this request"},
+    404: {"description": "Request not found"},
+    409: {"description": "Not a finally approved leave or invalid dates"},
+    503: {"description": "Request storage unavailable"},
+})
 def export_request_calendar(request_id: UUID, actor: UserContext = Depends(get_current_user)) -> Response:
     """Manual calendar export with exactly the same visibility as the request card."""
     request = workflow.get_request(actor, request_id)

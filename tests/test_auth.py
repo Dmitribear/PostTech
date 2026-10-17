@@ -3,10 +3,11 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-import pytest
+from supabase_auth.errors import AuthRetryableError
 
 from app.api.routes import auth
 from app.core.config import get_settings
+from app.db import supabase as supabase_db
 from app.db.supabase import get_supabase_auth_client
 from app.main import app
 
@@ -157,22 +158,29 @@ def test_login_rejects_invalid_credentials(monkeypatch) -> None:
     assert response.json() == {"detail": "Invalid email or password"}
 
 
-def test_auth_routes_report_missing_supabase_public_key(monkeypatch) -> None:
+@pytest.mark.parametrize("endpoint", ["register", "login", "refresh"])
+def test_auth_routes_report_missing_supabase_public_key(monkeypatch, endpoint) -> None:
     def missing_auth_key() -> None:
         raise RuntimeError("missing config")
 
     monkeypatch.setattr(auth, "get_supabase_auth_client", missing_auth_key)
 
     response = client.post(
-        "/api/v1/auth/login",
-        json={"email": "worker@example.test", "password": "safe-password"},
+        f"/api/v1/auth/{endpoint}",
+        json=(
+            {"refresh_token": "refresh-token"}
+            if endpoint == "refresh"
+            else REGISTRATION if endpoint == "register"
+            else {"email": "worker@example.test", "password": "safe-password"}
+        ),
     )
 
     assert response.status_code == 503
     assert response.json() == {"detail": "Supabase Auth is not configured"}
 
 
-def test_empty_compose_environment_returns_503_instead_of_settings_error(monkeypatch) -> None:
+@pytest.mark.parametrize("endpoint", ["register", "login", "refresh"])
+def test_empty_compose_environment_returns_503_instead_of_settings_error(monkeypatch, endpoint) -> None:
     for name in ("SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_KEY"):
         monkeypatch.setenv(name, "")
     get_settings.cache_clear()
@@ -181,8 +189,13 @@ def test_empty_compose_environment_returns_503_instead_of_settings_error(monkeyp
 
     try:
         response = client.post(
-            "/api/v1/auth/login",
-            json={"email": "worker@example.test", "password": "safe-password"},
+            f"/api/v1/auth/{endpoint}",
+            json=(
+                {"refresh_token": "refresh-token"}
+                if endpoint == "refresh"
+                else REGISTRATION if endpoint == "register"
+                else {"email": "worker@example.test", "password": "safe-password"}
+            ),
         )
     finally:
         get_settings.cache_clear()
@@ -349,3 +362,80 @@ def test_completion_supplies_names_only_after_verified_login(monkeypatch):
     assert client.post("/api/v1/auth/complete-invitation", json={**payload, "role": "hr_admin"}).status_code == 422
     assert len(completed) == 1
     assert client.post("/api/v1/auth/complete-invitation",json={**payload,"first_name": "   "}).status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("service_key", "expected_detail"),
+    [
+        (
+            "sb_publishable_test_value",
+            "Supabase keys look swapped: SUPABASE_KEY should be the service-role secret key, "
+            "and SUPABASE_ANON_KEY should be the public anon key",
+        ),
+        (
+            "sb_secret_test_service",
+            "SUPABASE_ANON_KEY looks wrong: use the public anon key from the Supabase project, "
+            "not the secret key",
+        ),
+    ],
+)
+def test_register_reports_invalid_key_configuration_without_calling_auth(
+    monkeypatch, service_key, expected_detail
+) -> None:
+    def unexpected_client_creation(*_args, **_kwargs):
+        pytest.fail("Invalid Auth configuration must be rejected before client creation")
+
+    monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
+    monkeypatch.setenv("SUPABASE_KEY", service_key)
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "sb_secret_test_auth")
+    get_settings.cache_clear()
+    get_supabase_auth_client.cache_clear()
+    monkeypatch.setattr(auth, "get_supabase_auth_client", get_supabase_auth_client)
+    monkeypatch.setattr(supabase_db, "create_client", unexpected_client_creation)
+
+    try:
+        response = client.post(
+            "/api/v1/auth/register",
+            json=REGISTRATION,
+        )
+    finally:
+        get_settings.cache_clear()
+        get_supabase_auth_client.cache_clear()
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": expected_detail}
+    assert service_key not in response.text
+    assert "sb_secret_test_auth" not in response.text
+
+
+@pytest.mark.parametrize(
+    ("error", "expected_status", "expected_detail"),
+    [
+        (
+            AuthRetryableError("upstream unavailable", 503),
+            503,
+            "Supabase Auth is temporarily unavailable",
+        ),
+        (
+            RuntimeError("private upstream detail"),
+            502,
+            "Could not complete registration with Supabase Auth",
+        ),
+    ],
+)
+def test_register_preserves_signup_failure_mapping(
+    monkeypatch, error, expected_status, expected_detail
+) -> None:
+    def fail_signup(_credentials: dict) -> None:
+        raise error
+
+    fake_client = SimpleNamespace(auth=SimpleNamespace(sign_up=fail_signup))
+    monkeypatch.setattr(auth, "get_supabase_auth_client", lambda: fake_client)
+
+    response = client.post(
+        "/api/v1/auth/register",
+        json=REGISTRATION,
+    )
+
+    assert response.status_code == expected_status
+    assert response.json() == {"detail": expected_detail}

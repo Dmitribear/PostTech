@@ -1,0 +1,15 @@
+{
+  "frozen_at": "2026-10-17T00:17:04.540444+00:00",
+  "sha256": {
+    "knowledge_base/demo/independent_agents_v3.json": "5b1e25c9bc5f0afd05a55c5fdba532dc0392ca415f9c4822d73925bb44a5e580",
+    "docs/reports/jana-independent-agents-v3/author-a.json": "5a701f166973baa0abe4be07c5acca4917350c87f7ee4f1e9668e5066b4f89a2",
+    "docs/reports/jana-independent-agents-v3/author-b.json": "5e5d016ca4ea667b2947448299ef97fb966ba55c6b1b4162717db44173fd2870",
+    "docs/reports/jana-independent-agents-v3/gold-review.json": "a6e3d707b53a7738f6f1a6f914cbfe1d636edf0ae338ea44417dd30149b780f3",
+    "docs/reports/jana-independent-agents-v3/novelty-check.json": "c6eaf85c36826be6f0e52cc3c7c477f2f99d7ec62fefe0cb9066c74d40d767f9",
+    "docs/reports/jana-independent-agents-v3/runtime-freeze.json": "a58059f459792df8a3358bb5e66666f859d264d77735deb12e2880c39e62fe00",
+    "docs/reports/jana-independent-agents-v3/protocol.json": "079b0dfa4378c7ce34c8d28ac7d540eabc321c90fdafaab69d575e4d036fd332"
+  },
+  "case_count": 50,
+  "question_changes_from_authors": 0,
+  "gold_cases_adjusted_before_inference": 15
+}
