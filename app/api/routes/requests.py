@@ -144,33 +144,88 @@ def review_request(
 
     request = _get_request(request_id)
     employee = ensure_can_manage_employee(actor, str(request["employee_id"]))
-    if request["status"] != "pending":
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only pending requests can be reviewed")
+    now = datetime.now(UTC).isoformat()
+    if actor.role == "manager":
+        if request["status"] != "pending":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Only requests awaiting manager review can be reviewed",
+            )
+        next_status = "pending_hr" if payload.status == "approved" else "rejected"
+        update = {
+            "status": next_status,
+            "manager_reviewed_by": actor.id,
+            "manager_reviewed_at": now,
+            "manager_reviewer_comment": payload.reviewer_comment,
+        }
+        if next_status == "rejected":
+            update.update(
+                {
+                    "reviewer_comment": payload.reviewer_comment,
+                    "reviewed_by": actor.id,
+                    "reviewed_at": now,
+                }
+            )
+        expected_status = "pending"
+    else:
+        if request["status"] == "pending_hr":
+            expected_status = "pending_hr"
+        elif request["status"] == "pending" and not employee.get("manager_id"):
+            # Requests from employees without a manager are routed directly to HR.
+            expected_status = "pending"
+        elif request["status"] == "pending":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Manager review is required before HR review",
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Only requests awaiting HR review can be reviewed",
+            )
+        next_status = payload.status
+        update = {
+            "status": next_status,
+            "reviewer_comment": payload.reviewer_comment,
+            "reviewed_by": actor.id,
+            "reviewed_at": now,
+            "hr_reviewed_by": actor.id,
+            "hr_reviewed_at": now,
+            "hr_reviewer_comment": payload.reviewer_comment,
+        }
 
     result = (
         get_supabase_client()
         .table("hr_requests")
-        .update(
-            {
-                "status": payload.status,
-                "reviewer_comment": payload.reviewer_comment,
-                "reviewed_by": actor.id,
-                "reviewed_at": datetime.now(UTC).isoformat(),
-            }
-        )
+        .update(update)
         .eq("id", request_id)
-        .eq("status", "pending")
+        .eq("status", expected_status)
         .execute()
     )
     updated = (result.data or [None])[0]
     if updated is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Request was already reviewed")
 
-    create_notification(
-        str(employee["id"]),
-        "Статус заявки изменён",
-        f"Ваша заявка получила статус: {payload.status}.",
-        "request_status_changed",
-        request_id,
-    )
+    if actor.role == "manager" and next_status == "pending_hr":
+        create_notification(
+            str(employee["id"]),
+            "Руководитель одобрил заявку",
+            "Заявка передана в HR для окончательного рассмотрения.",
+            "request_pending_hr",
+            request_id,
+        )
+        notify_hr(
+            "Заявка ожидает рассмотрения HR",
+            f"Руководитель одобрил заявку сотрудника {employee['full_name']}: требуется решение HR.",
+            "request_pending_hr",
+            request_id,
+        )
+    else:
+        create_notification(
+            str(employee["id"]),
+            "Статус заявки изменён",
+            f"Ваша заявка получила статус: {next_status}.",
+            "request_status_changed",
+            request_id,
+        )
     return updated
