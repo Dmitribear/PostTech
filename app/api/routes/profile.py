@@ -35,15 +35,17 @@ def team_profiles(actor: UserContext = Depends(get_current_user)) -> list[dict]:
     if actor.role == "hr_admin":
         response = get_supabase_client().table("employee_profiles").select("*").order("full_name").execute()
         return [_public_profile(profile) for profile in response.data or []]
-    if actor.role != "manager":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager or HR role required")
+    if actor.role not in ("manager", "director"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager, director or HR role required")
 
-    response = (
-        get_supabase_client()
-        .table("employee_profiles")
+    client = get_supabase_client()
+    direct_reports = (
+        client.table("employee_profiles")
         .select("*")
         .eq("manager_id", actor.id)
         .order("full_name")
         .execute()
+        .data
+        or []
     )
-    return [_public_profile(profile) for profile in response.data or []]
+    return [_public_profile(profile) for profile in direct_reports]

@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-AppRole = Literal["worker", "manager", "hr_admin"]
+AppRole = Literal["worker", "manager", "director", "hr_admin"]
 
 
 class UserContext(BaseModel):

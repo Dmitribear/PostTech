@@ -7,7 +7,6 @@ from httpx import HTTPError
 from postgrest.exceptions import APIError
 
 from app.core.permissions import (
-    ensure_can_manage_employee,
     ensure_can_view_profile,
     get_profile,
 )
@@ -50,8 +49,8 @@ def list_requests(
         query = query.eq("employee_id", employee_id)
     elif actor.role == "worker":
         query = query.eq("employee_id", actor.id)
-    elif actor.role == "manager":
-        team = (
+    elif actor.role in ("manager", "director"):
+        direct_reports = (
             client.table("employee_profiles")
             .select("id")
             .eq("manager_id", actor.id)
@@ -59,7 +58,7 @@ def list_requests(
             .data
             or []
         )
-        employee_ids = [actor.id, *(str(profile["id"]) for profile in team)]
+        employee_ids = [actor.id, *(str(profile["id"]) for profile in direct_reports)]
         query = query.in_("employee_id", employee_ids)
 
     response = query.execute()
@@ -139,19 +138,23 @@ def review_request(
     payload: RequestReview,
     actor: UserContext = Depends(get_current_user),
 ) -> dict:
-    if actor.role not in ("manager", "hr_admin"):
+    if actor.role not in ("manager", "director", "hr_admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Reviewer role required")
 
     request = _get_request(request_id)
-    employee = ensure_can_manage_employee(actor, str(request["employee_id"]))
+    employee = get_profile(str(request["employee_id"]))
     now = datetime.now(UTC).isoformat()
     if actor.role == "manager":
+        if employee.get("manager_id") != actor.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot review this employee's request")
         if request["status"] != "pending":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Only requests awaiting manager review can be reviewed",
             )
-        next_status = "pending_hr" if payload.status == "approved" else "rejected"
+        next_status = "rejected"
+        if payload.status == "approved":
+            next_status = "pending_hr"
         update = {
             "status": next_status,
             "manager_reviewed_by": actor.id,
@@ -167,16 +170,40 @@ def review_request(
                 }
             )
         expected_status = "pending"
+    elif actor.role == "director":
+        if employee.get("manager_id") != actor.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot review this employee's request")
+        if request["status"] != "pending":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Only direct reports' requests awaiting review can be reviewed",
+            )
+        expected_status = "pending"
+        next_status = "pending_hr" if payload.status == "approved" else "rejected"
+        update = {
+            "status": next_status,
+            "director_reviewed_by": actor.id,
+            "director_reviewed_at": now,
+            "director_reviewer_comment": payload.reviewer_comment,
+        }
+        if next_status == "rejected":
+            update.update(
+                {
+                    "reviewer_comment": payload.reviewer_comment,
+                    "reviewed_by": actor.id,
+                    "reviewed_at": now,
+                }
+            )
     else:
         if request["status"] == "pending_hr":
             expected_status = "pending_hr"
         elif request["status"] == "pending" and not employee.get("manager_id"):
-            # Requests from employees without a manager are routed directly to HR.
+            # Requests without a reporting line are routed directly to HR.
             expected_status = "pending"
         elif request["status"] == "pending":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Manager review is required before HR review",
+            detail="Manager review is required before HR review",
             )
         else:
             raise HTTPException(
@@ -206,17 +233,17 @@ def review_request(
     if updated is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Request was already reviewed")
 
-    if actor.role == "manager" and next_status == "pending_hr":
+    if actor.role in ("manager", "director") and next_status == "pending_hr":
         create_notification(
             str(employee["id"]),
-            "Руководитель одобрил заявку",
+            "Заявка передана в HR",
             "Заявка передана в HR для окончательного рассмотрения.",
             "request_pending_hr",
             request_id,
         )
         notify_hr(
             "Заявка ожидает рассмотрения HR",
-            f"Руководитель одобрил заявку сотрудника {employee['full_name']}: требуется решение HR.",
+            f"Заявка сотрудника {employee['full_name']} прошла согласование руководства; требуется решение HR.",
             "request_pending_hr",
             request_id,
         )

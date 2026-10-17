@@ -112,8 +112,8 @@ def assign_course(
     payload: CourseAssignmentCreate,
     actor: UserContext = Depends(get_current_user),
 ) -> dict:
-    if actor.role not in ("manager", "hr_admin"):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager or HR role required")
+    if actor.role not in ("manager", "director", "hr_admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager, director or HR role required")
     employee = ensure_can_manage_employee(actor, payload.employee_id)
     _get_course(payload.course_id)
     if _find_assignment(payload.course_id, payload.employee_id):

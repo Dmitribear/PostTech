@@ -17,6 +17,7 @@ UNMANAGED_WORKER = "worker-unmanaged"
 MANAGER = "manager-1"
 OTHER_MANAGER = "manager-2"
 HR = "hr-1"
+DIRECTOR = "director-1"
 COURSE = "course-1"
 
 
@@ -323,6 +324,62 @@ def test_manager_cannot_review_unrelated_employee_and_hr_cannot_bypass_manager(w
     assert premature.status_code == 409
 
 
+def test_worker_request_goes_to_manager_then_hr_even_if_manager_reports_to_director(workflow_client):
+    client, database, current_actor = workflow_client
+    database.tables["employee_profiles"].append(profile(DIRECTOR, "director"))
+    database.tables["employee_profiles"] = [
+        {**item, "manager_id": DIRECTOR} if item["id"] == MANAGER else item
+        for item in database.tables["employee_profiles"]
+    ]
+
+    current_actor["value"] = actor(MANAGER, "manager")
+    manager_decision = client.patch(
+        "/api/v1/requests/request-1/review",
+        json={"status": "approved", "reviewer_comment": "Одобрено руководителем"},
+    )
+    assert manager_decision.status_code == 200
+    assert manager_decision.json()["status"] == "pending_hr"
+    assert manager_decision.json()["manager_reviewed_by"] == MANAGER
+    assert not any(item["notification_type"] == "request_pending_director" for item in database.tables["notifications"])
+
+    current_actor["value"] = actor(DIRECTOR, "director")
+    director_inbox = client.get("/api/v1/requests")
+    assert director_inbox.status_code == 200
+    assert "request-1" not in {item["id"] for item in director_inbox.json()}
+    director_cannot_review_worker_request = client.patch(
+        "/api/v1/requests/request-1/review",
+        json={"status": "approved"},
+    )
+    assert director_cannot_review_worker_request.status_code == 403
+
+    current_actor["value"] = actor(HR, "hr_admin")
+    hr_decision = client.patch(
+        "/api/v1/requests/request-1/review",
+        json={"status": "approved", "reviewer_comment": "Финальное решение HR"},
+    )
+    assert hr_decision.status_code == 200
+    assert hr_decision.json()["status"] == "approved"
+    assert hr_decision.json()["hr_reviewed_by"] == HR
+
+
+def test_director_cannot_review_worker_request_or_another_managers_branch(workflow_client):
+    client, database, current_actor = workflow_client
+    database.tables["employee_profiles"].append(profile(DIRECTOR, "director"))
+    database.tables["employee_profiles"] = [
+        {**item, "manager_id": DIRECTOR} if item["id"] == MANAGER else item
+        for item in database.tables["employee_profiles"]
+    ]
+    current_actor["value"] = actor(DIRECTOR, "director")
+    premature = client.patch(
+        "/api/v1/requests/request-1/review", json={"status": "approved"}
+    )
+    unrelated = client.patch(
+        "/api/v1/requests/request-2/review", json={"status": "approved"}
+    )
+    assert premature.status_code == 403
+    assert unrelated.status_code == 403
+
+
 @pytest.mark.parametrize("final_status", ["approved", "rejected"])
 def test_hr_makes_final_decision_after_manager_approval(workflow_client, final_status):
     client, database, current_actor = workflow_client
@@ -390,8 +447,8 @@ def test_hr_can_review_request_directly_when_employee_has_no_manager(workflow_cl
 
 def test_manager_leave_request_goes_to_director_then_hr(workflow_client):
     client, database, current_actor = workflow_client
-    director_id = "director-1"
-    database.tables["employee_profiles"].append(profile(director_id, "manager"))
+    director_id = DIRECTOR
+    database.tables["employee_profiles"].append(profile(director_id, "director"))
     database.tables["employee_profiles"] = [
         {**item, "manager_id": director_id} if item["id"] == MANAGER else item
         for item in database.tables["employee_profiles"]
@@ -419,7 +476,7 @@ def test_manager_leave_request_goes_to_director_then_hr(workflow_client):
         for item in database.tables["notifications"]
     )
 
-    current_actor["value"] = actor(director_id, "manager")
+    current_actor["value"] = actor(director_id, "director")
     director_requests = client.get("/api/v1/requests")
     assert director_requests.status_code == 200
     assert request_id in {item["id"] for item in director_requests.json()}
@@ -429,7 +486,7 @@ def test_manager_leave_request_goes_to_director_then_hr(workflow_client):
     )
     assert director_decision.status_code == 200
     assert director_decision.json()["status"] == "pending_hr"
-    assert director_decision.json()["manager_reviewed_by"] == director_id
+    assert director_decision.json()["director_reviewed_by"] == director_id
 
     current_actor["value"] = actor(HR, "hr_admin")
     hr_decision = client.patch(

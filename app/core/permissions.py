@@ -35,7 +35,7 @@ def get_profile(employee_id: str) -> dict:
 def ensure_can_view_profile(actor: UserContext, profile: dict) -> None:
     if actor.role == "hr_admin" or profile["id"] == actor.id:
         return
-    if actor.role == "manager" and profile.get("manager_id") == actor.id:
+    if actor.role in ("manager", "director") and profile.get("manager_id") == actor.id:
         return
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access to this employee is forbidden")
 
@@ -44,6 +44,6 @@ def ensure_can_manage_employee(actor: UserContext, employee_id: str) -> dict:
     profile = get_profile(employee_id)
     if actor.role == "hr_admin":
         return profile
-    if actor.role == "manager" and profile.get("manager_id") == actor.id:
+    if actor.role in ("manager", "director") and profile.get("manager_id") == actor.id:
         return profile
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot manage this employee")

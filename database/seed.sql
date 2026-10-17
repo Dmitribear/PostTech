@@ -1,7 +1,8 @@
 -- Demo content. Run the migration first.
--- Create these three Supabase Auth users in Authentication -> Users before running
+-- Create these four Supabase Auth users in Authentication -> Users before running
 -- this seed so employee profile IDs can reference real auth.users rows:
 --   hr@posttech.demo
+--   director@posttech.demo
 --   manager@posttech.demo
 --   employee@posttech.demo
 
@@ -78,10 +79,26 @@ insert into public.employee_profiles (
     auth_user_id, employee_code, full_name, email, company, job_title,
     department, hired_at, vacation_days_remaining, role, external_source
 )
-select u.id, 'DEMO-MGR-001', 'Демо руководитель', u.email,
-       'PostTech', 'Руководитель отдела', 'Разработка', current_date - 1200, 24, 'manager', 'mock-1c-zup'
-from auth.users u where u.email = 'manager@posttech.demo'
+select u.id, 'DEMO-DIR-001', 'Демо директор', u.email,
+       'PostTech', 'Директор', 'Руководство', current_date - 1800, 28, 'director', 'mock-1c-zup'
+from auth.users u where u.email = 'director@posttech.demo'
 on conflict (auth_user_id) do update set role = excluded.role, full_name = excluded.full_name;
+
+insert into public.employee_profiles (
+    auth_user_id, employee_code, full_name, email, company, job_title,
+    department, manager_id, hired_at, vacation_days_remaining, role, external_source
+)
+select u.id, 'DEMO-MGR-001', 'Демо руководитель', u.email,
+       'PostTech', 'Руководитель отдела', 'Разработка', director.id,
+       current_date - 1200, 24, 'manager', 'mock-1c-zup'
+from auth.users u
+cross join public.employee_profiles director
+where u.email = 'manager@posttech.demo'
+  and director.email = 'director@posttech.demo'
+on conflict (auth_user_id) do update set
+    role = excluded.role,
+    manager_id = excluded.manager_id,
+    full_name = excluded.full_name;
 
 insert into public.employee_profiles (
     auth_user_id, employee_code, full_name, email, company, job_title,
