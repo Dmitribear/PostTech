@@ -297,3 +297,10 @@ body[data-density=compact] .support-notification{padding:16px 20px}
 .source-metadata strong { font-weight: 500; }
 .source-reviewed { color: #008443; }
 .source-unverified { color: #936315; }
+
+.assign-course-options{border:0;padding:0;margin:0;min-width:0}
+.assign-course-options legend{margin-bottom:10px}
+.assign-course-options .support-option{margin-bottom:8px;min-height:48px}
+.assign-course-options small{display:block;margin-top:4px;color:var(--muted,#748097);font-size:12px}
+
+.support-answer-action{margin-top:14px}

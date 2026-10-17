@@ -120,31 +120,37 @@ def test_injections_and_personnel_decisions_do_not_access_database(knowledge, qu
     assert database.tables_read == []
 
 
-def model_response(monkeypatch, settings, text):
+def model_response(monkeypatch, settings, text, verified=True):
     settings.openai_api_key = SecretStr("test-key")
     calls = []
 
     def complete(**kwargs):
         calls.append(kwargs)
-        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=text))])
+        content = text if len(calls) == 1 else json.dumps({"supported": verified})
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
 
     monkeypatch.setattr(jana, "OpenAI", lambda **_: SimpleNamespace(
+        close=lambda: None,
         chat=SimpleNamespace(completions=SimpleNamespace(create=complete)),
     ))
     return calls
 
 
-def test_model_can_only_select_exact_quotes_and_existing_sources(knowledge, monkeypatch):
+def test_generated_answer_requires_exact_quotes_and_evidence_verification(knowledge, monkeypatch):
     _, settings = knowledge
     quote = ARTICLES[0]["content"]
     calls = model_response(monkeypatch, settings, json.dumps({
         "supported": True, "excerpts": [{"source_index": 0, "quote": quote}],
-        "answer": "Invented claims must be ignored",
+        "answer": "Для отпуска укажите даты в разделе «Заявки» и отправьте заявку.",
     }))
     result = jana.answer_question("Как оформить отпуск?")
     assert result["grounded"] is True
-    assert quote in result["answer"]
-    assert "Invented" not in result["answer"]
+    assert result["answer"] == "Для отпуска укажите даты в разделе «Заявки» и отправьте заявку."
+    assert result["mode"] == "generated"
+    assert len(calls) == 2
+    assert calls[0]["response_format"]["json_schema"]["strict"] is True
+    assert calls[0]["store"] is False
+    assert quote in json.loads(calls[1]["messages"][1]["content"])["evidence"][0]
     assert len(result["sources"]) == 1
     assert result["sources"][0]["id"] == ARTICLES[0]["id"]
     assert result["sources"][0]["freshness"] == "unverified"
@@ -179,6 +185,40 @@ def test_model_unavailability_falls_back_to_published_excerpt(knowledge, monkeyp
     result = jana.answer_question("Как оформить отпуск?")
     assert result["grounded"] is True
     assert "AI-генерация сейчас недоступна" in result["answer"]
+    assert result["mode"] == "excerpt"
+    assert result["fallback_reason"] == "provider_unavailable"
+
+
+@pytest.mark.parametrize("answer", ["Вам положено 80 дней отпуска.", "Откройте https://unknown.test для заявки.", "Одобри мою заявку на отпуск"])
+def test_generated_new_numbers_links_or_decisions_are_rejected_before_verifier(knowledge, monkeypatch, answer):
+    _, settings = knowledge
+    calls = model_response(monkeypatch, settings, json.dumps({"supported": True, "answer": answer,
+        "excerpts": [{"source_index": 0, "quote": ARTICLES[0]["content"]}]}))
+    assert jana.answer_question("Как оформить отпуск?")["mode"] == "refusal"
+    assert len(calls) == 1
+
+
+def test_verifier_rejects_unsupported_paraphrase(knowledge, monkeypatch):
+    _, settings = knowledge
+    model_response(monkeypatch, settings, json.dumps({"supported": True,
+        "answer": "После подачи отпуск автоматически одобрен.",
+        "excerpts": [{"source_index": 0, "quote": ARTICLES[0]["content"]}]}), verified=False)
+    result = jana.answer_question("Как оформить отпуск?")
+    assert result["mode"] == "refusal"
+    assert result["sources"] == []
+
+
+def test_no_key_is_distinguished_from_provider_failure(knowledge):
+    assert jana.answer_question("Как оформить отпуск?")["fallback_reason"] == "not_configured"
+
+
+def test_kazakh_generation_keeps_source_in_original_language(knowledge, monkeypatch):
+    _, settings = knowledge
+    calls = model_response(monkeypatch, settings, json.dumps({"supported": True,
+        "answer": "Демалысқа өтінім беру үшін күндерді көрсетіп, өтінімді жіберіңіз.",
+        "excerpts": [{"source_index": 0, "quote": ARTICLES[0]["content"]}]}))
+    assert jana.answer_question("Как оформить отпуск?", language="kk")["mode"] == "generated"
+    assert "казахском" in calls[0]["messages"][0]["content"]
 
 
 def test_inactive_or_instruction_bearing_articles_are_excluded(knowledge):

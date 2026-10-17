@@ -268,3 +268,21 @@ body[data-density=compact] .data-table td { padding-top: 11px; padding-bottom: 1
 }
 
 .language-switch{border:1px solid #e2e8ee;border-radius:8px;background:white;color:#152039;padding:7px;font:inherit;font-size:12px;cursor:pointer}
+
+.list-pager{display:flex;align-items:center;justify-content:center;gap:16px;padding:16px 0}
+.list-pager span{white-space:nowrap;color:var(--muted);font-size:13px}
+.list-anchor{scroll-margin-top:90px}
+.modal-heading{position:sticky;top:-26px;background:var(--surface,#fff);z-index:2;padding:12px 0}
+.modal-heading h2{min-width:0;overflow-wrap:anywhere}
+.modal-heading .icon-btn{flex-shrink:0}
+.ws-form-actions{position:sticky;bottom:0;z-index:2;background:var(--surface,#fff);padding:12px 0;display:flex;gap:12px;border-top:1px solid var(--border)}
+.ws-form-actions>.btn{flex:1}
+@media(max-width:900px){
+ .ws-editor>.ws-form-actions{bottom:calc(64px + env(safe-area-inset-bottom))}
+ .modal-heading{top:-22px}
+ .modal .input,.ws-editor .input{font-size:16px;min-width:0;max-width:100%}
+ .modal .field{min-width:0}
+ .modal .btn,.ws-editor .btn,.list-pager .btn{min-height:44px}
+ .modal .btn{white-space:normal}
+ .ws-form-actions{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+}

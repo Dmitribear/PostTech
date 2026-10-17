@@ -73,7 +73,9 @@ Open `Start PostTech.cmd` to run the prepared portal at **http://127.0.0.1:8010*
 
 ## Run
 
-With `.env` configured and demo SQL applied, run `docker compose up --build`. The multi-stage image builds and serves the web portal at `http://localhost:8000`, with API routes under `/api/v1` and Swagger UI at `http://localhost:8000/docs`.
+With `.env` configured and database migrations applied, open `Start PostTech Docker.cmd` or run `docker compose up --build -d --wait`. The launcher waits for a healthy container and opens **http://localhost:8000**. The multi-stage image builds the current frontend source and serves it together with the API under `/api/v1`; Swagger UI is at `http://localhost:8000/docs`.
+
+Compose rebuilds the image on `docker compose up` (`pull_policy: build`). After changing source files, run the launcher again. Docker Desktop's Start/Restart button and `docker compose restart` only restart the existing container; they do not include new code. The separate non-Docker launcher `Start PostTech.cmd` uses port **8010**, so use port **8000** when checking Docker.
 
 The API container can start without `.env`, but Supabase-dependent endpoints will not work until valid credentials are provided. `GET /api/v1/health/live` checks process liveness. `/api/v1/health/ready` performs a real knowledge-table read and verifies the columns introduced by migration 0006. Failures return a generic 503 without configuration details.
 

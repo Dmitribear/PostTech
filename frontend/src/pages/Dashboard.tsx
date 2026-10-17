@@ -6,6 +6,7 @@ import { fetchAllRequests } from '../lib/api';
 import { EmptyState, ErrorState, Icon, LoadingState, PageHeader, StatusBadge } from '../components/ui';
 import { notificationHref } from '../lib/format';
 import RoleOverview from './RoleOverview';
+import { homeCourses, nextCourse } from '../lib/home-learning';
 import type { Course, HrRequest, Notification } from '../lib/types';
 import './dashboard.css';
 
@@ -16,7 +17,7 @@ const dayUnit = (days: number) => { const form = dayPlural.select(days); return 
 const localDay = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
 const todayKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Qyzylorda', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const actions = [
-  { path: '/requests/new?type=leave', icon: 'calendar', title: 'Оформить отпуск', text: 'Выбрать даты', category: 'Заявки', main: true },
+  { path: '/calendar?select=1', icon: 'calendar', title: 'Оформить отпуск', text: 'Выбрать даты', category: 'Заявки', main: true },
   { path: '/requests/new?type=advance', icon: 'wallet', title: 'Запросить аванс', text: 'Заявка на выплату', category: 'Заявки' },
   { path: '/calendar', icon: 'calendar', title: 'Календарь', text: 'Отпуска и планы', category: 'Планирование' },
   { path: '/jana', icon: 'message', title: 'AI Jana', text: 'Ответы на HR-вопросы', category: 'Поддержка' },
@@ -24,8 +25,8 @@ const actions = [
   { path: '/academy', icon: 'graduation', title: 'Обучение', text: 'Материалы и тесты', category: 'Обучение' },
 ];
 const quickActions = [
-  { path: '/requests/new?type=leave', icon: 'calendar', title: 'Оформить отпуск', color: 'green' },
-  { path: '/requests', icon: 'file-text', title: 'Мои заявки', color: 'blue' },
+  { path: '/calendar?select=1', icon: 'calendar', title: 'Оформить отпуск', color: 'green' },
+  { path: '/requests/new?type=advance', icon: 'wallet', title: 'Запросить аванс', color: 'blue' },
   { path: '/academy', icon: 'graduation', title: 'Обучение', color: 'purple' },
   { path: '/jana', icon: 'message', title: 'AI Jana', color: 'green' },
 ];
@@ -93,22 +94,21 @@ export default function Dashboard() {
   useEffect(() => {
     let active = true;
     setError(null);
-    Promise.all([fetchAllRequests(api, { employee_id: profile.id }), api.getCourses(), api.getNotifications({ limit: 3 })])
-      .then(([requests, courses, notifications]) => { if (active) setData({ requests, courses, notifications }); })
+    Promise.all([fetchAllRequests(api, { employee_id: profile.id }), api.getMyCourses(), api.getNotifications({ limit: 3 })])
+      .then(([requests, courses, notifications]) => { if (active) setData({ requests, courses: homeCourses(courses), notifications }); })
       .catch(e => { if (active) setError(e); });
     return () => { active = false; };
   }, [api, profile.id, refreshKey, retry]);
   const firstName = profile.full_name.split('·').at(-1)!.trim().split(' ')[0];
   const pending = data?.requests.filter(r => r.status === 'pending') || [];
-  const activeCourses = data?.courses.filter(c => c.assignment && c.assignment.status !== 'completed') || [];
-  const learning = activeCourses.find(c => c.assignment?.status === 'in_progress') || activeCourses[0];
+  const learning = nextCourse(data?.courses || []);
   const nextLeave = data?.requests.filter(r => r.request_type === 'leave' && r.status === 'approved' && r.end_date && r.end_date >= todayKey()).sort((a, b) => a.start_date!.localeCompare(b.start_date!))[0];
   return <div className="pt-dashboard">
     <header className="home-heading"><div><h1>{t("Добрый день, ")}{tx(firstName)}!</h1><p>{t("Хорошего рабочего дня.")}</p></div><LogisticsScene /></header>
     {tx(error ? <ErrorState error={error} retry={() => setRetry(v => v + 1)} /> : !data ? <LoadingState /> : <>
-      <nav className="home-quick-actions" aria-label={t("Быстрые действия")}><Link className="home-quick-action green home-mobile-calendar" to="/calendar"><span className="home-action-icon"><Icon name="calendar" size={25} /></span><strong>{t("Календарь")}</strong><Icon name="chevron-right" size={18} /></Link>{tx(quickActions.map(action => <Link className={`home-quick-action ${action.color}${action.path === '/requests/new?type=leave' ? ' home-desktop-leave' : ''}`} key={action.path} to={action.path}><span className="home-action-icon"><Icon name={action.icon} size={25} /></span><strong>{tx(action.title)}</strong><Icon name="chevron-right" size={18} /></Link>))}</nav>
+      <nav className="home-quick-actions" aria-label={t("Быстрые действия")}><Link className="home-quick-action green home-mobile-calendar" to="/calendar"><span className="home-action-icon"><Icon name="calendar" size={25} /></span><strong>{t("Календарь")}</strong><Icon name="chevron-right" size={18} /></Link>{tx(quickActions.map(action => <Link className={`home-quick-action ${action.color}${action.path === '/calendar?select=1' ? ' home-desktop-leave' : ''}`} key={action.path} to={action.path === '/academy' && learning ? `/academy?course=${learning.id}` : action.path}><span className="home-action-icon"><Icon name={action.icon} size={25} /></span><strong>{tx(action.path === '/academy' && learning ? (learning.assignment?.status === 'in_progress' ? 'Продолжить курс' : 'Начать курс') : action.title)}</strong><Icon name="chevron-right" size={18} /></Link>))}</nav>
       <div className="home-overview">
-        <section className="home-panel home-balance"><div className="home-card-heading"><h2>{t("Доступно дней отпуска")}</h2></div><span className="home-palm"><PalmIllustration /></span><div className="home-balance-value">{tx(profile.vacation_days_remaining.toLocaleString((getLocale() === 'kk' ? 'kk-KZ' : 'ru-RU')))}<span>{tx(dayUnit(profile.vacation_days_remaining))}</span></div>{tx(nextLeave && <p><Icon name="calendar-check" size={15} /><span>{t("Ваш отпуск: ")}{tx(date(nextLeave.start_date, true))} — {tx(date(nextLeave.end_date, true))}</span></p>)}<Link to="/requests/new?type=leave" className="btn btn-secondary">{t("Оформить отпуск")}</Link></section>
+        <section className="home-panel home-balance"><div className="home-card-heading"><h2>{t("Доступно дней отпуска")}</h2></div><span className="home-palm"><PalmIllustration /></span><div className="home-balance-value">{tx(profile.vacation_days_remaining.toLocaleString((getLocale() === 'kk' ? 'kk-KZ' : 'ru-RU')))}<span>{tx(dayUnit(profile.vacation_days_remaining))}</span></div>{tx(nextLeave && <p><Icon name="calendar-check" size={15} /><span>{t("Ваш отпуск: ")}{tx(date(nextLeave.start_date, true))} — {tx(date(nextLeave.end_date, true))}</span></p>)}<Link to="/calendar?select=1" className="btn btn-secondary">{t("Оформить отпуск")}</Link></section>
         <section className="home-panel home-events"><div className="home-card-heading"><h2>{t("Последние события")}</h2><Link className="text-link" to="/notifications">{t("Все")}<Icon name="arrow-right" size={15} /></Link></div>{tx(data.notifications.length ? <div className="home-event-list">{tx(data.notifications.map(n => <Link className="home-event" to={notificationHref(n)} key={n.id}><span className={`home-event-icon ${n.course_id || n.notification_type.includes('course') || n.notification_type.includes('training') ? 'purple' : n.notification_type.includes('approved') ? 'green' : 'amber'}`}><Icon name={n.course_id || n.notification_type.includes('course') || n.notification_type.includes('training') ? 'graduation' : 'clipboard'} size={18} /></span><span className="home-event-title">{tx(n.title)}</span><time dateTime={n.created_at}>{tx(date(n.created_at, true))}</time>{tx(!n.read_at && <span className="home-event-dot" aria-label={t("Не прочитано")} />)}</Link>))}</div> : <div className="home-events-empty"><Icon name="bell" size={25} /><p>{t("Всё спокойно")}</p><span>{t("Новые события появятся здесь")}</span></div>)}</section>
         <MiniCalendar requests={data.requests} />
       </div>

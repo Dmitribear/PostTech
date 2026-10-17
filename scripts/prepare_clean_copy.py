@@ -6,7 +6,7 @@ import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
 DIRECTORIES = ("app", "database", "docs", "evals", "examples", "frontend", "scripts", "tests")
-FILES = ("README.md", "requirements.txt", "requirements.lock.txt", "requirements-dev.txt", "Dockerfile", "compose.yaml", ".dockerignore", ".gitignore", ".env.example", "Start PostTech.cmd", "Stop PostTech.cmd")
+FILES = ("README.md", "requirements.txt", "requirements.lock.txt", "requirements-dev.txt", "Dockerfile", "compose.yaml", ".dockerignore", ".gitignore", ".env.example", "Start PostTech.cmd", "Stop PostTech.cmd", "Start PostTech Docker.cmd")
 
 def copy_to(destination):
     destination = destination.resolve()

@@ -148,10 +148,16 @@ class TicketAnswer(Payload):
 
 
 @router.get("/tickets")
-def tickets(actor: UserContext = Depends(get_current_user), limit: int = Query(50,ge=1,le=100), offset:int=Query(0,ge=0)):
+def tickets(actor: UserContext = Depends(get_current_user), limit: int = Query(50,ge=1,le=100), offset:int=Query(0,ge=0),
+            status: Literal['open', 'resolved'] | None = None, search: str = Query('', max_length=120)):
     q = _client().table("hr_tickets").select("*")
     if actor.role != "hr_admin":
         q = q.eq("employee_id",actor.id)
+    if status:
+        q = q.eq("status", status)
+    if search.strip():
+        term = search.strip().replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_').replace('*', '\\*')
+        q = q.ilike("question", f"%{term}%")
     return _execute(q.order("created_at",desc=True).order("id").range(offset,offset+limit-1)) or []
 
 

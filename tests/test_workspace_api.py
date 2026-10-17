@@ -5,6 +5,28 @@ from app.api.routes.workspace import CourseData
 from app.schemas.common import UserContext
 from test_academy import api, WORKER,OTHER,MANAGER,HR,COURSE
 
+
+def test_ticket_filter_applies_before_paging_and_keeps_employee_scope(api, monkeypatch):
+    from test_academy import Query
+    patterns = []
+    def ilike(query, field, pattern):
+        patterns.append(pattern)
+        term = pattern[1:-1].replace('\\%', '%').replace('\\_', '_').replace('\\*', '*')
+        query.filters.append(lambda row: term.casefold() in row.get(field, '').casefold())
+        return query
+    monkeypatch.setattr(Query, 'ilike', ilike, raising=False)
+    client, db, actor = api
+    db.tables['hr_tickets'] = [dict(id=str(uuid4()), employee_id=WORKER, status='resolved', question='old') for _ in range(60)]
+    wanted = dict(id=str(uuid4()), employee_id=WORKER, status='open', question='Нужно 100% уточнение')
+    db.tables['hr_tickets'] += [wanted, {**wanted, 'id':str(uuid4()), 'employee_id':OTHER}]
+    response = client.get('/api/v1/workspace/tickets', params={'limit':12,'status':'open','search':'100%'})
+    assert response.status_code == 200
+    assert response.json() == [wanted]
+    assert patterns == ['%100\\%%']
+    assert client.get('/api/v1/workspace/tickets?status=invalid').status_code == 422
+    actor['user'] = UserContext(id=HR, auth_user_id=str(uuid4()), role='hr_admin')
+    assert len(client.get('/api/v1/workspace/tickets?status=open').json()) == 2
+
 def test_only_hr_can_access_answer_keys_and_editor(api):
     client,db,actor=api
     assert client.get('/api/v1/workspace/courses').status_code==403

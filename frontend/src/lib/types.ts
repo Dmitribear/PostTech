@@ -243,6 +243,7 @@ export interface AssignedCourse extends CourseAssignment {
 }
 
 export interface JanaAnswer {
+  mode?: 'generated' | 'excerpt' | 'refusal';
   answer: string;
   sources: ({ id?: string; title: string; url: string | null } & KnowledgeFreshness)[];
   grounded: boolean;

@@ -21,11 +21,11 @@ def ask_jana(
         # Canonical UI prompts; free-form questions still pass the normal guards.
         question={"Демалысты қалай рәсімдеуге болады?":"Как оформить отпуск?", "Авансты қалай сұрауға болады?":"Как запросить аванс?",
                   "Өтінім мәртебесін қайдан көруге болады?":"Где посмотреть статус заявки?", "Менің кадрлық деректерімді кім көреді?":"Кто видит мои кадровые данные?"}.get(question,question)
-    result=answer_question(question)
+    result=answer_question(question, language=locale.get())
     if locale.get()=="kk":
         if not result["grounded"]:
             result["answer"]="Jana бұл сұраққа дереккөздермен расталған жауап бере алмайды. Сұрақты HR-ға жіберуге болады. Жеке деректерді профильден қараңыз."
-        else:
+        elif result.get("mode") != "generated":
             result["answer"]="Дереккөздің түпнұсқасы орыс тілінде. Төменде расталған үзінді берілген:\n\n"+result["answer"]
     return result
 

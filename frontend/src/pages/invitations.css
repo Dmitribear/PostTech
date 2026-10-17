@@ -16,3 +16,5 @@
 .invite-list small { display: block; color: var(--muted); margin-top: 4px; }
 .invite-list button { flex-shrink: 0; }
 @media(max-width:540px) { .invite-fields { grid-template-columns: minmax(0,1fr); } .invite-code { font-size: 12px; } }
+.invite-list{max-height:none;overflow:visible}
+.invite-list small{overflow-wrap:anywhere}

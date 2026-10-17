@@ -31,8 +31,8 @@ async function navigate(page: Page, label: string) {
 async function confirmRequest(page: Page) {
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
   const submit = page.getByRole('button', { name: 'Отправить заявку', exact: true });
-  await expect(submit).toBeDisabled();
-  await page.getByRole('checkbox', { name: 'Данные верны, можно отправлять', exact: true }).check();
+  await expect(submit).toBeEnabled();
+  await expect(page.getByRole('heading', { name: 'Проверьте заявку' })).toBeVisible();
   await submit.click();
 }
 
@@ -59,7 +59,7 @@ test('demo entry, responsive navigation and readonly profile', async ({ page }, 
   } else {
     await expect(page.locator('#profile-personal')).toBeVisible();
     await expect(page.locator('#profile-work')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Оформить отпуск', exact: true })).toHaveAttribute('href', '/requests/new?type=leave');
+    await expect(page.getByRole('link', { name: 'Оформить отпуск', exact: true })).toHaveAttribute('href', '/calendar?select=1');
   }
   await expect(page.locator('#main-content input')).toHaveCount(0);
   await expect(page.locator('#main-content')).toContainText('Алия Серикова');
@@ -115,8 +115,8 @@ test('calendar navigation and range selection carry dates into request review', 
   await expect(page.locator('.req-review-summary')).toContainText(/3 нояб.*2030.*6 нояб.*2030/);
   await expect(page.locator('.req-review-summary')).toContainText('4 календарных дня');
   const submit = page.getByRole('button', { name: 'Отправить заявку', exact: true });
-  await expect(submit).toBeDisabled();
-  await page.getByRole('checkbox', { name: 'Данные верны, можно отправлять', exact: true }).check();
+  await expect(submit).toBeEnabled();
+  await expect(page.getByRole('heading', { name: 'Проверьте заявку' })).toBeVisible();
   await submit.click();
   await expect(page.getByRole('heading', { name: 'Заявка отправлена!', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Открыть заявку', exact: true }).click();

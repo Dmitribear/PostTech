@@ -1,5 +1,7 @@
 services:
   api:
+    # Rebuild from current sources even with plain `docker compose up`.
+    pull_policy: build
     build:
       context: .
       dockerfile: Dockerfile

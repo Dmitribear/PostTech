@@ -125,7 +125,8 @@ test('calendar refuses past and overlapping leave ranges, then passes a free ran
   await expect(page.getByRole('heading', { name: 'Проверьте заявку' })).toBeVisible();
   await expect(page.locator('.req-review-hero')).toContainText('7 нояб. 2030');
   await expect(page.locator('.req-review-approver')).toContainText('Тестовый HR');
-  await expect(page.getByRole('button', { name: 'Отправить заявку', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Отправить заявку', exact: true })).toBeEnabled();
+  await expect(page.getByRole('checkbox', { name: 'Данные верны, можно отправлять' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Изменить', exact: true }).click();
   await expect(page.getByLabel('Дата начала', { exact: true })).toHaveValue('2030-11-07');
 });
