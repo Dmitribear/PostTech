@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+import pytest
 
 from app.api.routes import auth
 from app.core.config import get_settings
@@ -20,6 +21,24 @@ def fake_invitation_database(monkeypatch):
     monkeypatch.setattr(auth.invitations, "check", lambda *args, **kwargs: INVITATION)
     monkeypatch.setattr(auth.invitations, "prepare", lambda *args, **kwargs: INVITATION)
     monkeypatch.setattr(auth.invitations, "complete", lambda *args, **kwargs: {"profile_id": "profile-1", "role": "worker"})
+
+
+@pytest.mark.parametrize("extra", [
+    {"role": "hr_admin"},
+    {"user_metadata": {"role": "hr_admin"}},
+    {"auth_user_id": "another-account"},
+])
+def test_public_registration_rejects_role_or_identity_assignment(monkeypatch, extra) -> None:
+    def unexpected_auth_call():
+        pytest.fail("Role or identity injection must be rejected before account creation")
+
+    monkeypatch.setattr(auth, "get_supabase_auth_client", unexpected_auth_call)
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "worker@example.test", "password": "safe-password", **extra},
+    )
+
+    assert response.status_code == 422
 
 
 def _session() -> SimpleNamespace:
