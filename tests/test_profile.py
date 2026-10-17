@@ -7,12 +7,14 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.routes import academy, notifications, profile
+from app.api.routes import notifications, profile
 from app.core import permissions, security
 from app.core.security import get_current_user
 from app.main import app
 from app.schemas.common import UserContext
 from app.services import notifications as notification_service
+from app.services import academy
+from app.schemas.profile import AssignedCourse, ProfileNotification
 
 
 WORKER = "10000000-0000-4000-8000-000000000001"
@@ -92,6 +94,7 @@ class ReadQuery:
         self.filters = []
         self.ordering = []
         self.row_limit = None
+        self.row_offset = 0
 
     def select(self, columns):
         self.columns = columns
@@ -113,6 +116,10 @@ class ReadQuery:
         self.row_limit = value
         return self
 
+    def range(self, start, end):
+        self.row_offset, self.row_limit = start, end - start + 1
+        return self
+
     def execute(self):
         self.database.queries.append(self)
         rows = [deepcopy(row) for row in self.database.tables[self.table_name]
@@ -120,7 +127,7 @@ class ReadQuery:
         for column, descending in reversed(self.ordering):
             rows.sort(key=lambda row: row.get(column) or "", reverse=descending)
         if self.row_limit is not None:
-            rows = rows[:self.row_limit]
+            rows = rows[self.row_offset:self.row_offset + self.row_limit]
         if self.columns != "*" and self.database.project_columns:
             columns = [column.strip() for column in self.columns.split(",")]
             rows = [{column: row[column] for column in columns if column in row} for row in rows]
@@ -278,8 +285,10 @@ def test_profile_matches_existing_learning_and_notification_endpoints(profile_cl
     notices = profile_client.client.get("/api/v1/notifications")
 
     assert response.status_code == courses.status_code == notices.status_code == 200
-    assert response.json()["assigned_courses"] == courses.json()
-    assert response.json()["notifications"] == notices.json()
+    # The dedicated endpoints now include attempts/deadlines and ticket/course
+    # references. The dashboard keeps its compatible, intentionally smaller view.
+    assert response.json()["assigned_courses"] == [AssignedCourse.model_validate(item).model_dump(mode="json") for item in courses.json()]
+    assert response.json()["notifications"] == [ProfileNotification.model_validate(item).model_dump(mode="json") for item in notices.json()]
 
 
 def test_profile_training_is_sorted_by_assignment_date(profile_client):

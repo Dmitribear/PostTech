@@ -17,6 +17,17 @@ def _public_profile(profile: dict) -> dict:
     return {key: value for key, value in profile.items() if key != "auth_user_id"}
 
 
+def _with_manager(profile: dict) -> dict:
+    result = _public_profile(profile)
+    result["manager_name"] = None
+    if profile.get("manager_id"):
+        managers = (get_supabase_client().table("employee_profiles")
+                    .select("full_name").eq("id", profile["manager_id"])
+                    .limit(1).execute()).data or []
+        result["manager_name"] = managers[0]["full_name"] if managers else None
+    return result
+
+
 @router.get("/profile", response_model=EmployeeDashboard)
 def my_profile(actor: UserContext = Depends(get_current_user)) -> dict:
     """Return the employee's HR fields, manager's name, assigned learning and notifications."""
@@ -37,6 +48,7 @@ def my_profile(actor: UserContext = Depends(get_current_user)) -> dict:
         return {
             **_public_profile(profile),
             "manager": manager,
+            "manager_name": manager["full_name"] if manager else None,
             "assigned_courses": get_assigned_courses(client, actor.id),
             "notifications": list_employee_notifications(client, actor.id),
         }
@@ -51,7 +63,7 @@ def employee_profile(
 ) -> dict:
     profile = get_profile(employee_id)
     ensure_can_view_profile(actor, profile)
-    return _public_profile(profile)
+    return _with_manager(profile)
 
 
 @router.get("/team")

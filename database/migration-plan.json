@@ -1,0 +1,20 @@
+{
+  "purpose": "Fresh disposable local database only; never an automatic upgrade plan for the shared Supabase project.",
+  "migrations": [
+    "database/migrations/0001_digital_hr.sql",
+    "database/migrations/0002_request_workflow.sql",
+    "database/migrations/0003_request_lifecycle.sql",
+    "database/migrations/0004_academy_workflow.sql",
+    "database/migrations/0005_registration_invitations.sql",
+    "database/migrations/0006_knowledge_freshness.sql",
+    "database/migrations/0007_delegation_learning_support.sql",
+    "database/migrations/0008_course_seed_compatibility.sql",
+    "database/migrations/0009_leave_lessons_outbox.sql",
+    "database/migrations/0010_knowledge_editor.sql",
+    "database/migrations/main/0002_request_hr_review.sql",
+    "database/migrations/main/0003_director_approval.sql",
+    "database/migrations/main/0004_hr_role_administration.sql",
+    "database/migrations/main/0005_vacation_balance.sql",
+    "database/migrations/0011_team_workflow.sql"
+  ]
+}

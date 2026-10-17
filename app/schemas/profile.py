@@ -60,5 +60,6 @@ class EmployeeDashboard(BaseModel):
     created_at: datetime | None = None
     updated_at: datetime | None = None
     manager: ManagerSummary | None = None
+    manager_name: str | None = None
     assigned_courses: list[AssignedCourse] = Field(default_factory=list)
     notifications: list[ProfileNotification] = Field(default_factory=list)

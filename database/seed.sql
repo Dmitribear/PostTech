@@ -1,5 +1,6 @@
 -- Demo content. Run the migration first.
--- Create these four Supabase Auth users in Authentication -> Users before running
+-- Apply the complete database/migration-plan.json before this local demo seed.
+-- Create these four Supabase Auth users before running
 -- this seed so employee profile IDs can reference real auth.users rows:
 --   hr@posttech.demo
 --   director@posttech.demo
@@ -32,39 +33,8 @@ on conflict (id) do update set
     quiz = excluded.quiz,
     active = true;
 
-insert into public.knowledge_articles (id, title, content, source_title, source_url, keywords)
-values
-(
-    '20000000-0000-4000-8000-000000000001',
-    'Как подать заявку на отпуск',
-    'Чтобы запросить отпуск, откройте раздел «Заявки», выберите тип «Отпуск», укажите дату начала и окончания и отправьте заявку. После отправки можно отслеживать статус и комментарий руководителя в разделе «Мои заявки». Остаток отпускных дней отображается в профиле. Кадровые сведения в JanaMen доступны только для чтения.',
-    'Демо: Порядок оформления отпуска',
-    null,
-    array['отпуск', 'заявка', 'даты', 'остаток отпуска']
-),
-(
-    '20000000-0000-4000-8000-000000000002',
-    'Как запросить аванс',
-    'Чтобы запросить аванс, откройте раздел «Заявки», выберите тип «Аванс», укажите сумму и отправьте заявку. Статус заявки и решение можно посмотреть в разделе «Мои заявки». Решение принимает уполномоченный руководитель или HR.',
-    'Демо: Порядок оформления аванса',
-    null,
-    array['аванс', 'заявка', 'сумма', 'выплата']
-),
-(
-    '20000000-0000-4000-8000-000000000003',
-    'Правила доступа к кадровым данным',
-    'Сотрудник может видеть собственные кадровые данные. Руководитель имеет доступ к данным своей команды. HR/администратор может просматривать кадровые данные в рамках административной роли. Jana не принимает кадровые решения и не должна придумывать ответы, если в утверждённых материалах нет информации.',
-    'Демо: Политика доступа к HR-данным',
-    null,
-    array['доступ', 'роль', 'руководитель', 'персональные данные', 'hr']
-)
-on conflict (id) do update set
-    title = excluded.title,
-    content = excluded.content,
-    source_title = excluded.source_title,
-    source_url = excluded.source_url,
-    keywords = excluded.keywords,
-    active = true;
+-- Load the current, reviewed Jana demo articles separately from
+-- database/seed_jana_demo.sql. Keeping one knowledge seed avoids stale duplicates.
 
 insert into public.employee_profiles (
     auth_user_id, employee_code, full_name, email, company, job_title,
@@ -129,37 +99,30 @@ where c.id in (
   and hr.email = 'hr@posttech.demo'
 on conflict (course_id, employee_id) do nothing;
 
-insert into public.hr_requests (
-    employee_id, request_type, status, start_date, end_date, comment
-)
-select employee.id, 'leave', 'pending', current_date + 14, current_date + 18,
-       'Демо-заявка на отпуск: ожидает решения руководителя.'
-from public.employee_profiles employee
-where employee.email = 'employee@posttech.demo'
-  and not exists (
-      select 1 from public.hr_requests r
-      where r.employee_id = employee.id and r.comment like 'Демо-заявка на отпуск:%'
-  );
-
-insert into public.hr_requests (
-    employee_id, request_type, status, amount, comment, reviewed_by, reviewed_at
-)
-select employee.id, 'advance', 'approved', 50000, 'Демо-заявка на аванс: одобрена.', manager.id, now()
-from public.employee_profiles employee
-cross join public.employee_profiles manager
-where employee.email = 'employee@posttech.demo'
-  and manager.email = 'manager@posttech.demo'
-  and not exists (
-      select 1 from public.hr_requests r
-      where r.employee_id = employee.id and r.comment like 'Демо-заявка на аванс:%'
-  );
+-- Exercise the same transactional flow as the API. Rerunning the seed never
+-- overwrites existing decisions or repeats an approval/notification.
+do $$
+declare employee uuid; manager uuid; hr uuid; request jsonb;
+begin
+ select id into employee from public.employee_profiles where email='employee@posttech.demo';
+ select id into manager from public.employee_profiles where email='manager@posttech.demo';
+ select id into hr from public.employee_profiles where email='hr@posttech.demo';
+ if employee is not null and manager is not null and hr is not null then
+  if not exists(select 1 from public.hr_requests where employee_id=employee and comment like 'Демо-заявка на отпуск:%') then
+   perform public.create_hr_request(employee,'leave',current_date+14,current_date+18,null,
+    'Демо-заявка на отпуск: ожидает решения руководителя.','40000000-0000-4000-8000-000000000001');
+  end if;
+  if not exists(select 1 from public.hr_requests where employee_id=employee and comment like 'Демо-заявка на аванс:%') then
+   request:=public.create_hr_request(employee,'advance',null,null,50000,
+    'Демо-заявка на аванс: одобрена.','40000000-0000-4000-8000-000000000002');
+   perform public.review_hr_request(manager,(request->>'id')::uuid,'approved','Демо: согласовано руководителем');
+   perform public.review_hr_request(hr,(request->>'id')::uuid,'approved','Демо: окончательно одобрено HR');
+  end if;
+ end if;
+end $$;
 
 insert into public.notifications (employee_id, notification_type, title, body)
-select employee.id, 'training_assigned', 'Назначено обучение',
-       'Вам назначены два вводных курса Jana Academy.'
+select employee.id, 'training_assigned', 'Назначено обучение', 'Вам назначены два вводных курса Jana Academy.'
 from public.employee_profiles employee
 where employee.email = 'employee@posttech.demo'
-  and not exists (
-      select 1 from public.notifications n
-      where n.employee_id = employee.id and n.notification_type = 'training_assigned'
-  );
+ and not exists(select 1 from public.notifications n where n.employee_id=employee.id and n.notification_type='training_assigned');

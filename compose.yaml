@@ -1,5 +1,7 @@
 services:
   api:
+    # Rebuild from current sources even with plain `docker compose up`.
+    pull_policy: build
     build:
       context: .
       dockerfile: Dockerfile
@@ -8,12 +10,15 @@ services:
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_KEY: ${SUPABASE_KEY:-}
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
-      JANA_MODEL_DIR: /app/.models/mpnet
-      JANA_FAQ_PATH: /app/knowledge_base/faq.json
-      JANA_MIN_SCORE: ${JANA_MIN_SCORE:-0.72}
-      JANA_SCORE_MARGIN: ${JANA_SCORE_MARGIN:-0.045}
-    volumes:
-      - ./.models/mpnet:/app/.models/mpnet:ro
+      # Reader must run in the same loopback namespace; use native launch for the local AI demo.
+      JANA_READER_URL: http://127.0.0.1:8081
+      JANA_READER_MODEL: jana-reader
+      INTEGRATION_1C_ENABLED: ${INTEGRATION_1C_ENABLED:-false}
+      INTEGRATION_1C_URL: ${INTEGRATION_1C_URL:-}
+      INTEGRATION_1C_SECRET: ${INTEGRATION_1C_SECRET:-}
+      INTEGRATION_DOCUMENTOLOG_ENABLED: ${INTEGRATION_DOCUMENTOLOG_ENABLED:-false}
+      INTEGRATION_DOCUMENTOLOG_URL: ${INTEGRATION_DOCUMENTOLOG_URL:-}
+      INTEGRATION_DOCUMENTOLOG_SECRET: ${INTEGRATION_DOCUMENTOLOG_SECRET:-}
     ports:
       - "8000:8000"
     restart: unless-stopped
@@ -27,3 +32,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+  integration-worker:
+    profiles: [integrations]
+    build: .
+    command: [python, -m, scripts.integration_worker]
+    env_file: .env
+    restart: unless-stopped
+    healthcheck:
+      disable: true

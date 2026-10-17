@@ -18,3 +18,8 @@ api_router.include_router(requests_router)
 api_router.include_router(academy_router)
 api_router.include_router(notifications_router)
 api_router.include_router(ai_router)
+
+from app.api.routes.workspace import router as workspace_router
+api_router.include_router(workspace_router)
+from app.api.routes.extensions import router as extensions_router
+api_router.include_router(extensions_router)

@@ -5,6 +5,7 @@ from httpx import HTTPError
 from postgrest.exceptions import APIError
 
 from app.core.security import get_current_user
+from app.core.locale import locale
 from app.schemas.common import UserContext
 from app.schemas.digital_hr import JanaQuestion
 from app.schemas.jana import JanaAnswer, JanaArticle, JanaError
@@ -26,7 +27,7 @@ def ask_jana(
 ) -> dict:
     """Answer only from the prepared HR knowledge base and return citations."""
     try:
-        return answer_question(payload.question)
+        return answer_question(payload.question, language=locale.get())
     except JanaUnavailable as exc:
         raise HTTPException(status_code=503, detail="Jana AI is temporarily unavailable") from exc
     except (RuntimeError, HTTPError, APIError) as exc:
@@ -40,11 +41,12 @@ def ask_jana(
 )
 def read_jana_source(
     article_id: UUID,
+    version: str | None = None,
     actor: UserContext = Depends(get_current_user),
 ) -> dict:
     """Read a published FAQ source using the same HR authentication as /ask."""
     try:
-        article = get_source_article(str(article_id))
+        article = get_source_article(str(article_id), version=version)
     except (RuntimeError, HTTPError, APIError) as exc:
         raise HTTPException(status_code=503, detail="Jana knowledge base is temporarily unavailable") from exc
     if article is None:

@@ -1,0 +1,211 @@
+{
+  "mode": "HTTP TestClient + real local model, reviewed JSON articles, Auth identity and knowledge transport mocked; no Supabase calls",
+  "articles": 13,
+  "results": [
+    {
+      "id": "final_review",
+      "question": "Кто окончательно одобряет отпуск?",
+      "status": 503,
+      "seconds": 120.56,
+      "response": {
+        "detail": "Jana AI is temporarily unavailable"
+      },
+      "source_checks": []
+    },
+    {
+      "id": "debit",
+      "question": "При окончательном одобрении отпуска кадровый остаток уменьшается?",
+      "status": 200,
+      "seconds": 64.06,
+      "response": {
+        "answer": "Демонстрационные материалы:\n\nПри окончательном одобрении дни списываются из кадрового остатка один раз, а резерв снимается. [1]\n\nПри окончательном одобрении HR кадровый остаток уменьшается один раз, а соответствующий резерв закрывается: двойного вычета нет. [2]",
+        "sources": [
+          {
+            "version": "0f7380034a4b8eb30bf458e9",
+            "freshness": "reviewed",
+            "updated_at": "2026-10-17T00:00:00Z",
+            "reviewed_at": "2026-10-17T00:00:00Z",
+            "review_due_at": "2027-01-15T00:00:00Z",
+            "id": "20000000-0000-4000-8000-000000000001",
+            "title": "Демо: оформление заявки на отпуск",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000001?version=0f7380034a4b8eb30bf458e9",
+            "excerpt": "При окончательном одобрении дни списываются из кадрового остатка один раз, а резерв снимается."
+          },
+          {
+            "version": "dbc01d04212bdecf177eb8fd",
+            "freshness": "reviewed",
+            "updated_at": "2026-10-17T00:00:00Z",
+            "reviewed_at": "2026-10-17T00:00:00Z",
+            "review_due_at": "2027-01-15T00:00:00Z",
+            "id": "20000000-0000-4000-8000-000000000005",
+            "title": "Демо: остаток отпускных дней",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000005?version=dbc01d04212bdecf177eb8fd",
+            "excerpt": "При окончательном одобрении HR кадровый остаток уменьшается один раз, а соответствующий резерв закрывается: двойного вычета нет."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "source_checks": [
+        true,
+        true
+      ]
+    },
+    {
+      "id": "cancel",
+      "question": "Можно ли отменить свою заявку со статусом pending_hr?",
+      "status": 200,
+      "seconds": 21.0,
+      "response": {
+        "answer": "Демонстрационные материалы:\n\nСотрудник может отменить свою заявку на этапах pending и pending_hr. [1]",
+        "sources": [
+          {
+            "version": "bfc9d4c47f7cf7cbb3917da9",
+            "freshness": "reviewed",
+            "updated_at": "2026-10-17T00:00:00Z",
+            "reviewed_at": "2026-10-17T00:00:00Z",
+            "review_due_at": "2027-01-15T00:00:00Z",
+            "id": "20000000-0000-4000-8000-000000000004",
+            "title": "Демо: статусы заявок",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000004?version=bfc9d4c47f7cf7cbb3917da9",
+            "excerpt": "Сотрудник может отменить свою заявку на этапах pending и pending_hr."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "source_checks": [
+        true
+      ]
+    },
+    {
+      "id": "academy",
+      "question": "Курс завершится, если результат теста ниже проходного балла?",
+      "status": 200,
+      "seconds": 13.5,
+      "response": {
+        "answer": "Демонстрационные материалы:\n\nЕсли балл ниже порога, курс не завершён и доступна новая попытка. [1]",
+        "sources": [
+          {
+            "version": "d57869d17e26065b2a4b25ef",
+            "freshness": "reviewed",
+            "updated_at": "2026-10-17T00:00:00Z",
+            "reviewed_at": "2026-10-17T00:00:00Z",
+            "review_due_at": "2027-01-15T00:00:00Z",
+            "id": "20000000-0000-4000-8000-000000000008",
+            "title": "Демо: прогресс и результат обучения",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000008?version=d57869d17e26065b2a4b25ef",
+            "excerpt": "Если балл ниже порога, курс не завершён и доступна новая попытка."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "source_checks": [
+        true
+      ]
+    },
+    {
+      "id": "registration",
+      "question": "Как зарегистрироваться в приложении?",
+      "status": 200,
+      "seconds": 17.06,
+      "response": {
+        "answer": "Демонстрационные материалы:\n\nРегистрация в объединённой версии проходит по персональному приглашению HR: после подтверждения email сервер завершает привязку учётной записи к кадровому профилю с данными приглашения. Пользователь не выбирает себе роль HR или директора. Если вход выполнен, но кадровый профиль отсутствует, обратитесь к администратору проекта; повторная регистрация сама по себе не исправляет привязку. [1]",
+        "sources": [
+          {
+            "version": "efca7b2913524fc72dc1ac24",
+            "freshness": "reviewed",
+            "updated_at": "2026-10-17T00:00:00Z",
+            "reviewed_at": "2026-10-17T00:00:00Z",
+            "review_due_at": "2027-01-15T00:00:00Z",
+            "id": "20000000-0000-4000-8000-000000000006",
+            "title": "Демо: кадровый профиль и привязка учётной записи",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000006?version=efca7b2913524fc72dc1ac24",
+            "excerpt": "Регистрация в объединённой версии проходит по персональному приглашению HR: после подтверждения email сервер завершает привязку учётной записи к кадровому профилю с данными приглашения. Пользователь не выбирает себе роль HR или директора. Если вход выполнен, но кадровый профиль отсутствует, обратитесь к администратору проекта; повторная регистрация сама по себе не исправляет привязку."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "source_checks": [
+        true
+      ]
+    },
+    {
+      "id": "hr_ticket",
+      "question": "Если Jana советует обратиться в HR, мой вопрос уже отправлен?",
+      "status": 200,
+      "seconds": 14.51,
+      "response": {
+        "answer": "Демонстрационные материалы:\n\nСам совет Jana обратиться в HR не создаёт заявку автоматически. [1]",
+        "sources": [
+          {
+            "version": "6d6e8a61aa3124b93ae6be52",
+            "freshness": "reviewed",
+            "updated_at": "2026-10-17T00:00:00Z",
+            "reviewed_at": "2026-10-17T00:00:00Z",
+            "review_due_at": "2027-01-15T00:00:00Z",
+            "id": "20000000-0000-4000-8000-000000000012",
+            "title": "Демо: обращение в hr",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000012?version=6d6e8a61aa3124b93ae6be52",
+            "excerpt": "Сам совет Jana обратиться в HR не создаёт заявку автоматически."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "source_checks": [
+        true
+      ]
+    },
+    {
+      "id": "calendar",
+      "question": "Файл .ics автоматически синхронизируется с Google Calendar?",
+      "status": 200,
+      "seconds": 32.16,
+      "response": {
+        "answer": "Демонстрационные материалы:\n\nСкачивание файла не добавляет событие автоматически и не создаёт синхронизацию с Google. [1]",
+        "sources": [
+          {
+            "version": "c5ad59b4a3f03695f19e9f30",
+            "freshness": "reviewed",
+            "updated_at": "2026-10-17T00:00:00Z",
+            "reviewed_at": "2026-10-17T00:00:00Z",
+            "review_due_at": "2027-01-15T00:00:00Z",
+            "id": "20000000-0000-4000-8000-000000000011",
+            "title": "Демо: экспорт отпуска в календарь",
+            "url": "/api/v1/ai/sources/20000000-0000-4000-8000-000000000011?version=c5ad59b4a3f03695f19e9f30",
+            "excerpt": "Скачивание файла не добавляет событие автоматически и не создаёт синхронизацию с Google."
+          }
+        ],
+        "grounded": true,
+        "escalation_suggested": false,
+        "mode": "excerpts"
+      },
+      "source_checks": [
+        true
+      ]
+    },
+    {
+      "id": "unknown",
+      "question": "Какой процент зарплаты можно получить авансом?",
+      "status": 200,
+      "seconds": 12.25,
+      "response": {
+        "answer": "Не удалось надёжно подтвердить ответ материалами базы. Уточните вопрос или обратитесь в HR.",
+        "sources": [],
+        "grounded": false,
+        "escalation_suggested": true,
+        "mode": "refusal"
+      },
+      "source_checks": []
+    }
+  ],
+  "completed": true
+}
