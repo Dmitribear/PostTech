@@ -1,4 +1,5 @@
 """Local presentation server. Start through start_jury.ps1."""
+
 import argparse
 import os
 from pathlib import Path

@@ -1,0 +1,287 @@
+"""Request reads and transactional commands used by the HTTP API.
+
+The SQL RPCs own each write transaction, including history and notifications.
+Only the server's service-role client can execute them; actor IDs always come
+from the validated Auth session, never from request bodies.
+"""
+
+import logging
+from typing import Literal
+from uuid import UUID, uuid4
+
+from app.application.dependencies import get_data_gateway
+from app.application.dto.digital_hr import (
+    RequestCreate,
+    RequestReview,
+    RequestStatus,
+    RequestType,
+)
+from app.domain.errors import ApplicationError, StorageError, StorageUnavailable
+from app.domain.models import UserContext
+
+logger = logging.getLogger(__name__)
+
+REQUEST_COLUMNS = (
+    "id,employee_id,request_type,status,start_date,end_date,amount,comment,"
+    "reviewer_comment,reviewed_by,reviewed_at,created_at,updated_at,"
+    "approval_route,approver_ids,approvers,cancelled_at,fulfillment:request_fulfillment(status)"
+)
+EVENT_COLUMNS = "delegation_id,id,request_id,actor_id,event_type,from_status,to_status,comment,created_at"
+
+
+def data_gateway():
+    try:
+        return get_data_gateway()
+    except (RuntimeError, ValueError) as exc:
+        raise ApplicationError(
+            status_code=503, detail="HR database is not configured"
+        ) from exc
+
+
+def execute_query(query):
+    try:
+        return query.execute().data
+    except StorageError as exc:
+        if exc.code in {"PT403", "PT404", "PT409", "PT422"}:
+            raise ApplicationError(
+                status_code=int(exc.code[2:]), detail=exc.message
+            ) from exc
+        if exc.code in {"PGRST202", "42P01", "42703"}:
+            raise ApplicationError(
+                status_code=503,
+                detail="Request workflow is not installed; apply the database migrations",
+            ) from exc
+        logger.warning("Request database operation failed (code=%s)", exc.code)
+        raise ApplicationError(
+            status_code=503, detail="HR database operation failed; retry later"
+        ) from exc
+    except StorageUnavailable as exc:
+        raise ApplicationError(
+            status_code=503, detail="HR database is unavailable; retry later"
+        ) from exc
+
+
+def _profile(employee_id: str) -> dict:
+    rows = (
+        execute_query(
+            data_gateway()
+            .table("employee_profiles")
+            .select("id,manager_id")
+            .eq("id", employee_id)
+            .limit(1)
+        )
+        or []
+    )
+    if not rows:
+        raise ApplicationError(status_code=404, detail="Employee not found")
+    return rows[0]
+
+
+def _principals(actor: UserContext) -> list[str]:
+    if actor.role not in ("manager", "director"):
+        return []
+    result = execute_query(
+        data_gateway().rpc("active_delegation_principals", {"p_actor_id": actor.id})
+    )
+    if not isinstance(result, list):
+        raise ApplicationError(503, "Unexpected delegation response")
+    return result
+
+
+def _reviewable(actor: UserContext, record: dict, principals: list[str]) -> bool:
+    return (
+        record["status"] == "pending"
+        and record["employee_id"] != actor.id
+        and (
+            actor.role == "hr_admin"
+            or actor.role in ("manager", "director")
+            and (
+                actor.id in record.get("approver_ids", [])
+                or bool(set(principals) & set(record.get("approver_ids", [])))
+            )
+        )
+    )
+
+
+def list_requests(
+    actor: UserContext,
+    *,
+    employee_id: UUID | None = None,
+    request_status: RequestStatus | None = None,
+    request_type: RequestType | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    scope: Literal["all", "mine", "review"] = "all",
+) -> list[dict]:
+    client = data_gateway()
+    principals = _principals(actor)
+    delegated = (
+        f",and(status.eq.pending,employee_id.neq.{actor.id},approver_ids.ov.{{{','.join(principals)}}})"
+        if principals
+        else ""
+    )
+    query = client.table("hr_requests").select(REQUEST_COLUMNS)
+    if scope == "review":
+        if actor.role not in ("manager", "director", "hr_admin"):
+            raise ApplicationError(status_code=403, detail="Reviewer role required")
+        query = query.neq("employee_id", actor.id)
+        if actor.role in ("manager", "director"):
+            query = (
+                query.or_(
+                    f"approver_ids.cs.{{{actor.id}}},reviewed_by.eq.{actor.id}{delegated}"
+                )
+                if principals
+                else query.or_(
+                    f"approver_ids.cs.{{{actor.id}}},reviewed_by.eq.{actor.id}"
+                )
+            )
+    elif scope == "mine" or actor.role == "worker":
+        if employee_id is not None and str(employee_id) != actor.id:
+            raise ApplicationError(
+                status_code=403, detail="Access to this employee is forbidden"
+            )
+        query = query.eq("employee_id", actor.id)
+    elif actor.role in ("manager", "director"):
+        # Snapshot assignment survives a reporting-line change. A new manager
+        # does not silently acquire old requests merely by becoming manager_id.
+        query = query.or_(
+            f"employee_id.eq.{actor.id},approver_ids.cs.{{{actor.id}}},reviewed_by.eq.{actor.id}{delegated}"
+        )
+    if employee_id is not None:
+        query = query.eq("employee_id", str(employee_id))
+    if request_status is not None:
+        query = query.eq("status", request_status)
+    if request_type is not None:
+        query = query.eq("request_type", request_type)
+    records = (
+        execute_query(
+            query.order("created_at", desc=True)
+            .order("id", desc=True)
+            .range(offset, offset + limit - 1)
+        )
+        or []
+    )
+    return [{**r, "can_review": _reviewable(actor, r, principals)} for r in records]
+
+
+def get_request(actor: UserContext, request_id: UUID) -> dict:
+    rows = (
+        execute_query(
+            data_gateway()
+            .table("hr_requests")
+            .select(REQUEST_COLUMNS)
+            .eq("id", str(request_id))
+            .limit(1)
+        )
+        or []
+    )
+    if not rows:
+        raise ApplicationError(status_code=404, detail="Request not found")
+    request = rows[0]
+    principals = _principals(actor)
+    if not (
+        actor.role == "hr_admin"
+        or request["employee_id"] == actor.id
+        or (
+            actor.role in ("manager", "director")
+            and (
+                actor.id in request.get("approver_ids", [])
+                or request.get("reviewed_by") == actor.id
+                or _reviewable(actor, request, principals)
+            )
+        )
+    ):
+        raise ApplicationError(
+            status_code=403, detail="Access to this request is forbidden"
+        )
+    return {**request, "can_review": _reviewable(actor, request, principals)}
+
+
+def request_history(actor: UserContext, request_id: UUID) -> list[dict]:
+    get_request(actor, request_id)
+    events = (
+        execute_query(
+            data_gateway()
+            .table("request_events")
+            .select(EVENT_COLUMNS)
+            .eq("request_id", str(request_id))
+            .order("created_at")
+            .order("id")
+        )
+        or []
+    )
+    # Imported/demo requests may have equal creation and decision timestamps.
+    return sorted(
+        events,
+        key=lambda event: (
+            event["created_at"],
+            event["event_type"] != "created",
+            event["id"],
+        ),
+    )
+
+
+def create_request(
+    actor: UserContext, payload: RequestCreate, key: UUID | None
+) -> dict:
+    params = {
+        f"p_{name}": value for name, value in payload.model_dump(mode="json").items()
+    }
+    params.update(p_actor_id=actor.id, p_idempotency_key=str(key or uuid4()))
+    result = execute_query(data_gateway().rpc("create_hr_request", params))
+    if not isinstance(result, dict):
+        raise ApplicationError(
+            status_code=503, detail="Unexpected request workflow response"
+        )
+    return result
+
+
+def request_routing(actor: UserContext) -> dict:
+    result = execute_query(
+        data_gateway().rpc("get_hr_request_routing", {"p_actor_id": actor.id})
+    )
+    if not isinstance(result, dict):
+        raise ApplicationError(
+            status_code=503, detail="Unexpected request workflow response"
+        )
+    return result
+
+
+def cancel_request(actor: UserContext, request_id: UUID) -> dict:
+    result = execute_query(
+        data_gateway().rpc(
+            "cancel_hr_request",
+            {
+                "p_actor_id": actor.id,
+                "p_request_id": str(request_id),
+            },
+        )
+    )
+    if not isinstance(result, dict):
+        raise ApplicationError(
+            status_code=503, detail="Unexpected request workflow response"
+        )
+    return result
+
+
+def review_request(
+    actor: UserContext, request_id: UUID, payload: RequestReview
+) -> dict:
+    if actor.role not in ("manager", "director", "hr_admin"):
+        raise ApplicationError(status_code=403, detail="Reviewer role required")
+    result = execute_query(
+        data_gateway().rpc(
+            "review_hr_request",
+            {
+                "p_actor_id": actor.id,
+                "p_request_id": str(request_id),
+                "p_status": payload.status,
+                "p_reviewer_comment": payload.reviewer_comment,
+            },
+        )
+    )
+    if not isinstance(result, dict):
+        raise ApplicationError(
+            status_code=503, detail="Unexpected request workflow response"
+        )
+    return result

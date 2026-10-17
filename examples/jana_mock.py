@@ -11,8 +11,8 @@ from uuid import UUID
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.schemas.digital_hr import JanaQuestion
-from app.schemas.jana import JanaAnswer, JanaArticle
+from app.application.dto.digital_hr import JanaQuestion
+from app.application.dto.jana import JanaAnswer, JanaArticle
 
 _data = json.loads(
     (Path(__file__).resolve().parents[1] / "knowledge_base/demo/articles.json").read_text(encoding="utf-8")

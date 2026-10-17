@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.web import mount_portal
+from app.presentation.web import mount_portal
 
 
 def test_missing_build_keeps_api_only(tmp_path: Path) -> None:
@@ -13,10 +13,14 @@ def test_missing_build_keeps_api_only(tmp_path: Path) -> None:
 
 
 def test_portal_deep_links_assets_and_api_boundary(tmp_path: Path) -> None:
-    (tmp_path / "index.html").write_text("<html>PostTech portal</html>", encoding="utf-8")
+    (tmp_path / "index.html").write_text(
+        "<html>PostTech portal</html>", encoding="utf-8"
+    )
     (tmp_path / "favicon.svg").write_text("<svg></svg>", encoding="utf-8")
     (tmp_path / "assets").mkdir()
-    (tmp_path / "assets" / "app.js").write_text("console.log('portal')", encoding="utf-8")
+    (tmp_path / "assets" / "app.js").write_text(
+        "console.log('portal')", encoding="utf-8"
+    )
     app = FastAPI()
 
     @app.get("/api/v1/health/live")
@@ -35,5 +39,7 @@ def test_portal_deep_links_assets_and_api_boundary(tmp_path: Path) -> None:
     for path in ["/api/v1/missing", "/api", "/assets/missing.js", "/docs/missing"]:
         assert client.get(path).status_code == 404
     assert client.get("/assets/app.js").status_code == 200
-    assert client.get("/favicon.svg").headers["content-type"].startswith("image/svg+xml")
+    assert (
+        client.get("/favicon.svg").headers["content-type"].startswith("image/svg+xml")
+    )
     assert client.get("/docs").status_code == 200

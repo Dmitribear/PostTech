@@ -119,39 +119,58 @@ def db():
     legacy = {status: str(uuid4()) for status in ("pending", "approved", "rejected")}
 
     with psycopg.connect(DATABASE_URL, autocommit=True) as admin:
-        if admin.execute("SELECT to_regclass('public.employee_profiles')").fetchone()[0]:
-            pytest.fail("Refusing an existing application database; use an empty test database")
+        if admin.execute("SELECT to_regclass('public.employee_profiles')").fetchone()[
+            0
+        ]:
+            pytest.fail(
+                "Refusing an existing application database; use an empty test database"
+            )
 
         # Roles are cluster-wide. Never change or remove an existing role.
         for role in ("anon", "authenticated", "service_role"):
             existing = admin.execute(
-                "SELECT rolcanlogin, rolbypassrls, rolsuper FROM pg_roles WHERE rolname = %s", (role,)
+                "SELECT rolcanlogin, rolbypassrls, rolsuper FROM pg_roles WHERE rolname = %s",
+                (role,),
             ).fetchone()
             if existing is None:
                 admin.execute(
                     sql.SQL("CREATE ROLE {} NOLOGIN {}").format(
                         sql.Identifier(role),
-                        sql.SQL("BYPASSRLS" if role == "service_role" else "NOBYPASSRLS"),
+                        sql.SQL(
+                            "BYPASSRLS" if role == "service_role" else "NOBYPASSRLS"
+                        ),
                     )
                 )
             elif existing != (False, role == "service_role", False):
-                pytest.fail(f"Unexpected existing role attributes for {role}; use an isolated cluster")
+                pytest.fail(
+                    f"Unexpected existing role attributes for {role}; use an isolated cluster"
+                )
 
-        admin.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(isolated_name)))
+        admin.execute(
+            sql.SQL("CREATE DATABASE {}").format(sql.Identifier(isolated_name))
+        )
         try:
             with psycopg.connect(isolated_dsn, autocommit=True) as setup:
                 setup.execute("CREATE SCHEMA auth")
-                setup.execute("CREATE TABLE auth.users (id uuid PRIMARY KEY, email text)")
-                setup.execute((MIGRATIONS / "0001_digital_hr.sql").read_text(encoding="utf-8"))
+                setup.execute(
+                    "CREATE TABLE auth.users (id uuid PRIMARY KEY, email text)"
+                )
+                setup.execute(
+                    (MIGRATIONS / "0001_digital_hr.sql").read_text(encoding="utf-8")
+                )
                 for name, person_id in people.items():
                     role = (
-                        "hr_admin" if name == "hr"
-                        else "manager" if name in ("manager", "other_manager")
+                        "hr_admin"
+                        if name == "hr"
+                        else "manager"
+                        if name in ("manager", "other_manager")
                         else "worker"
                     )
                     manager_id = (
-                        people["manager"] if name == "worker"
-                        else people["other_manager"] if name == "outsider"
+                        people["manager"]
+                        if name == "worker"
+                        else people["other_manager"]
+                        if name == "outsider"
                         else None
                     )
                     setup.execute(
@@ -165,7 +184,15 @@ def db():
                             vacation_days_remaining, role
                         ) VALUES (%s, %s, %s, %s, %s, 'Test', 'Test', 'Test',
                                   %s, '2025-01-01', 24, %s)""",
-                        (person_id, person_id, name, name, f"{name}@example.test", manager_id, role),
+                        (
+                            person_id,
+                            person_id,
+                            name,
+                            name,
+                            f"{name}@example.test",
+                            manager_id,
+                            role,
+                        ),
                     )
                 for status, request_id in legacy.items():
                     reviewed = status != "pending"
@@ -177,14 +204,18 @@ def db():
                         ) VALUES (%s, %s, 'leave', %s, '2026-10-01', '2026-10-02',
                                   'Legacy request', %s, %s, %s, '2026-09-01 10:00:00+00')""",
                         (
-                            request_id, people["worker"], status,
+                            request_id,
+                            people["worker"],
+                            status,
                             people["manager"] if reviewed else None,
                             "Legacy decision" if reviewed else None,
                             "2026-09-02 10:00:00+00" if reviewed else None,
                         ),
                     )
                 migrations = sorted(MIGRATIONS.glob("0002*.sql"))
-                assert len(migrations) == 1, "Expected exactly one request workflow migration"
+                assert len(migrations) == 1, (
+                    "Expected exactly one request workflow migration"
+                )
                 setup.execute(migrations[0].read_text(encoding="utf-8"))
                 setup.execute("GRANT USAGE ON SCHEMA public TO anon, authenticated")
                 setup.execute(
@@ -204,7 +235,9 @@ def db():
         finally:
             # This identifier is generated here, never provided by the environment.
             admin.execute(
-                sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(isolated_name))
+                sql.SQL("DROP DATABASE {} WITH (FORCE)").format(
+                    sql.Identifier(isolated_name)
+                )
             )
 
 
@@ -287,11 +320,22 @@ def test_identical_review_replays_and_conflicting_review_fails(db):
     with db.connect() as connection:
         created = create_request(connection, db.people["worker"])
         reviewed = review_request(
-            connection, db.people["manager"], created["id"], "rejected", "Нужны другие даты"
+            connection,
+            db.people["manager"],
+            created["id"],
+            "rejected",
+            "Нужны другие даты",
         )
-        assert review_request(
-            connection, db.people["manager"], created["id"], "rejected", "Нужны другие даты"
-        ) == reviewed
+        assert (
+            review_request(
+                connection,
+                db.people["manager"],
+                created["id"],
+                "rejected",
+                "Нужны другие даты",
+            )
+            == reviewed
+        )
         for actor, status, comment in (
             (db.people["manager"], "approved", "Нужны другие даты"),
             (db.people["manager"], "rejected", "Изменённый комментарий"),
@@ -333,7 +377,10 @@ def test_review_rolls_back_when_notification_fails_then_retry_succeeds(db):
         assert unchanged == ("pending", None, None)
         assert counts(connection, created["id"]) == (1, 1, 1)
         connection.execute("SET posttech_test.fail_notifications = 'off'")
-        assert review_request(connection, db.people["manager"], created["id"])["status"] == "approved"
+        assert (
+            review_request(connection, db.people["manager"], created["id"])["status"]
+            == "approved"
+        )
         assert counts(connection, created["id"]) == (1, 2, 2)
 
 
@@ -364,14 +411,19 @@ def test_concurrent_competing_reviews_apply_one_decision(db):
         with db.connect() as connection:
             barrier.wait(timeout=10)
             try:
-                return review_request(connection, actor_status[0], created["id"], actor_status[1])
+                return review_request(
+                    connection, actor_status[0], created["id"], actor_status[1]
+                )
             except psycopg.Error as error:
                 return error.sqlstate
 
     with ThreadPoolExecutor(max_workers=2) as executor:
-        results = list(executor.map(decide, [
-            (db.people["manager"], "approved"), (db.people["hr"], "rejected")
-        ]))
+        results = list(
+            executor.map(
+                decide,
+                [(db.people["manager"], "approved"), (db.people["hr"], "rejected")],
+            )
+        )
     winners = [result for result in results if isinstance(result, dict)]
     assert len(winners) == 1
     assert results.count("PT409") == 1
@@ -384,10 +436,16 @@ def test_concurrent_competing_reviews_apply_one_decision(db):
         assert saved == (winners[0]["status"], winners[0]["reviewed_by"])
 
 
-@pytest.mark.parametrize("actor,owner", [
-    ("worker", "worker"), ("outsider", "worker"),
-    ("other_manager", "worker"), ("manager", "manager"), ("hr", "hr"),
-])
+@pytest.mark.parametrize(
+    "actor,owner",
+    [
+        ("worker", "worker"),
+        ("outsider", "worker"),
+        ("other_manager", "worker"),
+        ("manager", "manager"),
+        ("hr", "hr"),
+    ],
+)
 def test_unauthorized_or_self_review_is_forbidden(db, actor, owner):
     with db.connect() as connection:
         created = create_request(connection, db.people[owner])
@@ -396,7 +454,8 @@ def test_unauthorized_or_self_review_is_forbidden(db, actor, owner):
             review_request(connection, db.people[actor], created["id"])
         assert counts(connection, created["id"]) == before
         assert connection.execute(
-            "SELECT status::text FROM public.hr_requests WHERE id = %s", (created["id"],)
+            "SELECT status::text FROM public.hr_requests WHERE id = %s",
+            (created["id"],),
         ).fetchone() == ("pending",)
 
 
@@ -434,12 +493,23 @@ def test_functions_are_invoker_and_event_history_is_protected_by_rls(db):
         ).fetchone() == (True,)
 
 
-@pytest.mark.parametrize("changed", [
-    {"start_date": None}, {"end_date": "2026-10-01"}, {"amount": 100},
-    {"comment": "x" * 2001}, {"key": None},
-    {"request_type": "advance", "amount": -1, "start_date": None, "end_date": None},
-    {"request_type": "advance", "amount": "25.001", "start_date": None, "end_date": None},
-])
+@pytest.mark.parametrize(
+    "changed",
+    [
+        {"start_date": None},
+        {"end_date": "2026-10-01"},
+        {"amount": 100},
+        {"comment": "x" * 2001},
+        {"key": None},
+        {"request_type": "advance", "amount": -1, "start_date": None, "end_date": None},
+        {
+            "request_type": "advance",
+            "amount": "25.001",
+            "start_date": None,
+            "end_date": None,
+        },
+    ],
+)
 def test_sql_rejects_invalid_payload_even_without_api_validation(db, changed):
     with db.connect() as connection:
         with sqlstate("PT422"):
@@ -466,18 +536,25 @@ def test_review_rejects_unsupported_transition(db, status):
 def test_empty_review_comment_replays_null_without_another_event(db):
     with db.connect() as connection:
         created = create_request(connection, db.people["worker"])
-        reviewed = review_request(connection, db.people["manager"], created["id"], comment=None)
-        assert review_request(
-            connection, db.people["manager"], created["id"], comment=""
-        ) == reviewed
+        reviewed = review_request(
+            connection, db.people["manager"], created["id"], comment=None
+        )
+        assert (
+            review_request(connection, db.people["manager"], created["id"], comment="")
+            == reviewed
+        )
         assert counts(connection, created["id"]) == (1, 2, 2)
 
 
 def test_advance_request_still_uses_same_workflow(db):
     with db.connect() as connection:
         created = create_request(
-            connection, db.people["worker"], request_type="advance", amount="25000.50",
-            start_date=None, end_date=None,
+            connection,
+            db.people["worker"],
+            request_type="advance",
+            amount="25000.50",
+            start_date=None,
+            end_date=None,
         )
         assert created["amount"] == 25000.5
         assert created["start_date"] is None
@@ -497,7 +574,11 @@ def test_migration_backfills_existing_request_history_without_notifications(db, 
             (request_id,),
         ).fetchall()
         assert events[0][:5] == (
-            "created", db.people["worker"], None, "pending", "Legacy request"
+            "created",
+            db.people["worker"],
+            None,
+            "pending",
+            "Legacy request",
         )
         assert events[0][5].startswith("2026-09-01 10:00:00")
         if status == "pending":
@@ -505,7 +586,11 @@ def test_migration_backfills_existing_request_history_without_notifications(db, 
         else:
             assert len(events) == 2
             assert events[1][:5] == (
-                status, db.people["manager"], "pending", status, "Legacy decision"
+                status,
+                db.people["manager"],
+                "pending",
+                status,
+                "Legacy decision",
             )
             assert events[1][5].startswith("2026-09-02 10:00:00")
         assert counts(connection, request_id)[2] == 0
@@ -521,9 +606,14 @@ def test_demo_seed_can_be_applied_twice_with_complete_history(db):
         ).fetchone()[0]
         # Keep the additional HR account and demo data out of other scenarios.
         with connection.transaction():
-            for email in ("hr@posttech.demo", "manager@posttech.demo", "employee@posttech.demo"):
+            for email in (
+                "hr@posttech.demo",
+                "manager@posttech.demo",
+                "employee@posttech.demo",
+            ):
                 connection.execute(
-                    "INSERT INTO auth.users(id, email) VALUES (%s, %s)", (str(uuid4()), email)
+                    "INSERT INTO auth.users(id, email) VALUES (%s, %s)",
+                    (str(uuid4()), email),
                 )
             connection.execute(seed)
             first_requests = connection.execute(
@@ -541,22 +631,30 @@ def test_demo_seed_can_be_applied_twice_with_complete_history(db):
                      AND m.email = 'manager@posttech.demo'"""
             ).fetchone()
             assert employee is not None
-            employee_id, manager_id, linked_manager_id, employee_role, manager_role = employee
+            employee_id, manager_id, linked_manager_id, employee_role, manager_role = (
+                employee
+            )
             assert manager_id == linked_manager_id
             assert (employee_role, manager_role) == ("worker", "manager")
             assert connection.execute(
                 "SELECT role::text FROM public.employee_profiles WHERE email = 'hr@posttech.demo'"
             ).fetchone() == ("hr_admin",)
-            assert connection.execute(
-                "SELECT id::text FROM public.hr_requests WHERE employee_id = %s ORDER BY id",
-                (employee_id,),
-            ).fetchall() == first_requests
+            assert (
+                connection.execute(
+                    "SELECT id::text FROM public.hr_requests WHERE employee_id = %s ORDER BY id",
+                    (employee_id,),
+                ).fetchall()
+                == first_requests
+            )
             assert len(first_requests) == 2
             assert connection.execute(
                 """SELECT request_type::text, status::text, reviewed_by
                    FROM public.hr_requests WHERE employee_id = %s ORDER BY request_type::text""",
                 (employee_id,),
-            ).fetchall() == [("advance", "approved", manager_id), ("leave", "pending", None)]
+            ).fetchall() == [
+                ("advance", "approved", manager_id),
+                ("leave", "pending", None),
+            ]
             assert connection.execute(
                 """SELECT r.request_type::text, e.event_type, count(*)
                    FROM public.request_events e
@@ -564,7 +662,11 @@ def test_demo_seed_can_be_applied_twice_with_complete_history(db):
                    WHERE r.employee_id = %s
                    GROUP BY r.request_type, e.event_type ORDER BY r.request_type::text, e.event_type""",
                 (employee_id,),
-            ).fetchall() == [("advance", "approved", 1), ("advance", "created", 1), ("leave", "created", 1)]
+            ).fetchall() == [
+                ("advance", "approved", 1),
+                ("advance", "created", 1),
+                ("leave", "created", 1),
+            ]
             assert connection.execute(
                 "SELECT count(*) FROM public.course_assignments WHERE employee_id = %s",
                 (employee_id,),

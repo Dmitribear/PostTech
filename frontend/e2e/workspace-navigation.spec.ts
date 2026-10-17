@@ -13,6 +13,7 @@ async function noOverflow(page: Page) { expect(await page.evaluate(() => documen
 test('merged language picker works inside the profile menu and preserves workspace', async ({ page }) => {
   await demo(page, 'hr_admin');
   await switches(page).getByRole('button', { name: 'HR', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Сотрудники', exact: true })).toBeVisible();
   await page.getByLabel('Меню профиля', { exact: true }).click();
   await page.getByRole('button', { name: 'Language / Тіл', exact: true }).click();
   await page.getByRole('option', { name: /Қазақша/ }).click();

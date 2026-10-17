@@ -4,10 +4,12 @@ from types import SimpleNamespace
 
 import httpx
 
-from app.db import supabase
+from app.infrastructure.database import client as supabase
 
 
-def test_cached_clients_use_separate_http1_pools_for_auth_and_parallel_queries(monkeypatch):
+def test_cached_clients_use_separate_http1_pools_for_auth_and_parallel_queries(
+    monkeypatch,
+):
     settings = SimpleNamespace(
         supabase_url="https://project.supabase.co",
         supabase_key="sb_secret_test_server",
@@ -22,15 +24,18 @@ def test_cached_clients_use_separate_http1_pools_for_auth_and_parallel_queries(m
     def respond(request):
         requests.append(request)
         if request.url.path == "/auth/v1/user":
-            return httpx.Response(200, json={
-                "id": "a83f486c-a376-4b8e-a9ef-bb2114247bc1",
-                "aud": "authenticated",
-                "role": "authenticated",
-                "email": "worker@example.test",
-                "app_metadata": {},
-                "user_metadata": {},
-                "created_at": "2026-10-16T10:00:00Z",
-            })
+            return httpx.Response(
+                200,
+                json={
+                    "id": "a83f486c-a376-4b8e-a9ef-bb2114247bc1",
+                    "aud": "authenticated",
+                    "role": "authenticated",
+                    "email": "worker@example.test",
+                    "app_metadata": {},
+                    "user_metadata": {},
+                    "created_at": "2026-10-16T10:00:00Z",
+                },
+            )
         assert request.url.path == "/rest/v1/employee_profiles"
         parallel_queries.wait(timeout=5)
         return httpx.Response(200, json=[{"id": "employee-1"}])
@@ -70,8 +75,14 @@ def test_cached_clients_use_separate_http1_pools_for_auth_and_parallel_queries(m
         # Actual SDK Auth and REST calls must use our transport, not fall back
         # to their own default HTTP/2 clients. The barrier also rules out
         # serializing all dashboard requests as a workaround.
-        assert server.auth.get_user("server-user-token").user.email == "worker@example.test"
-        assert public.auth.get_user("public-user-token").user.email == "worker@example.test"
+        assert (
+            server.auth.get_user("server-user-token").user.email
+            == "worker@example.test"
+        )
+        assert (
+            public.auth.get_user("public-user-token").user.email
+            == "worker@example.test"
+        )
 
         def query_profile():
             return server.table("employee_profiles").select("id").execute().data
@@ -87,7 +98,8 @@ def test_cached_clients_use_separate_http1_pools_for_auth_and_parallel_queries(m
         ]
         assert all(
             request.headers["authorization"] == f"Bearer {settings.supabase_key}"
-            for request in requests if request.url.path.startswith("/rest/")
+            for request in requests
+            if request.url.path.startswith("/rest/")
         )
     finally:
         for client in clients:

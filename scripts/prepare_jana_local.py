@@ -6,8 +6,13 @@ Subsequent inference is offline. Existing valid files are reused.
 
 import urllib.request
 
-from app.core.config import get_settings
-from app.services.local_embeddings import MODEL_FILES, MODEL_ID, REVISION, file_matches
+from app.infrastructure.config import get_settings
+from app.infrastructure.ai.local_embeddings import (
+    MODEL_FILES,
+    MODEL_ID,
+    REVISION,
+    file_matches,
+)
 
 
 def main() -> None:
@@ -22,7 +27,10 @@ def main() -> None:
         url = f"https://huggingface.co/{MODEL_ID}/resolve/{REVISION}/{name}"
         print(f"Downloading: {name}", flush=True)
         try:
-            with urllib.request.urlopen(url, timeout=60) as response, partial.open("wb") as output:
+            with (
+                urllib.request.urlopen(url, timeout=60) as response,
+                partial.open("wb") as output,
+            ):
                 while chunk := response.read(1024 * 1024):
                     output.write(chunk)
             if not file_matches(partial, digest):

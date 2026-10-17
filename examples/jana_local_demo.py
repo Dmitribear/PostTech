@@ -13,12 +13,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, ConfigDict
 
-from app.core.config import get_settings
-from app.schemas.digital_hr import JanaQuestion
-from app.schemas.jana import JanaAnswer, JanaArticle
-from app.services.calendar_export import CalendarExportUnavailable, leave_calendar
-from app.services.jana_errors import JanaUnavailable
-from app.services.jana_reader import LocalReader, answer_from_knowledge
+from app.infrastructure.config import get_settings
+from app.application.dto.digital_hr import JanaQuestion
+from app.application.dto.jana import JanaAnswer, JanaArticle
+from app.infrastructure.calendar_export import CalendarExportUnavailable, leave_calendar
+from app.domain.knowledge.jana_errors import JanaUnavailable
+from app.infrastructure.ai.jana_reader import LocalReader, answer_from_knowledge
 
 ROOT = Path(__file__).resolve().parents[1]
 app = FastAPI(title="Jana: local model / fictional demo only")

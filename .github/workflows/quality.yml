@@ -1,0 +1,49 @@
+name: Quality checks
+on:
+  push:
+    branches: [main, test]
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: posttech_test
+          POSTGRES_PASSWORD: local-test-only
+          POSTGRES_DB: posttech_test_control
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U posttech_test -d posttech_test_control"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      POSTTECH_TEST_DATABASE_URL: postgresql://posttech_test:local-test-only@localhost:5432/posttech_test_control
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: pip install -r requirements.lock.txt -r requirements-dev.txt
+      - run: ruff check app --select F,I
+      - run: ruff format --check app
+      - run: pytest -q
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run check:architecture && npm test && npm run build
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run test:e2e
+        working-directory: frontend
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: frontend/test-results

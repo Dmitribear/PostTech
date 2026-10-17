@@ -1,17 +1,15 @@
 # PostTech Digital HR MVP
 
-FastAPI REST backend for the JanaMen Digital HR hackathon prototype. The MVP demonstrates one employee journey across profile, HR requests, Jana Academy, notifications, and AI Jana, with worker/manager/HR role enforcement.
+FastAPI REST backend for the JanaMen Digital HR hackathon prototype. The MVP demonstrates one employee journey across profile, HR requests, Jana Academy, notifications, and AI Jana, with worker/manager/director/HR role enforcement.
 
 The React web portal in `frontend/` connects the supplied PostTech layouts to the API: sign in, inspect the read-only profile, submit a request, review it as the employee's manager or HR, inspect its history, and read notifications. It also includes a leave calendar, Jana Academy with quizzes, AI Jana, and team management. Follow the [frontend guide](docs/frontend.md), the [step-by-step API guide](docs/leave-workflow.md), or the [HTTP examples](examples/leave-workflow.http).
 
 ## Architecture
 
-- `app/main.py` creates the FastAPI application; `/api/v1` is the versioned API boundary.
-- `app/api/routes/` contains HTTP endpoints. `app/core/security.py` validates Supabase Auth access tokens and resolves the user's HR role.
-- `app/core/permissions.py` applies ownership and manager-team checks before returning or changing employee data.
-- `app/db/supabase.py` creates the server-side Supabase client; `app/services/` contains application operations.
-- `database/migrations/0001_digital_hr.sql` defines the MVP schema and enables RLS. `0002_request_workflow.sql` adds request history and transactional create/review operations; `0003_request_lifecycle.sql` adds approval routes, overlap checks and withdrawal; `0004_academy_workflow.sql` adds atomic learning attempts and notifications; `0005_registration_invitations.sql` adds invitation activation; `0006_knowledge_freshness.sql` adds source review metadata and invalidation on edits. `database/seed.sql` adds fictional demo content and records.
-- Request flow: client -> bearer-token validation -> role/ownership checks -> API route/service -> Supabase Postgres/Auth.
+- Frontend: FSD (`app/pages/widgets/features/entities/shared`), Atomic UI primitives and checked import boundaries.
+- Backend: `domain`, `application` (use cases/ports/DTO), `infrastructure`, `presentation`; `bootstrap.py` injects adapters.
+- Transactional business commands remain in PostgreSQL; migrations `0001` through `0016` are the supported sequence.
+- See [architecture and scaling constraints](docs/architecture.md) and [branch consolidation](docs/branch-consolidation.md).
 
 ## Implemented API
 
@@ -31,7 +29,11 @@ HR endpoints require a Supabase Auth bearer access token. Health, invitation che
 | `POST /api/v1/auth/refresh` | Exchange a refresh token for a new session. |
 | `GET /api/v1/profile` | Current user's read-only HR profile. |
 | `GET /api/v1/employees/{employee_id}` | Own profile; managers can view direct reports; HR can view all. |
-| `GET /api/v1/team` | Direct reports for managers; all profiles for HR. |
+| `GET /api/v1/team` | Direct reports for managers/directors; all profiles for HR (legacy list). |
+| `GET /api/v1/team/page` | Bounded keyset page: `limit` up to 100, `after` UUID, returns `items` and `next_cursor`. |
+| `PATCH /api/v1/admin/employees/{id}/role` | HR-only audited role assignment with self-demotion/reporting-line guards. |
+| `GET /api/v1/requests/{id}/calendar.ics` | Authorized export of approved leave, inclusive end date converted to ICS exclusive end. |
+| `POST /api/v1/ai/local/ask` | Optional isolated local Jana provider; requires separately prepared models/reader. |
 | `GET /api/v1/requests` | View permitted requests; filter by `employee_id`, `status`, `request_type`, and `scope=mine/review/all`; paginate with `limit` (default 50, max 100) and `offset` (default 0). |
 | `POST /api/v1/requests` | Create a leave or advance request for the current employee; optional UUID `Idempotency-Key` prevents duplicate submission. |
 | `GET /api/v1/requests/{id}` | Owner, eligible manager in the saved reviewer snapshot, or HR can read; a newly assigned manager does not automatically gain access to old requests. Full HR profile access remains independently restricted. |
@@ -81,7 +83,7 @@ The API container can start without `.env`, but Supabase-dependent endpoints wil
 
 For local development, use Python 3.12+, install `requirements-dev.txt`, and run `uvicorn app.main:app --reload`. The Docker image uses Python 3.12.
 
-For frontend development, use Node.js 22+, then run `npm ci` and `npm run dev` from `frontend/`. Open `http://localhost:5173`; `/api` is proxied to `http://127.0.0.1:8000`. `npm run build` creates `frontend/dist`, which FastAPI serves after its next startup. If no build exists, `/` keeps the API information response. The login screen offers an explicit, isolated demo mode for all three roles; it does not contact Supabase or fall back to demo after a failed real login.
+For frontend development, use Node.js 22+, then run `npm ci` and `npm run dev` from `frontend/`. Open `http://localhost:5173`; `/api` is proxied to `http://127.0.0.1:8000`. `npm run build` creates `frontend/dist`, which FastAPI serves after its next startup. If no build exists, `/` keeps the API information response. The login screen offers an explicit, isolated demo mode for employee, manager and HR demo roles; it does not contact Supabase or fall back to demo after a failed real login.
 
 ## Scope and integration boundary
 
@@ -90,7 +92,7 @@ For frontend development, use Node.js 22+, then run `npm ci` and `npm run dev` f
 - **Not connected yet:** live 1C:ЗУП and Documentolog integrations. Replace the profile snapshot source with a read-only 1C adapter and add a Documentolog adapter behind service boundaries; do not let either integration make employee-editable official data.
 - **Not included:** production HR policies, real employee data, electronic signatures, original document storage, recruiting, or AI-driven personnel decisions.
 
-Approving a leave request records the decision in this prototype. It does not deduct vacation days, update 1C, or issue a Documentolog document. Vacation balance stays a read-only profile value. The explicit prototype policy uses inclusive calendar dates and the Asia/Qyzylorda business date: past starts and overlaps with pending/approved leave are blocked. Owners can withdraw pending requests. Official entitlement, holiday calendars, notice periods, substitutes and recall of approved leave require a confirmed company policy and are not inferred. A manager’s own request goes to their eligible superior or HR; an HR employee cannot review their own request. With no eligible approver, submission is blocked with an explanation.
+Leave requests reserve days in a transactional ledger. Approval preserves the reservation; rejection or withdrawal releases it. Official balance is reconciled by HR against an external snapshot. Approval starts a separate HR document-fulfillment stage and does not claim that 1C or Documentolog has issued a document. The explicit prototype policy uses inclusive calendar dates and the Asia/Qyzylorda business date: past starts and overlaps with pending/approved leave are blocked. Owners can withdraw pending requests. Official entitlement, holiday calendars, notice periods, substitutes and recall of approved leave require a confirmed company policy and are not inferred. A manager’s own request goes to their eligible superior or HR; an HR employee cannot review their own request. With no eligible approver, submission is blocked with an explanation.
 
 ## Tests
 
@@ -108,7 +110,7 @@ Remove-Item Env:POSTTECH_TEST_DATABASE_URL
 
 Tests create a separate `posttech_test_<UUID>` database, apply the real migrations there, and drop only that generated database afterward. They do not clear the control database or connect to a configured Supabase project. Missing cluster roles `anon`, `authenticated`, and `service_role` are created for the fixture and retained; existing roles are checked, not modified. Use a dedicated local test PostgreSQL instance and keep its connection credentials outside version control.
 
-Latest full run (17 October 2026, UTC+5): **332 passed, no skips**, including real PostgreSQL tests on the isolated local cluster at `127.0.0.1:55432`. Tests created and removed only their own UUID-named test databases; live Supabase tables were not used by this suite. The focused Auth/recovery/SDK suite passed all 55 tests. Full details are in the [verification log](docs/live-verification.md).
+Latest consolidation verification (17 October 2026): **1119 backend tests passed**, including real PostgreSQL tests on isolated disposable databases. See [consolidation report](docs/branch-consolidation.md) for frontend checks and deployment prerequisites.
 
 The guarded live recovery check creates only one uniquely marked fictional Auth account and sends no emails. It generates a real Supabase recovery OTP administratively, changes the password through the public application endpoint, rejects replay and the old password, verifies the new password, and checks revocation of the previous refresh session:
 

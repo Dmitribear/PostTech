@@ -7,12 +7,16 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.routes import academy, notifications, profile
-from app.core import permissions, security
-from app.core.security import get_current_user
+from app.application.use_cases import academy
+from app.application.use_cases import notifications
+from app.application.use_cases import profile
+from app.application.use_cases import permissions
+from app.presentation.http import security
+from app.presentation.http.security import get_current_user
 from app.main import app
-from app.schemas.common import UserContext
-from app.services import notifications as notification_service
+from app.domain.models import UserContext
+from app.application.use_cases import notification_delivery as notification_service
+from app.application.dto.profile import AssignedCourse, ProfileNotification
 
 
 WORKER = "10000000-0000-4000-8000-000000000001"
@@ -50,7 +54,9 @@ def _course(course_id, title):
         "description": "Demo course description",
         "duration_minutes": 15,
         "material_markdown": "Training material",
-        "quiz": [{"id": "q1", "prompt": "Question", "options": ["A", "B"], "answer_index": 1}],
+        "quiz": [
+            {"id": "q1", "prompt": "Question", "options": ["A", "B"], "answer_index": 1}
+        ],
         "active": True,
     }
 
@@ -92,6 +98,7 @@ class ReadQuery:
         self.filters = []
         self.ordering = []
         self.row_limit = None
+        self.row_offset = 0
 
     def select(self, columns):
         self.columns = columns
@@ -113,17 +120,28 @@ class ReadQuery:
         self.row_limit = value
         return self
 
+    def range(self, start, end):
+        self.row_offset = start
+        self.row_limit = end - start + 1
+        return self
+
     def execute(self):
         self.database.queries.append(self)
-        rows = [deepcopy(row) for row in self.database.tables[self.table_name]
-                if all(row.get(column) in values for column, values in self.filters)]
+        rows = [
+            deepcopy(row)
+            for row in self.database.tables[self.table_name]
+            if all(row.get(column) in values for column, values in self.filters)
+        ]
         for column, descending in reversed(self.ordering):
             rows.sort(key=lambda row: row.get(column) or "", reverse=descending)
         if self.row_limit is not None:
-            rows = rows[:self.row_limit]
+            rows = rows[self.row_offset : self.row_offset + self.row_limit]
         if self.columns != "*" and self.database.project_columns:
             columns = [column.strip() for column in self.columns.split(",")]
-            rows = [{column: row[column] for column in columns if column in row} for row in rows]
+            rows = [
+                {column: row[column] for column in columns if column in row}
+                for row in rows
+            ]
         return SimpleNamespace(data=rows)
 
 
@@ -137,7 +155,10 @@ class ProfileDatabase:
                 _employee(MANAGER, "Demo Manager", role="manager"),
                 _employee(OTHER_WORKER, "Unrelated Worker"),
             ],
-            "courses": [_course(COURSE, "Assigned course"), _course(OTHER_COURSE, "Other person's course")],
+            "courses": [
+                _course(COURSE, "Assigned course"),
+                _course(OTHER_COURSE, "Other person's course"),
+            ],
             "course_assignments": [
                 _assignment(WORKER, COURSE),
                 _assignment(OTHER_WORKER, OTHER_COURSE, 2),
@@ -157,20 +178,27 @@ def profile_client(monkeypatch):
     database = ProfileDatabase()
     provider = Mock(return_value=database)
     for module in (profile, permissions, academy, notifications, notification_service):
-        monkeypatch.setattr(module, "get_supabase_client", provider)
+        monkeypatch.setattr(module, "get_data_gateway", provider)
     auth_provider = Mock(side_effect=AssertionError("Unexpected live Auth call"))
     monkeypatch.setattr(security, "get_supabase_client", auth_provider)
-    current_actor = {"value": UserContext(
-        id=WORKER, auth_user_id=database.tables["employee_profiles"][0]["auth_user_id"],
-        role="worker", manager_id=MANAGER,
-    )}
+    current_actor = {
+        "value": UserContext(
+            id=WORKER,
+            auth_user_id=database.tables["employee_profiles"][0]["auth_user_id"],
+            role="worker",
+            manager_id=MANAGER,
+        )
+    }
     original_overrides = app.dependency_overrides.copy()
     app.dependency_overrides[get_current_user] = lambda: current_actor["value"]
     try:
         with TestClient(app) as client:
             yield SimpleNamespace(
-                client=client, database=database, actor=current_actor,
-                provider=provider, auth_provider=auth_provider,
+                client=client,
+                database=database,
+                actor=current_actor,
+                provider=provider,
+                auth_provider=auth_provider,
             )
     finally:
         app.dependency_overrides.clear()
@@ -184,7 +212,9 @@ def test_profile_combines_hr_fields_manager_training_and_notifications(profile_c
     assert response.status_code == 200
     body = response.json()
     expected_fields = {
-        key: value for key, value in before["employee_profiles"][0].items() if key != "auth_user_id"
+        key: value
+        for key, value in before["employee_profiles"][0].items()
+        if key != "auth_user_id"
     }
     assert {key: body[key] for key in expected_fields} == expected_fields
     assert body["manager"] == {"id": MANAGER, "full_name": "Demo Manager"}
@@ -193,18 +223,27 @@ def test_profile_combines_hr_fields_manager_training_and_notifications(profile_c
     assert assignment["employee_id"] == WORKER
     assert assignment["progress_percent"] == 40
     assert assignment["course"] == {
-        "id": COURSE, "title": "Assigned course", "description": "Demo course description", "duration_minutes": 15,
+        "id": COURSE,
+        "title": "Assigned course",
+        "description": "Demo course description",
+        "duration_minutes": 15,
     }
     assert [item["employee_id"] for item in body["notifications"]] == [WORKER]
     assert profile_client.database.tables == before
 
 
 @pytest.mark.parametrize("role", ["worker", "manager", "director", "hr_admin"])
-def test_profile_always_uses_current_employee_even_if_query_names_someone_else(profile_client, role):
-    profile_client.actor["value"] = profile_client.actor["value"].model_copy(update={"role": role})
+def test_profile_always_uses_current_employee_even_if_query_names_someone_else(
+    profile_client, role
+):
+    profile_client.actor["value"] = profile_client.actor["value"].model_copy(
+        update={"role": role}
+    )
     profile_client.database.tables["employee_profiles"][0]["role"] = role
 
-    response = profile_client.client.get("/api/v1/profile", params={"employee_id": OTHER_WORKER})
+    response = profile_client.client.get(
+        "/api/v1/profile", params={"employee_id": OTHER_WORKER}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -216,7 +255,9 @@ def test_profile_always_uses_current_employee_even_if_query_names_someone_else(p
     assert "Unrelated Worker" not in response.text
 
 
-def test_worker_gets_manager_name_without_access_to_full_manager_profile(profile_client):
+def test_worker_gets_manager_name_without_access_to_full_manager_profile(
+    profile_client,
+):
     own = profile_client.client.get("/api/v1/profile")
     manager = profile_client.client.get(f"/api/v1/employees/{MANAGER}")
     other = profile_client.client.get(f"/api/v1/employees/{OTHER_WORKER}")
@@ -247,16 +288,23 @@ def test_profile_response_filters_unexpected_fields_at_every_level(profile_clien
     assert "auth_user_id" not in response.text
     assert body["manager"] == {"id": MANAGER, "full_name": "Demo Manager"}
     assert set(body["assigned_courses"][0]["course"]) == {
-        "id", "title", "description", "duration_minutes",
+        "id",
+        "title",
+        "description",
+        "duration_minutes",
     }
     assert "quiz" not in body["assigned_courses"][0]["course"]
 
 
-def test_profile_without_manager_training_or_notifications_returns_empty_sections(profile_client):
+def test_profile_without_manager_training_or_notifications_returns_empty_sections(
+    profile_client,
+):
     database = profile_client.database
     database.tables["employee_profiles"][0]["manager_id"] = None
     database.tables["course_assignments"] = [
-        row for row in database.tables["course_assignments"] if row["employee_id"] != WORKER
+        row
+        for row in database.tables["course_assignments"]
+        if row["employee_id"] != WORKER
     ]
     database.tables["notifications"] = [
         row for row in database.tables["notifications"] if row["employee_id"] != WORKER
@@ -278,8 +326,14 @@ def test_profile_matches_existing_learning_and_notification_endpoints(profile_cl
     notices = profile_client.client.get("/api/v1/notifications")
 
     assert response.status_code == courses.status_code == notices.status_code == 200
-    assert response.json()["assigned_courses"] == courses.json()
-    assert response.json()["notifications"] == notices.json()
+    assert response.json()["assigned_courses"] == [
+        AssignedCourse.model_validate(row).model_dump(mode="json")
+        for row in courses.json()
+    ]
+    assert response.json()["notifications"] == [
+        ProfileNotification.model_validate(row).model_dump(mode="json")
+        for row in notices.json()
+    ]
 
 
 def test_profile_training_is_sorted_by_assignment_date(profile_client):
@@ -290,14 +344,23 @@ def test_profile_training_is_sorted_by_assignment_date(profile_client):
     response = profile_client.client.get("/api/v1/profile")
 
     assert response.status_code == 200
-    assert [row["course_id"] for row in response.json()["assigned_courses"]] == [OTHER_COURSE, COURSE]
+    assert [row["course_id"] for row in response.json()["assigned_courses"]] == [
+        OTHER_COURSE,
+        COURSE,
+    ]
 
 
-def test_profile_returns_latest_100_own_notifications_without_marking_them_read(profile_client):
+def test_profile_returns_latest_100_own_notifications_without_marking_them_read(
+    profile_client,
+):
     database = profile_client.database
     start = datetime(2026, 10, 1, tzinfo=UTC)
     notices = [
-        _notification(WORKER, number, (start + timedelta(minutes=number)).isoformat().replace("+00:00", "Z"))
+        _notification(
+            WORKER,
+            number,
+            (start + timedelta(minutes=number)).isoformat().replace("+00:00", "Z"),
+        )
         for number in range(1, 106)
     ]
     database.tables["notifications"] = [
@@ -312,14 +375,21 @@ def test_profile_returns_latest_100_own_notifications_without_marking_them_read(
     result = response.json()["notifications"]
     assert len(result) == 100
     assert [row["id"] for row in result] == [row["id"] for row in reversed(notices[5:])]
-    assert all(row["employee_id"] == WORKER and row["read_at"] is None for row in result)
+    assert all(
+        row["employee_id"] == WORKER and row["read_at"] is None for row in result
+    )
     assert database.tables["notifications"] == before
 
 
 def test_profile_remains_read_only(profile_client):
-    response = profile_client.client.patch("/api/v1/profile", json={
-        "full_name": "Changed", "role": "hr_admin", "vacation_days_remaining": 999,
-    })
+    response = profile_client.client.patch(
+        "/api/v1/profile",
+        json={
+            "full_name": "Changed",
+            "role": "hr_admin",
+            "vacation_days_remaining": 999,
+        },
+    )
     assert response.status_code == 405
     profile_client.provider.assert_not_called()
 

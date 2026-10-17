@@ -13,6 +13,7 @@ async function livePortal(page: Page, handler: (route: Route, path: string) => P
     expect(route.request().headers().authorization).toBe('Bearer test-token');
     const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
     if (await handler(route, path)) return;
+    if (path.startsWith('/workspace/fulfillment/')) return respond(route, {status:'awaiting_hr', note:'', can_send:false, deliveries:[], events:[]});
     if (path === '/profile') return respond(route, { id: employeeId, employee_code: 'TEST-01', full_name: 'Тестовый Сотрудник', email: 'test@example.test', company: 'PostTech', job_title: 'Оператор', department: 'Хаб', manager_id: null, hired_at: '2023-01-10', vacation_days_remaining: 24, role: 'worker', external_source: 'test', created_at: '2026-01-01T10:00:00Z', updated_at: '2026-10-01T10:00:00Z' });
     return respond(route, []);
   });
@@ -42,7 +43,7 @@ test('live Jana opens authenticated sources, shows refusals and retains question
   await page.getByRole('button', { name: 'Как оформить отпуск?', exact: true }).click();
   await expect(page.locator('.support-answer-text')).toHaveText(quote);
   await page.getByRole('button', { name: source.title, exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Полный материал');
+  await expect(page.getByRole('dialog')).toContainText('Это полный проверяемый материал.');
   await expect(page.getByRole('dialog')).toContainText('<script>');
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false);
   await page.screenshot({ path: `test-results/jana-source-${testInfo.project.name}.png`, fullPage: true });
@@ -52,7 +53,7 @@ test('live Jana opens authenticated sources, shows refusals and retains question
   await expect(page.getByRole('dialog').getByRole('alert')).toContainText('больше не опубликован');
   sourceMissing = false;
   await page.getByRole('button', { name: 'Повторить', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Полный материал');
+  await expect(page.getByRole('dialog')).toContainText('Это полный проверяемый материал.');
   await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
   await page.getByRole('textbox', { name: 'Ваш вопрос Jana' }).fill('Расскажи про погоду');
   await page.getByRole('button', { name: 'Отправить вопрос' }).click();
@@ -60,7 +61,7 @@ test('live Jana opens authenticated sources, shows refusals and retains question
   await expect(page.locator('.support-message.jana').last().locator('.support-citation')).toHaveCount(0);
   await page.getByRole('textbox', { name: 'Ваш вопрос Jana' }).fill('Недоступная модель');
   await page.getByRole('button', { name: 'Отправить вопрос' }).click();
-  await expect(page.getByRole('alert')).toContainText('Локальная Jana сейчас недоступна');
+  await expect(page.getByRole('alert')).toContainText('Jana сейчас недоступна');
   await expect(page.getByRole('textbox', { name: 'Ваш вопрос Jana' })).toHaveValue('Недоступная модель');
   await expect(page.locator('.support-message.jana')).toHaveCount(2);
   expect(askCount).toBe(3);

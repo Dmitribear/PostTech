@@ -4,9 +4,9 @@ from pydantic import ValidationError
 from unittest.mock import MagicMock
 
 from app.main import app
-from app.api.routes import health
-from app.schemas.digital_hr import RequestCreate
-from app.services.jana import _rank_articles
+from app.presentation.http.routes import health
+from app.application.dto.digital_hr import RequestCreate
+from app.infrastructure.ai.jana import _rank_articles
 
 client = TestClient(app)
 
@@ -28,19 +28,24 @@ def test_readiness_reports_ready_when_supabase_client_is_available(
 
     assert response.status_code == 200
     assert response.json() == {"status": "ready", "dependency": "supabase"}
-    assert 'integration_outbox' in [c.args[0] for c in database.table.call_args_list]
+    assert "integration_outbox" in [c.args[0] for c in database.table.call_args_list]
 
 
 def test_old_schema_is_not_ready(monkeypatch):
     database = MagicMock()
-    database.table.return_value.select.return_value.limit.return_value.execute.side_effect = [None, RuntimeError('missing lessons')]
-    monkeypatch.setattr(health, 'get_supabase_client', lambda: database)
-    assert client.get('/api/v1/health/ready').status_code == 503
+    database.table.return_value.select.return_value.limit.return_value.execute.side_effect = [
+        None,
+        RuntimeError("missing lessons"),
+    ]
+    monkeypatch.setattr(health, "get_supabase_client", lambda: database)
+    assert client.get("/api/v1/health/ready").status_code == 503
 
 
 def test_readiness_catches_database_outage_without_exposing_diagnostics(monkeypatch):
     database = MagicMock()
-    database.table.return_value.select.return_value.limit.return_value.execute.side_effect = RuntimeError("private-provider-diagnostic")
+    database.table.return_value.select.return_value.limit.return_value.execute.side_effect = RuntimeError(
+        "private-provider-diagnostic"
+    )
     monkeypatch.setattr(health, "get_supabase_client", lambda: database)
     response = client.get("/api/v1/health/ready")
     assert response.status_code == 503
@@ -71,7 +76,9 @@ def test_readiness_reports_unavailable_when_supabase_setup_fails(
         ("POST", "/api/v1/ai/ask", {"question": "Как подать заявку на отпуск?"}),
     ],
 )
-def test_hr_routes_require_authentication(method: str, path: str, payload: dict | None) -> None:
+def test_hr_routes_require_authentication(
+    method: str, path: str, payload: dict | None
+) -> None:
     response = client.request(method, path, json=payload)
 
     assert response.status_code == 401
@@ -111,6 +118,8 @@ def test_jana_retrieval_ranks_matching_hr_article() -> None:
 
 
 def test_jana_retrieval_returns_no_source_for_unrelated_question() -> None:
-    articles = [{"title": "Отпуск", "content": "Укажите даты отпуска.", "keywords": ["отпуск"]}]
+    articles = [
+        {"title": "Отпуск", "content": "Укажите даты отпуска.", "keywords": ["отпуск"]}
+    ]
 
     assert _rank_articles("Как сменить пароль от Wi-Fi?", articles) == []

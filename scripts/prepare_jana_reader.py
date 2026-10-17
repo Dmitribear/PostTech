@@ -5,6 +5,7 @@ Weights and executables are stored below .models/reader (ignored by Git).
 Only standard-library code is needed. Downloads are checked against the reviewed
 SHA256/size in knowledge_base/reader-model.json before extraction or use.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -31,7 +32,11 @@ def digest(path: Path) -> str:
 
 
 def valid(path: Path, spec: dict) -> bool:
-    return path.is_file() and path.stat().st_size == spec["size"] and digest(path) == spec["sha256"]
+    return (
+        path.is_file()
+        and path.stat().st_size == spec["size"]
+        and digest(path) == spec["sha256"]
+    )
 
 
 def obtain(spec: dict, *, verify_only: bool) -> Path:
@@ -43,14 +48,21 @@ def obtain(spec: dict, *, verify_only: bool) -> Path:
         print(f"Verified {filename}", flush=True)
         return target
     if verify_only:
-        raise RuntimeError(f"Missing/corrupt {target}. Run the preparation script without --verify-only.")
+        raise RuntimeError(
+            f"Missing/corrupt {target}. Run the preparation script without --verify-only."
+        )
     partial = target.with_suffix(target.suffix + ".partial")
     # A fresh request avoids accepting an incomplete response or an unverified cache.
-    request = urllib.request.Request(spec["url"], headers={"User-Agent": "PostTech-Jana-setup/1"})
+    request = urllib.request.Request(
+        spec["url"], headers={"User-Agent": "PostTech-Jana-setup/1"}
+    )
     print(f"Downloading {filename} ({spec['size'] / 1_000_000:.1f} MB)", flush=True)
     started = last = time.monotonic()
     received = 0
-    with urllib.request.urlopen(request, timeout=120) as response, partial.open("wb") as output:
+    with (
+        urllib.request.urlopen(request, timeout=120) as response,
+        partial.open("wb") as output,
+    ):
         while block := response.read(4 * 1024 * 1024):
             received += len(block)
             if received > spec["size"]:
@@ -58,10 +70,15 @@ def obtain(spec: dict, *, verify_only: bool) -> Path:
             output.write(block)
             if time.monotonic() - last > 10:
                 elapsed = time.monotonic() - started
-                print(f"  {received / spec['size']:.0%}; {received / elapsed / 1_000_000:.1f} MB/s", flush=True)
+                print(
+                    f"  {received / spec['size']:.0%}; {received / elapsed / 1_000_000:.1f} MB/s",
+                    flush=True,
+                )
                 last = time.monotonic()
     if not valid(partial, spec):
-        raise RuntimeError(f"SHA256/size mismatch for {filename}; artifact was not installed")
+        raise RuntimeError(
+            f"SHA256/size mismatch for {filename}; artifact was not installed"
+        )
     partial.replace(target)
     print(f"Verified {filename}", flush=True)
     return target
@@ -75,7 +92,11 @@ def unpack_verified(archive: Path, *, verify_only: bool) -> Path:
     with zipfile.ZipFile(archive) as bundle:
         for info in bundle.infolist():
             relative = PurePosixPath(info.filename.replace("\\", "/"))
-            if relative.is_absolute() or ".." in relative.parts or any(":" in p for p in relative.parts):
+            if (
+                relative.is_absolute()
+                or ".." in relative.parts
+                or any(":" in p for p in relative.parts)
+            ):
                 raise RuntimeError("Unsafe archive path")
             if stat.S_ISLNK(info.external_attr >> 16):
                 raise RuntimeError("Archive symlinks are not allowed")
@@ -107,7 +128,11 @@ def unpack_verified(archive: Path, *, verify_only: bool) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--verify-only", action="store_true", help="Verify local files without any network access")
+    parser.add_argument(
+        "--verify-only",
+        action="store_true",
+        help="Verify local files without any network access",
+    )
     args = parser.parse_args()
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     DEST.mkdir(parents=True, exist_ok=True)
@@ -115,7 +140,12 @@ def main() -> None:
     archive = obtain(manifest["runtime"], verify_only=args.verify_only)
     server = unpack_verified(archive, verify_only=args.verify_only)
     model = obtain(manifest["model"], verify_only=args.verify_only)
-    print(json.dumps({"status": "verified", "server": str(server), "model": str(model)}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {"status": "verified", "server": str(server), "model": str(model)},
+            ensure_ascii=False,
+        )
+    )
 
 
 if __name__ == "__main__":

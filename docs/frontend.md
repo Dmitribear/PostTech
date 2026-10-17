@@ -24,7 +24,7 @@ For one server, run `npm run build` inside `frontend`, then restart FastAPI and 
 
 ## Accounts and demonstration
 
-Real login and registration use Supabase Auth through the backend. Registration follows invitation → account → email verification → welcome. HR issues invitations from the employee directory and supplies the role, email and reporting manager; verified activation creates the HR profile atomically. Existing confirmed accounts can complete activation with their password. OTP accepts 6–8 digits, including paste/autofill, and resend has a 60-second cooldown. The optional remember checkbox stores only the email; passwords are never persisted. See [registration setup and verification](registration.md). Self-service password reset, SSO, and two-factor authentication are not implemented; the password-help dialog directs the employee to HR.
+Real login and registration use Supabase Auth through the backend. Registration follows invitation → account → email verification → welcome. HR issues invitations from the employee directory and supplies the role, email and reporting manager; verified activation creates the HR profile atomically. Existing confirmed accounts can complete activation with their password. OTP accepts 6–8 digits, including paste/autofill, and resend has a 60-second cooldown. The optional remember checkbox stores only the email; passwords are never persisted. See [registration setup and verification](registration.md). Self-service password recovery verifies an emailed OTP and sets a new password. SSO and two-factor authentication are not implemented.
 
 The **Демо-вход** button starts a walkthrough using fictional invitation `JP-DEMO-2026`. Select **Продолжить**, then **Создать аккаунт**; the invitation and sample account fields are already filled. Enter `472916` in **Код подтверждения**; the code is checked automatically and opens **Выберите роль**. Choose employee, manager or HR, select **Продолжить**, and then **Перейти на главную**. The demo workspace uses fictional data and mutations, is marked by a persistent banner, and stores changes in memory. Refreshing the tab restores the selected demo role but resets demonstration business data. Demo request drafts are scoped to that role and tab. No demo action calls a production service or changes real employee data. Signing out allows choosing another role or entering a real account.
 
@@ -45,12 +45,13 @@ Live access and refresh tokens are held in memory and this tab's `sessionStorage
 | Team | Manager/HR employee list, profile details, course assignment and scoped learning overview |
 | Settings | Local compact layout preference and sign out |
 
-Request status reflects the API decision. Approval does not deduct the displayed vacation balance or create a signed document. Calendar entries represent leave requests; production shifts, statutory holidays, payroll dates, and legal restrictions are not invented. Attachments, electronic signatures, recall of approved leave, certificate generation, real 1C/Documentolog synchronization, and Kazakh localization require backend/product work and are not shown as functioning services.
+Request status reflects the API decision. Leave requests reserve days; approval retains the reservation and starts HR document fulfillment. It does not create a signed external document. Calendar entries represent leave requests; production shifts, statutory holidays, payroll dates, and legal restrictions are not invented. Attachments, electronic signatures, recall of approved leave, real 1C/Documentolog synchronization and production legal rules require integration/product work and are not shown as functioning services.
 
 ## Checks
 
 ```powershell
 cd frontend
+npm run check:architecture
 npm run build
 npm test
 npm run test:e2e
@@ -81,3 +82,12 @@ The latest refinement makes the mobile balance card and four quick actions more 
 Forgot-password now has email, code/new-password, and success steps backed by the public recovery API. Codes support six or eight digits, resend has a cooldown, and a successful change returns to manual sign-in. The invitation recovery path keeps its email fixed. The interface uses a neutral email response; SMTP delivery remains pending. See [registration](registration.md) for provider configuration and limitations.
 
 Validation: production build and **26 client tests passed**. Interactive checks covered a real employee's mobile leave submission, manager approval on desktop, and the employee's resulting notification/history, plus actual course results and an openable Jana source. Profile and recovery were inspected at 320 px, request submission at 390 px, home at 900 px, and the desktop flow at 1280 px. Details and evidence are in [live verification](live-verification.md). Existing E2E specifications were updated and type-checked, not run automatically in this batch.
+
+## FSD and Atomic Design
+
+The layer/slice layout and import rules are documented in [architecture.md](architecture.md).
+New screen code belongs under `pages/<slice>/ui`; actions under `features/<slice>`;
+shared atoms/molecules/organisms under `shared/ui`. Cross-slice consumers use `index.ts`.
+Run `npm run check:architecture`, `npm test`, and `npm run build` before committing.
+HR can assign employee roles in the profile dialog; the backend remains authoritative.
+Approved leave details provide an authenticated ICS download. Sources in Jana have retryable errors.
