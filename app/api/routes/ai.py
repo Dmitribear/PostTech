@@ -17,6 +17,9 @@ def ask_jana(
 ) -> dict:
     """Answer only from the prepared HR knowledge base and return citations."""
     question=payload.question
+    from app.services.workflow_summary import SUMMARY_PROMPTS, summary_answer
+    if question.strip().lower().rstrip('.') in SUMMARY_PROMPTS:
+        return summary_answer(actor)
     if locale.get()=="kk":
         # Canonical UI prompts; free-form questions still pass the normal guards.
         question={"Демалысты қалай рәсімдеуге болады?":"Как оформить отпуск?", "Авансты қалай сұрауға болады?":"Как запросить аванс?",

@@ -1,0 +1,76 @@
+{
+  "at": "2026-10-17T12:10:10.305Z",
+  "backend": "Docker + real Supabase, synthetic test identities",
+  "results": [
+    {
+      "role": "hr",
+      "screen": "document",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "jana",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "document",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "hr",
+      "screen": "jana",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "screen": "document",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "screen": "jana",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "screen": "document",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "employee",
+      "screen": "jana",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "manager",
+      "screen": "jana",
+      "width": 390,
+      "overflow": false,
+      "runtimeErrors": 0
+    },
+    {
+      "role": "manager",
+      "screen": "jana",
+      "width": 1440,
+      "overflow": false,
+      "runtimeErrors": 0
+    }
+  ]
+}

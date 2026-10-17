@@ -31,6 +31,16 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+  workflow-worker:
+    build: .
+    pull_policy: build
+    command: [python, -m, scripts.workflow_worker]
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_KEY: ${SUPABASE_KEY:-}
+    restart: unless-stopped
+    healthcheck:
+      disable: true
   integration-worker:
     profiles: [integrations]
     build: .

@@ -2,6 +2,7 @@ import { getLocale, localizedDate } from './i18n';
 import type { AppRole, CourseStatus, RequestStatus, RequestType, Notification } from './types';
 
 export function notificationHref(item: Notification): string {
+  if (item.notification_type === 'team_training_reminder') return '/academy?tab=team';
   if (item.ticket_id) return `/support?ticket=${encodeURIComponent(item.ticket_id)}`;
   if (item.notification_type === 'delegation_assigned') return '/requests?scope=review';
   if (item.request_id) return `/requests/${item.request_id}`;
