@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-18",
+  "root_cause": "Each DemoApi instance previously owned separate state; switching roles recreated the requests.",
+  "deployment": "Docker frontend rebuilt",
+  "unit_tests": {
+    "passed": 58,
+    "shared_demo_regressions": 7
+  },
+  "build": "passed",
+  "fsd": "passed",
+  "browser_checks": {
+    "employee": "Aliya",
+    "manager": "Erlan",
+    "created_request": "REQ-DD3DC6CE",
+    "manager_home_updated_without_reload": true,
+    "manager_notification": true,
+    "employee_approval_updated_without_reload": true,
+    "employee_notification": true,
+    "role_reentry_preserved_request": true,
+    "available_days_before": 17,
+    "available_days_after_submission_and_approval": 14
+  },
+  "limits": [
+    "Demo data is shared only within the same browser profile and origin.",
+    "This check covers local demo, not a Supabase transaction.",
+    "Cancellation, rejection, concurrent writes, course progress and failed storage were checked by unit tests."
+  ]
+}

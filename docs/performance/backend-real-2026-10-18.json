@@ -1,0 +1,130 @@
+{
+  "checked_at": "2026-10-18T07:34:30.472416+00:00",
+  "status": "passed",
+  "previously_skipped_enabled": 144,
+  "postgresql_tests": {
+    "checked_at": "2026-10-18T07:28:40.3438946Z",
+    "database": "postgres:16-alpine",
+    "isolation": "Disposable local PostgreSQL; UUID databases per fixture; synthetic auth.users, real application SQL and RLS.",
+    "total": 1401,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 1401,
+    "exit_code": 0
+  },
+  "groups": [
+    {
+      "module": "test_academy",
+      "description": "Курсы, тесты, попытки и доступ к ответам",
+      "passed": 15
+    },
+    {
+      "module": "test_consolidated_schema_db",
+      "description": "Полная схема, роли и миграции",
+      "passed": 5
+    },
+    {
+      "module": "test_extensions_db",
+      "description": "Резервы, очередь интеграций и версии материалов",
+      "passed": 10
+    },
+    {
+      "module": "test_hr_workflows_db",
+      "description": "HR-процессы и оформление",
+      "passed": 12
+    },
+    {
+      "module": "test_invitation_email_db",
+      "description": "Состояния отправки приглашений",
+      "passed": 2
+    },
+    {
+      "module": "test_knowledge_freshness_db",
+      "description": "Актуальность базы знаний",
+      "passed": 1
+    },
+    {
+      "module": "test_leave_terminal_db",
+      "description": "Отмена, отклонение и возврат дней",
+      "passed": 9
+    },
+    {
+      "module": "test_registration_db",
+      "description": "Приглашения и регистрация",
+      "passed": 11
+    },
+    {
+      "module": "test_request_lifecycle_db",
+      "description": "Жизненный цикл заявок и маршруты",
+      "passed": 36
+    },
+    {
+      "module": "test_request_workflow_db",
+      "description": "Атомарность, права и конкурентные решения",
+      "passed": 37
+    },
+    {
+      "module": "test_workspace_db",
+      "description": "Замещение, обучение и обращения",
+      "passed": 6
+    }
+  ],
+  "live_api": {
+    "checked_at": "2026-10-18T07:31:58.627485+00:00",
+    "backend": "Docker API + Supabase Auth/PostgreSQL",
+    "checks": [
+      "real_auth_five_accounts_and_anonymous_denied",
+      "employee_and_manager_cannot_use_hr_administration",
+      "employee_and_manager_own_request_routes",
+      "cancelled_creation_reservation_notifications_permissions_idempotency",
+      "cancelled_status_history_notifications_balance_and_repeat_protection",
+      "rejected_creation_reservation_notifications_permissions_idempotency",
+      "rejected_status_history_notifications_balance_and_repeat_protection",
+      "approved_creation_reservation_notifications_permissions_idempotency",
+      "approved_status_history_notifications_balance_and_repeat_protection",
+      "assigned_courses_material_and_attempts_without_quiz_solutions"
+    ],
+    "request_ids": [
+      "e8b7cb98-d674-4e78-b20c-9d98889f636f",
+      "f3bb5098-d11c-4d32-90fd-c7c880a332c2",
+      "74675b77-4153-45c3-97a1-779fcf7e3892"
+    ],
+    "marker": "[SYNTHETIC BACKEND CHECK] 679c63209d834711ba4a2ea252fd405a",
+    "status": "passed",
+    "cleanup": "Synthetic requests and their reservations removed; balances restored",
+    "api_calls": 96
+  },
+  "director": {
+    "status": "passed",
+    "checked_at": "2026-10-18T07:31:33.963867+00:00",
+    "checks": [
+      "hr_assigns_director",
+      "worker_cannot_assign",
+      "director_team_scope",
+      "director_is_not_hr",
+      "own_request_routes_to_hr",
+      "fixture_role_restored"
+    ]
+  },
+  "limits": [
+    "SQL tests use real PostgreSQL 16, migrations, constraints, transactions and RLS; auth.users is a synthetic minimal schema, not a full Supabase Auth deployment.",
+    "The separate live check uses real Supabase Auth and the current Docker API on five marked synthetic accounts; director authorization is additionally checked with temporary role assignment and restoration.",
+    "SMTP delivery, new registration codes, external 1C/Documentolog receiver delivery, and browser live-refresh were not re-run in this task. Queue and invitation SQL behavior is covered by the 144 enabled tests."
+  ],
+  "verification_history": [
+    {
+      "run": "First live API probe",
+      "result": "Verifier incorrectly queried all accessible review history as if it were the pending queue. Corrected verifier to use scope=review&status=pending, matching the UI. Test request removed and balance restored."
+    },
+    {
+      "run": "Corrected live API probe",
+      "result": "10 check groups passed; 96 API calls; 3 test requests removed and balances restored."
+    }
+  ],
+  "reproduce": {
+    "all_backend": "pwsh -NoProfile -File scripts/test_backend.ps1",
+    "live_api": ".\\.venv\\Scripts\\python.exe scripts/verify_backend_live.py",
+    "director": ".\\.venv\\Scripts\\python.exe scripts/verify_director_live.py"
+  }
+}

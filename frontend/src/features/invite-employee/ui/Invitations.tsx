@@ -9,10 +9,11 @@ import type {
 } from '@/shared/api/contracts';
 import { formatDate, roleLabels } from '@/shared/lib/format';
 import { t, tx } from '@/shared/lib/i18n';
+import { watchVisible } from '@/shared/lib/live-refresh';
 import '@/shared/styles/invitations.css';
 import { Icon, Modal } from '@/shared/ui/index';
 import { ListPager, useListPage } from '@/shared/ui/molecules/ListPager';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 export default function Invitations({
   employees,
@@ -38,6 +39,8 @@ export default function Invitations({
   const [copied, setCopied] = useState(false);
   const [retryAt, setRetryAt] = useState(0);
   const [now, setNow] = useState(Date.now());
+  const mutation = useRef(false);
+  const revision = useRef(0);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -69,28 +72,32 @@ export default function Invitations({
   const update = <K extends keyof InvitationInput>(key: K, value: InvitationInput[K]) =>
     setInput((previous) => ({ ...previous, [key]: value }));
   useEffect(() => {
-    if (view !== 'list' || !live) return;
-    let active = true;
+    if (view !== 'list' || !live || result) return;
+    let loaded = false;
     setBusy(true);
     setError('');
-    live
-      .getInvitations()
-      .then((data) => {
-        if (active) setRows(data);
-      })
-      .catch((err) => {
-        if (active) setError(errorMessage(err));
-      })
-      .finally(() => {
-        if (active) setBusy(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [view, live, listVersion]);
+    return watchVisible(async (signal) => {
+      if (mutation.current) return;
+      const version = revision.current;
+      try {
+        const data = await live.getInvitations();
+        if (!signal.aborted && version === revision.current) {
+          setRows(data);
+          setError('');
+          loaded = true;
+        }
+      } catch (err) {
+        if (!signal.aborted && version === revision.current && !loaded) setError(errorMessage(err));
+      } finally {
+        if (!signal.aborted && version === revision.current) setBusy(false);
+      }
+    }, 3000);
+  }, [view, live, listVersion, result]);
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
+    mutation.current = true;
+    revision.current += 1;
     setBusy(true);
     setError('');
     try {
@@ -114,11 +121,14 @@ export default function Invitations({
     } catch (err) {
       setError(errorMessage(err));
     } finally {
+      mutation.current = false;
       setBusy(false);
     }
   }
   async function revoke(id: string) {
     if (!live || busy) return;
+    mutation.current = true;
+    revision.current += 1;
     setBusy(true);
     setError('');
     try {
@@ -127,11 +137,14 @@ export default function Invitations({
     } catch (err) {
       setError(errorMessage(err));
     } finally {
+      mutation.current = false;
       setBusy(false);
     }
   }
   async function sendEmail(id: string) {
     if (!live || busy) return;
+    mutation.current = true;
+    revision.current += 1;
     setBusy(true);
     setError('');
     try {
@@ -141,6 +154,7 @@ export default function Invitations({
     } catch (err) {
       setError(errorMessage(err));
     } finally {
+      mutation.current = false;
       setBusy(false);
     }
   }

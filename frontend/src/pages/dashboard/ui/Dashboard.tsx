@@ -1,5 +1,6 @@
 import { usePortal } from '@/entities/session';
 import { LeaveBalance } from '@/features/leave-balance';
+import { ApprovalInbox } from '@/features/approval-inbox';
 import type { Course, HrRequest, Notification } from '@/shared/api/contracts';
 import { notificationHref } from '@/shared/lib/format';
 import { homeCourses, nextCourse } from '@/shared/lib/home-learning';
@@ -8,6 +9,7 @@ import { getLocale, localizedDate, t, tx } from '@/shared/lib/i18n';
 import '@/shared/styles/dashboard.css';
 import { EmptyState, ErrorState, Icon, LoadingState, PageHeader } from '@/shared/ui/index';
 import { RequestState } from '@/widgets/hr-workflow';
+import { DashboardCalendar } from '@/widgets/dashboard-calendar';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -110,6 +112,7 @@ export default function Dashboard() {
           })}
         </p>
       </header>
+      {profile.role !== 'worker' && <ApprovalInbox />}
       <section className="desk-leave" aria-label={t('Отпуск')}>
         <span className="action-icon">
           <Icon name="calendar" size={27} />
@@ -177,80 +180,79 @@ export default function Dashboard() {
               </div>
             )}
           </section>
-          <div className="desk-side">
-            <section className="card desk-learning">
-              <div className="section-heading">
-                <h2>{t('Обучение')}</h2>
-                <Link to="/academy" className="icon-btn" aria-label={t('Все курсы')}>
-                  <Icon name="chevron-right" size={18} />
-                </Link>
-              </div>
-              {learning ? (
-                <>
-                  <div className="desk-course">
-                    <Icon name="file-text" size={26} />
-                    <div>
-                      <Link className="desk-course-title" to={`/academy?course=${learning.id}`}>
-                        {tx(learning.title)}
-                      </Link>
-                      <div className="desk-course-meta">
-                        <span>
-                          {learning.assignment?.due_on && (
-                            <>
-                              {t('До')} {date(learning.assignment.due_on, true)} ·{' '}
-                            </>
-                          )}
-                          {learning.duration_minutes} {t('мин')}
-                        </span>
-                        <span>{learning.assignment!.progress_percent}%</span>
-                      </div>
-                      <div
-                        className="progress-track"
-                        role="progressbar"
-                        aria-label={t('Прогресс курса')}
-                        aria-valuenow={learning.assignment!.progress_percent}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                      >
-                        <span
-                          style={{
-                            width: `${learning.assignment!.progress_percent}%`,
-                          }}
-                        />
-                      </div>
+          <DashboardCalendar />
+          <section className="card desk-learning">
+            <div className="section-heading">
+              <h2>{t('Обучение')}</h2>
+              <Link to="/academy" className="icon-btn" aria-label={t('Все курсы')}>
+                <Icon name="chevron-right" size={18} />
+              </Link>
+            </div>
+            {learning ? (
+              <>
+                <div className="desk-course">
+                  <Icon name="file-text" size={26} />
+                  <div>
+                    <Link className="desk-course-title" to={`/academy?course=${learning.id}`}>
+                      {tx(learning.title)}
+                    </Link>
+                    <div className="desk-course-meta">
+                      <span>
+                        {learning.assignment?.due_on && (
+                          <>
+                            {t('До')} {date(learning.assignment.due_on, true)} ·{' '}
+                          </>
+                        )}
+                        {learning.duration_minutes} {t('мин')}
+                      </span>
+                      <span>{learning.assignment!.progress_percent}%</span>
+                    </div>
+                    <div
+                      className="progress-track"
+                      role="progressbar"
+                      aria-label={t('Прогресс курса')}
+                      aria-valuenow={learning.assignment!.progress_percent}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                    >
+                      <span
+                        style={{
+                          width: `${learning.assignment!.progress_percent}%`,
+                        }}
+                      />
                     </div>
                   </div>
-                  <Link className="btn btn-secondary" to={`/academy?course=${learning.id}`}>
-                    {t(learning.assignment!.progress_percent ? 'Продолжить' : 'Начать курс')}
-                  </Link>
-                </>
-              ) : (
-                <div className="desk-empty">
-                  <p>
-                    {t(
-                      data.courses.some((c) => c.assignment?.status === 'completed')
-                        ? 'Все назначенные курсы пройдены'
-                        : 'Нет назначенных курсов',
-                    )}
-                  </p>
-                  <Link to="/academy" className="text-link">
-                    {t('Все курсы')}
-                    <Icon name="arrow-right" size={16} />
-                  </Link>
                 </div>
-              )}
-            </section>
-            <Link to="/jana" className="card desk-help">
-              <Icon name="message" size={25} />
-              <div>
-                <strong>{t('Есть вопрос?')}</strong>
+                <Link className="btn btn-secondary" to={`/academy?course=${learning.id}`}>
+                  {t(learning.assignment!.progress_percent ? 'Продолжить' : 'Начать курс')}
+                </Link>
+              </>
+            ) : (
+              <div className="desk-empty">
                 <p>
-                  {t('Спросить Jana')}
-                  <Icon name="arrow-right" size={15} />
+                  {t(
+                    data.courses.some((c) => c.assignment?.status === 'completed')
+                      ? 'Все назначенные курсы пройдены'
+                      : 'Нет назначенных курсов',
+                  )}
                 </p>
+                <Link to="/academy" className="text-link">
+                  {t('Все курсы')}
+                  <Icon name="arrow-right" size={16} />
+                </Link>
               </div>
-            </Link>
-          </div>
+            )}
+          </section>
+          <Link to="/jana" className="card desk-help">
+            <Icon name="message" size={25} />
+            <div>
+              <strong>{t('Есть вопрос?')}</strong>
+              <p>
+                {t('Спросить Jana')}
+                <Icon name="arrow-right" size={15} />
+              </p>
+            </div>
+          </Link>
         </div>
       )}
     </div>

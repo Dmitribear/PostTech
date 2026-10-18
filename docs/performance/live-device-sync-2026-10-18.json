@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-18",
+  "status": "passed",
+  "server": "Docker API and Supabase",
+  "accounts": "jury Aliya and Erlan; authenticated fixture accounts, not local demo",
+  "lan": {
+    "url": "http://192.168.1.5:8011",
+    "phone_login_page": "confirmed by user",
+    "firewall_modified": false
+  },
+  "baseline": {
+    "available_days": 21,
+    "official_days": 24
+  },
+  "request": {
+    "id": "cac909ba-d948-4e5b-a046-1b7487d7fb1a",
+    "number": "REQ-87D7FB1A",
+    "marker": "[DEVICE SYNC CHECK] 2026-10-18T08:37:48.861Z",
+    "start_date": "2026-10-26",
+    "end_date": "2026-10-26"
+  },
+  "checks": {
+    "employee_login": true,
+    "manager_login": true,
+    "manager_assignment": true
+  },
+  "desktop_manager_appearance_ms": 2405,
+  "checked_at": "2026-10-18T08:40:38.623585+00:00",
+  "phone": {
+    "device": "Android Chrome over Wi-Fi",
+    "request_and_notification_without_reload": "confirmed by user",
+    "approval": "performed by user on phone"
+  },
+  "employee": {
+    "device": "desktop, independent authenticated session",
+    "status_without_reload": "awaiting_hr",
+    "available_days_after": 20,
+    "unread_before": 21,
+    "unread_after": 22
+  },
+  "manager": {
+    "reviewer_matches": true,
+    "removed_from_pending_home": true
+  },
+  "notification_records_verified": true,
+  "cleanup": {
+    "only_this_test_request_removed": true,
+    "available_days_restored": 21,
+    "official_days_unchanged": 24
+  }
+}

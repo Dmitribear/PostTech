@@ -190,7 +190,6 @@ export function TeamLearning({
             <span>{t('Сотрудник / курс')}</span>
             <span>{t('Прогресс')}</span>
             <span>{t('Результат')}</span>
-            <span>{t('Статус')}</span>
           </div>
           {paging.items.map((row) => (
             <article className="academy-team-row" key={row.id}>
@@ -204,7 +203,7 @@ export function TeamLearning({
                   </Link>
                 </div>
               </div>
-              <div>
+              <div className="academy-team-progress">
                 <div
                   className="support-progress"
                   role="progressbar"
@@ -217,39 +216,44 @@ export function TeamLearning({
                 </div>
                 <div className="support-progress-label">
                   <strong>{tx(row.progress_percent)}%</strong>
-                  <span>
-                    {tx(
-                      row.material_completed_at
-                        ? 'Материал изучен'
-                        : row.progress_percent > 0
-                          ? 'Изучает материал'
-                          : 'Не начат',
-                    )}
-                  </span>
+                  <StatusBadge status={row.status} />
                 </div>
               </div>
               <div className="academy-team-score">
+                <span className="academy-score-label">{t('Результат теста')}</span>
                 <strong>{tx(row.score_percent == null ? '—' : `${row.score_percent}%`)}</strong>
-                <small>
-                  {t('Попыток: ')}
-                  {tx(row.attempt_count ?? 0)}
-                  {tx(
-                    row.course?.passing_score != null
-                      ? ` · порог ${row.course.passing_score}%`
-                      : '',
-                  )}
-                </small>
-                <small>
-                  {tx(
-                    row.last_attempt_at
-                      ? formatDate(row.last_attempt_at)
-                      : `Назначен ${formatDate(row.assigned_at)}`,
-                  )}
-                </small>
-              </div>
-              <div>
-                <StatusBadge status={row.status} />
                 <Deadline id={row.id} due={row.due_on} status={row.status} editable />
+                <details className="academy-assignment-details">
+                  <summary>{t('Подробности')}</summary>
+                  <dl>
+                    <div>
+                      <dt>{t('Назначен')}</dt>
+                      <dd>{formatDate(row.assigned_at)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t('Попытки')}</dt>
+                      <dd>{row.attempt_count ?? '—'}</dd>
+                    </div>
+                    {row.course?.passing_score != null && (
+                      <div>
+                        <dt>{t('Для зачёта')}</dt>
+                        <dd>{row.course.passing_score}%</dd>
+                      </div>
+                    )}
+                    {row.last_attempt_at && (
+                      <div>
+                        <dt>{t('Последняя попытка')}</dt>
+                        <dd>{formatDate(row.last_attempt_at)}</dd>
+                      </div>
+                    )}
+                    {row.material_completed_at && (
+                      <div>
+                        <dt>{t('Материал изучен')}</dt>
+                        <dd>{formatDate(row.material_completed_at)}</dd>
+                      </div>
+                    )}
+                  </dl>
+                </details>
               </div>
             </article>
           ))}

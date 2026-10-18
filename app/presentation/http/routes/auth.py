@@ -77,10 +77,20 @@ def _auth_client():
 
 def _registration_error_detail(exc: Exception) -> str:
     code = getattr(exc, "code", None)
+    message = str(getattr(exc, "message", "")).casefold()
     if code in {"user_already_exists", "email_exists"}:
         return "An account already exists. Confirm your email, then continue with your password"
-    if code in {"email_address_not_authorized", "over_email_send_rate_limit"}:
+    if code in {
+        "email_address_not_authorized",
+        "over_email_send_rate_limit",
+        "email_provider_disabled",
+    } or any(
+        text in message
+        for text in ("error sending confirmation email", "error sending email", "smtp")
+    ):
         return "Confirmation email could not be sent. Contact HR or try again later"
+    if getattr(exc, "status", 0) >= 500:
+        return "Registration is temporarily unavailable. Try again later"
     return "Could not create your account. Check your password or contact HR"
 
 
@@ -178,7 +188,11 @@ def register(payload: RegistrationRequest) -> dict[str, Any]:
             }
         )
     except AuthApiError as exc:
-        raise _auth_error(exc, _registration_error_detail(exc)) from exc
+        raise _auth_error(
+            exc,
+            _registration_error_detail(exc),
+            503 if exc.status >= 500 else 400,
+        ) from exc
     except AuthRetryableError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

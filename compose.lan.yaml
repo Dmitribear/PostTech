@@ -1,0 +1,4 @@
+services:
+  frontend:
+    ports:
+      - "${POSTTECH_LAN_HOST:?Set POSTTECH_LAN_HOST to the computer LAN IPv4 address}:8011:80"

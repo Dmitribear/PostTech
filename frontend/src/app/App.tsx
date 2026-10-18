@@ -5,7 +5,7 @@ import Dashboard, { ActivityPage, Services } from '@/pages/dashboard';
 import { Help, HrTools } from '@/pages/workspace-links';
 import { createLiveApi } from '@/shared/api/api';
 import type { AppRole, EmployeeProfile, HrApi } from '@/shared/api/contracts';
-import { createDemoApi } from '@/shared/api/demo';
+import { createSharedDemoApi } from '@/shared/api/demo-workspace';
 import { LanguageSwitch, t, tx, useLocale } from '@/shared/lib/i18n';
 import { Brand } from '@/shared/ui/atoms/Brand';
 import { Avatar, ErrorState, Icon, LoadingState } from '@/shared/ui/index';
@@ -44,7 +44,7 @@ export default function App() {
   const locale = useLocale();
   const [api, setApi] = useState<HrApi | null>(() => {
     const role = savedDemoRole();
-    return role ? createDemoApi(role) : live.getSession() ? live : null;
+    return role ? createSharedDemoApi(role) : live.getSession() ? live : null;
   });
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(Boolean(api));
@@ -128,7 +128,7 @@ export default function App() {
       sessionStorage.setItem('posttech.demo-role', role);
     } catch {}
     setProfile(null);
-    setApi(createDemoApi(role));
+    setApi(createSharedDemoApi(role));
     navigate('/', { replace: true });
   };
   if (!api)
@@ -517,6 +517,7 @@ function Shell() {
               <span>
                 <span className="dot dot-amber" />
                 {t('Демоверсия')}
+                <span>{t('Общие данные в этом браузере')}</span>
               </span>
               <button onClick={logout}>
                 {t('Сменить роль')}

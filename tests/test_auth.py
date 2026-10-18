@@ -140,6 +140,41 @@ def test_register_returns_supabase_error_details(monkeypatch) -> None:
     assert "An account already exists" in response.json()["detail"]
 
 
+@pytest.mark.parametrize(
+    "message,code,status,expected_status,expected_detail",
+    [
+        ("Error sending confirmation email", "unexpected_failure", 500, 503,
+         "Confirmation email could not be sent. Contact HR or try again later"),
+        ("SMTP rejected owner@example.test with private provider details", "unexpected_failure", 500, 503,
+         "Confirmation email could not be sent. Contact HR or try again later"),
+        ("Recipient rejected", "email_address_not_authorized", 400, 400,
+         "Confirmation email could not be sent. Contact HR or try again later"),
+        ("Email provider disabled", "email_provider_disabled", 400, 400,
+         "Confirmation email could not be sent. Contact HR or try again later"),
+        ("Internal provider failure with private details", "unexpected_failure", 500, 503,
+         "Registration is temporarily unavailable. Try again later"),
+    ],
+)
+def test_registration_delivery_and_server_errors_do_not_blame_password(
+    monkeypatch, message, code, status, expected_status, expected_detail
+):
+    from supabase_auth.errors import AuthApiError
+
+    def fail_signup(_credentials):
+        raise AuthApiError(message, status, code)
+
+    monkeypatch.setattr(
+        auth, "get_supabase_auth_client",
+        lambda: SimpleNamespace(auth=SimpleNamespace(sign_up=fail_signup)),
+    )
+    response = client.post("/api/v1/auth/register", json=REGISTRATION)
+    assert response.status_code == expected_status
+    assert response.json() == {"detail": expected_detail}
+    assert "password" not in response.text.lower()
+    assert "owner@example.test" not in response.text
+    assert "private" not in response.text
+
+
 def test_login_returns_supabase_bearer_and_refresh_tokens(monkeypatch) -> None:
     fake_user = SimpleNamespace(id="user-123", email="worker@example.test")
     calls: list[dict] = []

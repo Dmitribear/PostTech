@@ -265,6 +265,8 @@
   font-size: 11px;
   color: #748097;
   margin: 8px 0;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 .support-progress-label strong {
   color: #008c45;
@@ -313,23 +315,87 @@
   font-size: 12px;
 }
 .academy-course-facts {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-  font-size: 11px;
-  color: #748097;
+  font-size: 13px;
+  color: #526174;
 }
-.academy-course-facts > span {
-  padding: 6px 10px;
-  background: #f4f6f8;
-  border-radius: var(--radius);
-}
-.academy-course-facts strong {
+.academy-course-facts summary,
+.academy-assignment-details summary {
+  cursor: pointer;
+  padding: 8px 0;
   font-size: 12px;
-  font-weight: 550;
-  color: #008c45;
-  padding: 6px 0;
+  color: #526174;
+}
+.academy-course-facts dl,
+.academy-assignment-details dl {
+  margin: 6px 0;
+}
+.academy-course-facts dl > div,
+.academy-assignment-details dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 4px 0;
+}
+.academy-course-facts dd,
+.academy-assignment-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.course-reader-note {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  color: #526174;
+}
+.course-reader-note p {
+  margin: 0;
+}
+.support-course-reader > .muted {
+  margin: 0;
+}
+.support-course-reader .support-material {
+  padding-top: 16px;
+  line-height: 1.7;
+}
+.support-course-reader .support-material h2 {
+  font-size: 18px;
+}
+.support-course-reader .support-material h3 {
+  font-size: 16px;
+}
+.support-course-reader > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.academy-assignment-details {
+  font-size: 12px;
+  color: #526174;
+}
+.academy-team-row > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.academy-team-score .ws-deadline {
+  margin-top: 6px;
+}
+.academy-team-score .ws-deadline .btn {
+  padding: 4px 0;
+}
+.academy-team-progress .support-progress {
+  height: 5px;
+}
+.academy-team-progress .support-progress-label {
+  font-size: 12px;
+  margin-bottom: 0;
+}
+@media (max-width: 640px) {
+  .academy-team-row .ws-deadline .btn {
+    min-height: 44px;
+  }
+  .academy-assignment-details summary {
+    min-height: 44px;
+    padding: 12px 0;
+  }
 }
 .support-material {
   line-height: 1.85;
@@ -858,6 +924,33 @@
   gap: 22px;
   min-width: 0;
 }
+.academy-team-view > .support-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+}
+.academy-team-view .support-metric {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.academy-team-view .support-metric > span {
+  display: none;
+}
+.academy-team-view .support-metric > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.academy-team-view .support-metric strong {
+  font-size: 16px;
+}
+.academy-team-score .ws-deadline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
 .academy-team-view > .support-toolbar h2 {
   margin-bottom: 6px;
 }
@@ -872,12 +965,10 @@
 .academy-team-head,
 .academy-team-row {
   display: grid;
-  grid-template-columns:
-    minmax(210px, 1.65fr) minmax(130px, 1fr) minmax(120px, 0.85fr)
-    minmax(105px, 0.7fr);
-  gap: 22px;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
   align-items: center;
-  padding: 22px;
+  padding: 18px 22px;
 }
 .academy-team-head {
   padding: 15px 22px;
@@ -937,7 +1028,7 @@
   margin-top: 4px;
 }
 .academy-team-row .support-progress-label {
-  font-size: 10px;
+  font-size: 12px;
   gap: 6px;
 }
 .support-chat-layout {
@@ -1333,7 +1424,7 @@ body[data-density='compact'] .support-notification {
     grid-column: 1/-1;
   }
   .academy-team-row > div:nth-child(2) {
-    grid-column: 1/-1;
+    align-self: start;
   }
 }
 @media (max-width: 900px) {
@@ -1492,7 +1583,9 @@ body[data-density='compact'] .support-notification {
     white-space: nowrap;
   }
   .academy-team-row {
-    padding: 20px;
+    padding: 16px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
   }
   .support-composer-caption {
     font-size: 9px;
@@ -2009,5 +2102,17 @@ body[data-density='compact'] .support-notification {
   }
   .support-jana-embedded .support-chat-composer {
     padding: 10px 12px;
+  }
+}
+
+.academy-score-label {
+  display: none;
+}
+@media (max-width: 1180px) {
+  .academy-score-label {
+    display: inline;
+    font-size: 12px;
+    color: var(--muted);
+    margin-right: 8px;
   }
 }

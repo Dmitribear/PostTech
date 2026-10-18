@@ -2101,8 +2101,8 @@
     align-self: center;
   }
   .req-table .req-status-cell .badge {
-    font-size: 10px;
-    padding: 6px 8px;
+    font-size: 12px;
+    padding: 0;
   }
   .req-table td:last-child {
     position: absolute;

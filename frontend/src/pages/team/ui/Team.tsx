@@ -5,6 +5,7 @@ import Invitations from '@/features/invite-employee';
 import { errorMessage } from '@/shared/api/api';
 import type { Course, EmployeeProfile } from '@/shared/api/contracts';
 import { businessToday } from '@/shared/lib/business-date';
+import { watchVisible } from '@/shared/lib/live-refresh';
 import { t, tx } from '@/shared/lib/i18n';
 import '@/shared/styles/support.css';
 import {
@@ -263,25 +264,24 @@ export default function Team() {
       setLoading(false);
       return;
     }
-    let active = true;
+    let loaded = false;
     setLoading(true);
     setError(null);
-    Promise.all([api.getTeam(), api.getCourses()])
-      .then(([people, catalog]) => {
-        if (active) {
+    return watchVisible(async (signal) => {
+      try {
+        const [people, catalog] = await Promise.all([api.getTeam(), api.getCourses()]);
+        if (!signal.aborted) {
           setEmployees(people);
           setCourses(catalog);
+          setError(null);
+          loaded = true;
         }
-      })
-      .catch((err) => {
-        if (active) setError(err);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+      } catch (err) {
+        if (!signal.aborted && !loaded) setError(err);
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+    }, 3000);
   }, [api, allowed, refreshKey, retry]);
   const visible = employees.filter((employee) =>
     `${employee.full_name} ${employee.job_title} ${employee.department} ${employee.employee_code}`

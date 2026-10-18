@@ -498,14 +498,16 @@ select.input:disabled {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 9px;
-  border-radius: 7px;
-  background: #eef1f5;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   color: #677287;
-  font-size: 11px;
-  font-weight: 550;
-  line-height: 16px;
-  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .badge-dot {
   width: 5px;
@@ -513,26 +515,21 @@ select.input:disabled {
   background: currentColor;
 }
 .badge-pending {
-  color: #ac7100;
-  background: #fff5df;
+  color: #856526;
 }
 .badge-approved,
 .badge-completed {
-  background: #e9f8ef;
-  color: #078240;
+  color: #276147;
 }
 .badge-rejected {
-  background: #fdefef;
-  color: #c03e4a;
+  color: #a43943;
 }
 .badge-cancelled,
 .badge-not_started {
-  background: #f0f3f6;
   color: #69768b;
 }
 .badge-in_progress {
-  background: #eaf3ff;
-  color: #317bd0;
+  color: #405c7a;
 }
 .avatar {
   display: inline-flex;
@@ -1690,10 +1687,12 @@ body[data-density='compact'] .data-table td {
 }
 .modal-heading {
   position: sticky;
-  top: -26px;
+  top: 0;
   background: #fff;
   z-index: 2;
-  padding: 12px 0;
+  padding: 20px 26px 16px;
+  margin: -26px -26px 20px;
+  border-bottom: 1px solid var(--border);
 }
 .modal-heading-copy {
   flex: 1;
@@ -1735,7 +1734,19 @@ body[data-density='compact'] .data-table td {
     bottom: calc(64px + env(safe-area-inset-bottom));
   }
   .modal-heading {
-    top: -22px;
+    top: 0;
+    margin: -22px -20px 16px;
+    padding: 16px 20px;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .modal-heading h2 {
+    font-size: 18px;
+    line-height: 1.4;
+  }
+  .modal-heading .icon-btn {
+    min-width: 44px;
+    min-height: 44px;
   }
   .modal .input,
   .ws-editor .input {

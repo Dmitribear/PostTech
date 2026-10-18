@@ -182,7 +182,7 @@ for (const role of ['worker', 'manager', 'director', 'hr_admin'] as const) {
       const state = await mockLeave(page, role);
       await page.goto('/');
       await expect(page.locator('.desk-leave-copy')).toContainText('20 дн. доступно');
-      await expect(page.locator('.desk-request')).toContainText('На согласовании');
+      await expect(page.locator('.desk-request')).toContainText('Ждёт решения');
       state.release(status);
       await expect(page.locator('.desk-leave-copy')).toContainText('24 дн. доступно');
       await expect(page.locator('.desk-request')).toContainText(statusLabel[status]);

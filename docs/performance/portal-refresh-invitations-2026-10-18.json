@@ -1,0 +1,703 @@
+{
+  "checked_at": "2026-10-18T07:57:14.459751+00:00",
+  "status": "passed_including_human_mailbox_activation",
+  "refresh": {
+    "at": "2026-10-18T07:44:29.886Z",
+    "marker": "[SYNTHETIC PORTAL REFRESH] c5e82f68019d44f0ae5699a033c5c78c",
+    "results": [
+      {
+        "role": "employee",
+        "reviewer": "manager",
+        "width": 1440,
+        "decision": "cancelled",
+        "creationMs": 2453,
+        "decisionMs": 2161,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "employee",
+        "reviewer": "manager",
+        "width": 1440,
+        "decision": "rejected",
+        "creationMs": 2614,
+        "decisionMs": 1935,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "employee",
+        "reviewer": "manager",
+        "width": 1440,
+        "decision": "approved",
+        "creationMs": 2663,
+        "decisionMs": 1591,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "employee",
+        "reviewer": "manager",
+        "width": 390,
+        "decision": "cancelled",
+        "creationMs": 2994,
+        "decisionMs": 2102,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "employee",
+        "reviewer": "manager",
+        "width": 390,
+        "decision": "rejected",
+        "creationMs": 2105,
+        "decisionMs": 2946,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "employee",
+        "reviewer": "manager",
+        "width": 390,
+        "decision": "approved",
+        "creationMs": 2632,
+        "decisionMs": 1797,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "manager",
+        "reviewer": "hr",
+        "width": 1440,
+        "decision": "cancelled",
+        "creationMs": 3041,
+        "decisionMs": 2627,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "manager",
+        "reviewer": "hr",
+        "width": 1440,
+        "decision": "rejected",
+        "creationMs": 2658,
+        "decisionMs": 2646,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "manager",
+        "reviewer": "hr",
+        "width": 1440,
+        "decision": "approved",
+        "creationMs": 2673,
+        "decisionMs": 2126,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "manager",
+        "reviewer": "hr",
+        "width": 390,
+        "decision": "cancelled",
+        "creationMs": 2590,
+        "decisionMs": 2376,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "manager",
+        "reviewer": "hr",
+        "width": 390,
+        "decision": "rejected",
+        "creationMs": 2659,
+        "decisionMs": 2648,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "manager",
+        "reviewer": "hr",
+        "width": 390,
+        "decision": "approved",
+        "creationMs": 2636,
+        "decisionMs": 2080,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "director",
+        "reviewer": "hr",
+        "width": 1440,
+        "decision": "cancelled",
+        "creationMs": 2714,
+        "decisionMs": 2638,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "director",
+        "reviewer": "hr",
+        "width": 1440,
+        "decision": "rejected",
+        "creationMs": 2709,
+        "decisionMs": 2590,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "director",
+        "reviewer": "hr",
+        "width": 1440,
+        "decision": "approved",
+        "creationMs": 2168,
+        "decisionMs": 2100,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "director",
+        "reviewer": "hr",
+        "width": 390,
+        "decision": "cancelled",
+        "creationMs": 2233,
+        "decisionMs": 2468,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "director",
+        "reviewer": "hr",
+        "width": 390,
+        "decision": "rejected",
+        "creationMs": 3186,
+        "decisionMs": 2651,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "director",
+        "reviewer": "hr",
+        "width": 390,
+        "decision": "approved",
+        "creationMs": 2826,
+        "decisionMs": 2434,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "hr",
+        "reviewer": "backup_hr",
+        "width": 1440,
+        "decision": "cancelled",
+        "creationMs": 2722,
+        "decisionMs": 2435,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "hr",
+        "reviewer": "backup_hr",
+        "width": 1440,
+        "decision": "rejected",
+        "creationMs": 1453,
+        "decisionMs": 2428,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "hr",
+        "reviewer": "backup_hr",
+        "width": 1440,
+        "decision": "approved",
+        "creationMs": 1635,
+        "decisionMs": 2503,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "hr",
+        "reviewer": "backup_hr",
+        "width": 390,
+        "decision": "cancelled",
+        "creationMs": 2450,
+        "decisionMs": 2980,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "hr",
+        "reviewer": "backup_hr",
+        "width": 390,
+        "decision": "rejected",
+        "creationMs": 1430,
+        "decisionMs": 2318,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      },
+      {
+        "role": "hr",
+        "reviewer": "backup_hr",
+        "width": 390,
+        "decision": "approved",
+        "creationMs": 3157,
+        "decisionMs": 2641,
+        "noReload": true,
+        "balance": true,
+        "notifications": true,
+        "badge": true,
+        "queue": true,
+        "details": true,
+        "noOverflow": true
+      }
+    ],
+    "requests": [
+      {
+        "id": "c3a1e839-1d8a-4baf-b277-a699ef15e2a8",
+        "role": "employee",
+        "width": 1440,
+        "decision": "cancelled"
+      },
+      {
+        "id": "707bedde-ee9c-45d5-91c0-72590dae2530",
+        "role": "employee",
+        "width": 1440,
+        "decision": "rejected"
+      },
+      {
+        "id": "d47f4a19-1cfb-487e-92e9-d8c213da55c6",
+        "role": "employee",
+        "width": 1440,
+        "decision": "approved"
+      },
+      {
+        "id": "dffebabe-2bba-4083-be1d-7e7ec4f8348c",
+        "role": "employee",
+        "width": 390,
+        "decision": "cancelled"
+      },
+      {
+        "id": "1e599fc7-6b5c-4174-bbe7-5ddf520abdf2",
+        "role": "employee",
+        "width": 390,
+        "decision": "rejected"
+      },
+      {
+        "id": "b9dbca32-601e-4c5f-a72f-38c503b68cf2",
+        "role": "employee",
+        "width": 390,
+        "decision": "approved"
+      },
+      {
+        "id": "89e700bc-d4d8-41fb-9503-64ef56608f33",
+        "role": "manager",
+        "width": 1440,
+        "decision": "cancelled"
+      },
+      {
+        "id": "ee7d3f8b-9eaa-4bbc-9e94-b2d40e9ab979",
+        "role": "manager",
+        "width": 1440,
+        "decision": "rejected"
+      },
+      {
+        "id": "d5f396bd-8034-4bfe-b83c-2957433b2b0c",
+        "role": "manager",
+        "width": 1440,
+        "decision": "approved"
+      },
+      {
+        "id": "4500a1ef-4209-4245-88cd-85049c167f8e",
+        "role": "manager",
+        "width": 390,
+        "decision": "cancelled"
+      },
+      {
+        "id": "af8b2e19-84c0-4098-834b-b6be34425d97",
+        "role": "manager",
+        "width": 390,
+        "decision": "rejected"
+      },
+      {
+        "id": "769a1bb4-ae71-4639-aa34-04a37c120a7c",
+        "role": "manager",
+        "width": 390,
+        "decision": "approved"
+      },
+      {
+        "id": "d0804180-372d-4808-9349-6036c3710b89",
+        "role": "director",
+        "width": 1440,
+        "decision": "cancelled"
+      },
+      {
+        "id": "05ff8e77-343f-456f-a82c-fa42d8e1e123",
+        "role": "director",
+        "width": 1440,
+        "decision": "rejected"
+      },
+      {
+        "id": "d0d573d0-33b2-4679-a686-076f35edad8f",
+        "role": "director",
+        "width": 1440,
+        "decision": "approved"
+      },
+      {
+        "id": "f79ab599-090e-4785-b333-2a1c5affd95a",
+        "role": "director",
+        "width": 390,
+        "decision": "cancelled"
+      },
+      {
+        "id": "f7312abe-d762-4843-9a1f-f1fff98af582",
+        "role": "director",
+        "width": 390,
+        "decision": "rejected"
+      },
+      {
+        "id": "96614a14-1186-424e-8d4e-ac0bee362dc8",
+        "role": "director",
+        "width": 390,
+        "decision": "approved"
+      },
+      {
+        "id": "38933084-5db7-4419-8f3b-fc0e12214c33",
+        "role": "hr",
+        "width": 1440,
+        "decision": "cancelled"
+      },
+      {
+        "id": "482147aa-7292-4c23-a578-dae0c28db269",
+        "role": "hr",
+        "width": 1440,
+        "decision": "rejected"
+      },
+      {
+        "id": "bf172465-409b-4523-ad2b-531cdb4d9fd9",
+        "role": "hr",
+        "width": 1440,
+        "decision": "approved"
+      },
+      {
+        "id": "1baf0617-81c9-4ec8-aa16-3f8fb13c272f",
+        "role": "hr",
+        "width": 390,
+        "decision": "cancelled"
+      },
+      {
+        "id": "658eea65-105c-4a28-b24c-e482a28b5c4f",
+        "role": "hr",
+        "width": 390,
+        "decision": "rejected"
+      },
+      {
+        "id": "b7bd9e09-be15-4f4e-8970-c36b39e2c0a7",
+        "role": "hr",
+        "width": 390,
+        "decision": "approved"
+      }
+    ],
+    "baseline": {
+      "employee": {
+        "holds": [],
+        "policy": "calendar_days",
+        "employee_id": "9d93a182-44c3-4343-b5fb-63a6175f3c5e",
+        "pending_days": 0,
+        "official_days": 24,
+        "available_days": 24,
+        "approved_unreconciled_days": 0,
+        "request_days": 0
+      },
+      "manager": {
+        "holds": [],
+        "policy": "calendar_days",
+        "employee_id": "6a4023d2-b114-46b5-882b-d1cf96b395e7",
+        "pending_days": 0,
+        "official_days": 24,
+        "available_days": 24,
+        "approved_unreconciled_days": 0,
+        "request_days": 0
+      },
+      "director": {
+        "holds": [],
+        "policy": "calendar_days",
+        "employee_id": "e794be30-9a2d-4f79-8f40-b836c323e2d5",
+        "pending_days": 0,
+        "official_days": 24,
+        "available_days": 24,
+        "approved_unreconciled_days": 0,
+        "request_days": 0
+      },
+      "hr": {
+        "holds": [],
+        "policy": "calendar_days",
+        "employee_id": "440dfc1e-2180-42ec-a463-0f5db2c64592",
+        "pending_days": 0,
+        "official_days": 24,
+        "available_days": 24,
+        "approved_unreconciled_days": 0,
+        "request_days": 0
+      }
+    },
+    "status": "passed",
+    "cleanup": "All run requests removed; balances and director role restored"
+  },
+  "activation": {
+    "at": "2026-10-18T07:54:50.373Z",
+    "results": [
+      {
+        "role": "worker",
+        "width": 1440,
+        "activationOrLogin": true,
+        "assignedRole": true,
+        "permissions": true,
+        "noRoleChooser": true
+      },
+      {
+        "role": "worker",
+        "width": 390,
+        "activationOrLogin": true,
+        "assignedRole": true,
+        "permissions": true,
+        "noRoleChooser": true
+      },
+      {
+        "role": "manager",
+        "width": 1440,
+        "activationOrLogin": true,
+        "assignedRole": true,
+        "permissions": true,
+        "noRoleChooser": true
+      },
+      {
+        "role": "manager",
+        "width": 390,
+        "activationOrLogin": true,
+        "assignedRole": true,
+        "permissions": true,
+        "noRoleChooser": true
+      },
+      {
+        "role": "director",
+        "width": 1440,
+        "activationOrLogin": true,
+        "assignedRole": true,
+        "permissions": true,
+        "noRoleChooser": true
+      },
+      {
+        "role": "director",
+        "width": 390,
+        "activationOrLogin": true,
+        "assignedRole": true,
+        "permissions": true,
+        "noRoleChooser": true
+      },
+      {
+        "role": "hr_admin",
+        "width": 1440,
+        "activationOrLogin": true,
+        "assignedRole": true,
+        "permissions": true,
+        "noRoleChooser": true
+      },
+      {
+        "role": "hr_admin",
+        "width": 390,
+        "activationOrLogin": true,
+        "assignedRole": true,
+        "permissions": true,
+        "noRoleChooser": true
+      }
+    ],
+    "hrViews": [
+      {
+        "width": 1440,
+        "navigations": 0
+      },
+      {
+        "width": 390,
+        "navigations": 0
+      }
+    ],
+    "mail": "Real invitation sends to Resend simulated-delivery inboxes",
+    "otp": "Real Supabase OTP generated by admin for disposable fixtures; inbox receipt is a separate check",
+    "status": "passed",
+    "cleanup": "Four temporary invitations, profiles and Auth accounts removed; local credential file deleted"
+  },
+  "smtp_signup": {
+    "target": "Resend simulated inbox",
+    "status": "passed",
+    "invitation": "Resend accepted",
+    "signup": "Supabase accepted signup and requested email confirmation",
+    "unverified_access": "Supabase Auth account remained unconfirmed before cleanup",
+    "inbox_delivery": "Simulated recipient; not proof of delivery to a human inbox",
+    "cleanup": "Test invitation and Auth user removed"
+  },
+  "frontend_tests": {
+    "unit_passed": 51,
+    "invitation_browser_passed": 6,
+    "production_build": "passed",
+    "fsd_boundaries": "passed"
+  },
+  "mail": {
+    "provider": "Resend",
+    "server_key_configured": true,
+    "simulated_invitation_sends": "accepted for all four roles",
+    "human_inbox": "User received invitation and confirmation code; activation, assigned worker role and portal access verified on server and browser",
+    "previous_recipient_result": "403 testing address restriction",
+    "allowed_testing_recipient": "mplaceai2@gmail.com",
+    "owner_invitation": {
+      "email": "mplaceai2@gmail.com",
+      "role": "worker",
+      "email_status": "accepted",
+      "invitation_id": "523a1e76-64ac-4bdb-920a-bb65541d86c7",
+      "expires_at": "2026-10-19T08:04:20.422305+00:00",
+      "receipt": "confirmed by user",
+      "activation": "Confirmed by user, live browser and server",
+      "invitation_code": "accepted by live API and browser",
+      "smtp_fix": {
+        "cause": "Supabase SMTP used a different Resend account from the invitation sender",
+        "setting": "User confirmed saving the matching key",
+        "delivery_after_change": "Confirmation mail received by user; email confirmed in Supabase"
+      },
+      "verification": {
+        "activated": true,
+        "email_confirmed": true,
+        "assigned_role": "worker",
+        "profile_source": "hr-invitation",
+        "profile_link_matches_invitation": true,
+        "portal": "My cabinet visible; no error alerts",
+        "consumed_at": "2026-10-18T08:15:00.226217+00:00"
+      }
+    }
+  },
+  "deployment": "Updated frontend and API environment applied to local Docker",
+  "limits": [
+    "Real browser refresh checks use marked synthetic employees and real Supabase API.",
+    "Invitation role checks use real Auth OTPs obtained through the admin API, not an inbox reader.",
+    "Resend simulated delivery is not proof of receipt in a human mailbox.",
+    "Resend test sender is restricted to the account owner mailbox; a verified sender domain is required for arbitrary recipients."
+  ],
+  "auth_error_regression": {
+    "passed": 82,
+    "new_cases": 5,
+    "docker_api": "rebuilt; health check passed",
+    "behavior": "SMTP and provider failures no longer blame the password"
+  }
+}

@@ -180,7 +180,7 @@ test('calendar refuses past and overlapping leave ranges, then passes a free ran
   await expect(proceed).toBeDisabled();
   await start.fill('2030-11-06'); await end.fill('2030-11-08');
   await expect(page.getByRole('alert')).toContainText('пересекается');
-  await expect(page.locator('.req-conflict')).toContainText('На согласовании');
+  await expect(page.locator('.req-conflict')).toContainText('Ждёт решения');
   await expect(page.locator('.req-conflict')).toContainText('Согласует: Тестовый HR');
   await expect(page.locator('.req-conflict')).toContainText('3 нояб. 2030');
   await expect(page.locator('.req-conflict').getByRole('link', { name: 'Открыть заявку' })).toHaveAttribute('href', `/requests/${requestId}`);
@@ -211,7 +211,7 @@ test('all conflicting requests remain discoverable on a narrow screen', async ({
   await expect(page.getByRole('button', { name: 'Продолжить' })).toBeDisabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator('.req-conflict-list>li').last().getByRole('link', { name: 'Открыть заявку' }).click();
-  await expect(page.getByRole('region', { name: 'Состояние заявки' })).toContainText('Повторно отправлять заявку не нужно.');
+  await expect(page.getByRole('region', { name: 'Состояние заявки' })).toContainText('Решение сохранено');
   await expect(page.getByRole('button', { name: 'Согласовать заявку' })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
@@ -225,7 +225,7 @@ test('manager mobile navigation opens the review inbox and personal leave stays 
   await expect(page.locator('.req-table tbody tr')).toHaveCount(1);
   await expect(page.locator('.req-table')).toContainText('Ждёт вашего решения');
   await page.locator('.req-open-link').click();
-  await expect(page.locator('.req-workflow-summary')).toContainText('Заявка ждёт вашего решения');
+  await expect(page.locator('.req-workflow-summary')).toContainText('Нужно ваше решение');
   await page.locator('.req-back').click();
   await expect(page).toHaveURL(/scope=review/);
   await page.locator('.workspace-switch-mobile').getByRole('button', { name: 'Личное', exact: true }).click();
@@ -246,7 +246,7 @@ test('server overlap during submission opens the existing request instead of a d
   await expect(page.getByRole('button', { name: 'Отправить заявку', exact: true })).toBeDisabled();
   await page.locator('.req-conflict').getByRole('link', { name: 'Открыть заявку' }).click();
   await expect(page).toHaveURL(new RegExp(`/requests/${requestId}$`));
-  await expect(page.locator('.req-workflow-summary')).toContainText('Ожидает согласования');
+  await expect(page.locator('.req-workflow-summary')).toContainText('Ждёт решения');
 });
 
 test('capture request states for visual review', async ({ page }, testInfo) => {

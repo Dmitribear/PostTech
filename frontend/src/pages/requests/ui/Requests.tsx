@@ -266,7 +266,7 @@ function RequestList() {
             onChange={(event) => changeFilter('status', event.target.value)}
           >
             <option value="all">{t('Все статусы')}</option>
-            <option value="pending">{t('На согласовании')}</option>
+            <option value="pending">{t('Ждёт решения')}</option>
             <option value="approved">{t('Согласовано')}</option>
             <option value="rejected">{t('Отклонено')}</option>
             <option value="cancelled">{t('Отменено')}</option>
@@ -1327,8 +1327,8 @@ function RequestDetails({ id }: { id: string }) {
             {tx(
               record.status === 'pending'
                 ? canReview
-                  ? 'Заявка ждёт вашего решения'
-                  : 'Ожидает согласования'
+                  ? 'Нужно ваше решение'
+                  : 'Ждёт решения'
                 : record.status === 'approved'
                   ? 'Заявка согласована'
                   : record.status === 'rejected'
@@ -1343,11 +1343,10 @@ function RequestDetails({ id }: { id: string }) {
               ) : (
                 <>
                   {t('Согласует')}: {tx(approverNames(record.approvers))}.{' '}
-                  {t('Решение появится здесь и в уведомлениях.')}
                 </>
               )
             ) : record.status === 'approved' ? (
-              t('Повторно отправлять заявку не нужно.')
+              t('Решение сохранено')
             ) : record.status === 'rejected' ? (
               record.reviewer_comment || t('Причина указана в истории согласования.')
             ) : (

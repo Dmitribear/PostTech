@@ -209,14 +209,23 @@ function CourseReader({ id, onClose }: { id: string; onClose: () => void }) {
         <LoadingState />
       ) : (
         <div className="support-course-reader">
-          <div className="academy-course-facts">
-            <span>{tx(course.category || 'Общее')}</span>
-            <span>{tx(course.audience || 'Все сотрудники')}</span>
-            <strong>
-              {t('Проходной балл — ')}
-              {tx(course.passing_score ?? 80)}%
-            </strong>
-          </div>
+          <details className="academy-course-facts">
+            <summary>{t('О курсе')}</summary>
+            <dl>
+              <div>
+                <dt>{t('Категория')}</dt>
+                <dd>{tx(course.category || 'Общее')}</dd>
+              </div>
+              <div>
+                <dt>{t('Для кого')}</dt>
+                <dd>{tx(course.audience || 'Все сотрудники')}</dd>
+              </div>
+              <div>
+                <dt>{t('Для зачёта')}</dt>
+                <dd>{course.passing_score ?? 80}%</dd>
+              </div>
+            </dl>
+          </details>
           {step === 'material' && (
             <>
               <p className="muted">{tx(course.description)}</p>
@@ -242,21 +251,22 @@ function CourseReader({ id, onClose }: { id: string; onClose: () => void }) {
                 />
               )}
               {course.assignment?.status === 'completed' ? (
-                <div className="support-note">
-                  <Icon name="check-circle" size={18} />
+                <div className="course-reader-note">
                   <p>
-                    {t('Курс завершён. Ваш результат: ')}
-                    <strong>{tx(course.assignment.score_percent ?? '—')}%</strong>.
+                    {t('Результат теста: ')}
+                    <strong>
+                      {course.assignment.score_percent == null
+                        ? '—'
+                        : `${course.assignment.score_percent}%`}
+                    </strong>
                   </p>
                 </div>
               ) : !course.assignment ? (
-                <div className="support-note">
-                  <Icon name="info" size={18} />
-                  <p>{t('Для прохождения теста нужно назначение курса.')}</p>
+                <div className="course-reader-note">
+                  <p>{t('Тест доступен после назначения курса.')}</p>
                 </div>
               ) : !course.quiz.length ? (
-                <div className="support-note">
-                  <Icon name="info" size={18} />
+                <div className="course-reader-note">
                   <p>{t('Тест пока не опубликован.')}</p>
                 </div>
               ) : (
@@ -366,7 +376,7 @@ function CourseReader({ id, onClose }: { id: string; onClose: () => void }) {
                 <p>
                   {tx(
                     course.assignment?.status === 'completed'
-                      ? 'Отличная работа! Результат сохранён.'
+                      ? 'Результат сохранён.'
                       : `Нужно набрать ${course.passing_score ?? 80}%. Повторите материал или попробуйте снова.`,
                   )}
                 </p>
@@ -529,16 +539,7 @@ export default function Academy() {
   }
   return (
     <div className="support-page">
-      <PageHeader
-        title={t('Обучение')}
-        description={t('Новый навык — в вашем темпе')}
-        actions={
-          <span className="academy-brand">
-            <Icon name="graduation" size={19} />
-            Jana Academy
-          </span>
-        }
-      />
+      <PageHeader title={t('Обучение')} />
       {tab !== 'team' && <MyTracks />}
       <div className="support-tabs" role="group" aria-label={t('Разделы обучения')}>
         <button

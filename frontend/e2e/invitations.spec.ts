@@ -48,3 +48,31 @@ test('HR assigns role and sees honest failed email state with retry',async({page
  await expect(page.getByLabel('Код приглашения',{exact:true})).toHaveValue('JP-private-invitation');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
 });
+
+test('HR sees activation and the new employee without reloading', async ({page}) => {
+ const stamp = '2026-10-18T10:00:00Z';
+ const profile = {id:'81000000-0000-4000-8000-000000000001',employee_code:'TEST-HR',full_name:'Тестовый HR',email:'hr@example.test',company:'PostTech',job_title:'HR',department:'Тест',manager_id:null,hired_at:'2025-01-01',vacation_days_remaining:24,role:'hr_admin',external_source:'test',created_at:stamp,updated_at:stamp};
+ let activated = false;
+ await page.addInitScript(() => sessionStorage.setItem('jana.hr.session.v1', JSON.stringify({user_id:'test',email:'hr@example.test',access_token:'test',refresh_token:'test',token_type:'bearer',expires_in:3600,expires_at:Date.now()+3600000})));
+ await page.route('**/api/v1/**', async route => {
+  const pathname = new URL(route.request().url()).pathname;
+  if (pathname.endsWith('/profile')) return route.fulfill({json:profile});
+  if (pathname.endsWith('/team')) return route.fulfill({json:activated ? [profile,{...profile,id:'81000000-0000-4000-8000-000000000002',full_name:'Новый Сотрудник',email:'joined@example.test',role:'worker'}] : [profile]});
+  if (pathname.endsWith('/auth/invitations')) return route.fulfill({json:[{id:'81000000-0000-4000-8000-000000000003',email:'joined@example.test',role:'worker',department:'Тест',expires_at:'2099-12-01T00:00:00Z',consumed_at:activated?stamp:null,revoked_at:null,email_status:'accepted'}]});
+  return route.fulfill({json:[]});
+ });
+ await page.goto('/team');
+ await page.getByRole('button',{name:'Пригласить сотрудника',exact:true}).click();
+ await page.getByRole('button',{name:'Выданные',exact:true}).click();
+ const invitation = page.locator('.invite-list article').filter({hasText:'joined@example.test'});
+ await expect(invitation).toContainText('Ожидает активации');
+ let navigations = 0;
+ page.on('framenavigated', frame => {if (frame === page.mainFrame()) navigations++;});
+ activated = true;
+ await expect(invitation).toContainText('Активировано');
+ await expect(invitation.getByRole('button')).toHaveCount(0);
+ await page.getByRole('button',{name:'Закрыть',exact:true}).click();
+ await expect(page.getByText('Новый Сотрудник',{exact:true})).toBeVisible();
+ expect(navigations).toBe(0);
+ expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
+});

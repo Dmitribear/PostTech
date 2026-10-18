@@ -1,7 +1,7 @@
 /**
  * Isolated demonstration data. This module never calls the network and is only
  * instantiated after the user explicitly chooses the labelled demo experience.
- * Mutations last for this instance only; they never update employee records.
+ * Browser persistence is provided separately by demo-workspace.
  */
 import { ApiError } from '@/shared/api/api';
 import type {
@@ -174,10 +174,21 @@ function courseData(): (CourseDetail & {
   }));
 }
 
+export interface DemoSnapshot {
+  employees: EmployeeProfile[];
+  assignments: CourseAssignment[];
+  requests: HrRequest[];
+  history: RequestEvent[];
+  notifications: Notification[];
+  attempts: CourseAttempt[];
+  idempotency: [string, { body: string; id: string }][];
+  quizKeys: [string, { fingerprint: string; assignment: CourseAssignment }][];
+}
+
 export class DemoApi implements HrApi {
   readonly mode = 'demo' as const;
   private readonly employees = profiles();
-  private readonly actor: EmployeeProfile;
+  private actor: EmployeeProfile;
   private readonly courses = courseData();
   private readonly assignments: CourseAssignment[] = [];
   private readonly requests: HrRequest[] = [];
@@ -192,6 +203,39 @@ export class DemoApi implements HrApi {
 
   get janaAvailable() {
     return Boolean(this.localJana);
+  }
+
+  snapshot(): DemoSnapshot {
+    return copy({
+      employees: this.employees,
+      assignments: this.assignments,
+      requests: this.requests,
+      history: this.history,
+      notifications: this.notifications,
+      attempts: this.attempts,
+      idempotency: [...this.idempotency],
+      quizKeys: [...this.quizKeys],
+    });
+  }
+
+  restore(snapshot: DemoSnapshot) {
+    const actorId = this.actor.id;
+    const state = copy(snapshot);
+    for (const key of [
+      'employees',
+      'assignments',
+      'requests',
+      'history',
+      'notifications',
+      'attempts',
+    ] as const) {
+      (this[key] as unknown[]).splice(0, this[key].length, ...state[key]);
+    }
+    this.idempotency.clear();
+    for (const [key, value] of state.idempotency) this.idempotency.set(key, value);
+    this.quizKeys.clear();
+    for (const [key, value] of state.quizKeys) this.quizKeys.set(key, value);
+    this.actor = this.employees.find((person) => person.id === actorId)!;
   }
   constructor(
     role: AppRole = 'worker',
@@ -419,6 +463,40 @@ export class DemoApi implements HrApi {
     });
   }
   async workspace<T>(_path: string, _method = 'GET', _body?: unknown): Promise<T> {
+    const [path, query] = _path.split('?');
+    if (path === '/leave-balance' && _method === 'GET') {
+      const requestId = new URLSearchParams(query).get('request_id');
+      const employeeId = requestId ? this.findRequest(requestId).employee_id : this.actor.id;
+      const employee = this.employees.find((person) => person.id === employeeId)!;
+      const holds = this.requests
+        .filter(
+          (r) =>
+            r.employee_id === employeeId &&
+            r.request_type === 'leave' &&
+            ['pending', 'approved'].includes(r.status) &&
+            r.end_date! >= dateAt(0),
+        )
+        .map((r) => ({
+          request_id: r.id,
+          days: daysBetween(r.start_date!, r.end_date!),
+          state: r.status,
+        }));
+      const pending = holds
+        .filter((h) => h.state === 'pending')
+        .reduce((sum, h) => sum + h.days, 0);
+      const approved = holds
+        .filter((h) => h.state === 'approved')
+        .reduce((sum, h) => sum + h.days, 0);
+      return {
+        employee_id: employeeId,
+        official_days: employee.vacation_days_remaining,
+        pending_days: pending,
+        approved_unreconciled_days: approved,
+        available_days: employee.vacation_days_remaining - pending - approved,
+        request_days: holds.find((h) => h.request_id === requestId)?.days ?? 0,
+        holds,
+      } as T;
+    }
     throw new ApiError(409, 'Этот раздел доступен после входа в реальный портал.');
   }
   async getProfile(): Promise<EmployeeProfile> {
@@ -490,7 +568,8 @@ export class DemoApi implements HrApi {
       amount: payload.amount ?? null,
       comment: payload.comment ?? '',
     });
-    const previous = this.idempotency.get(idempotencyKey);
+    const submissionKey = `${this.actor.id}:${idempotencyKey}`;
+    const previous = this.idempotency.get(submissionKey);
     if (previous) {
       if (previous.body !== fingerprint)
         throw new ApiError(409, 'Эта отправка уже использована для другой заявки.');
@@ -501,6 +580,9 @@ export class DemoApi implements HrApi {
     if (payload.request_type === 'leave') {
       const duration = daysBetween(payload.start_date, payload.end_date);
       if (!duration) throw new ApiError(422, 'Укажите корректные даты отпуска.');
+      const balance = await this.workspace<{ available_days: number }>('/leave-balance');
+      if (duration > balance.available_days)
+        throw new ApiError(409, 'Недостаточно дней для выбранного периода');
       if (payload.start_date < dateAt(0))
         throw new ApiError(422, 'Отпуск не может начинаться в прошлом.');
       if (
@@ -557,13 +639,22 @@ export class DemoApi implements HrApi {
       comment: request.comment,
       created_at: request.created_at,
     });
-    this.idempotency.set(idempotencyKey, { body: fingerprint, id: request.id });
+    this.idempotency.set(submissionKey, { body: fingerprint, id: request.id });
     this.notify(
       'Заявка отправлена',
       'Ваша заявка передана на рассмотрение.',
       'request_created',
       request.id,
     );
+    for (const reviewer of routing.approvers) {
+      this.notify(
+        'Новая заявка на согласование',
+        `${this.actor.full_name}: ${payload.request_type === 'leave' ? 'отпуск' : 'аванс'}.`,
+        'request_created',
+        request.id,
+        reviewer.id,
+      );
+    }
     return copy(request);
   }
   async getRequest(id: string): Promise<HrRequest> {
@@ -643,6 +734,15 @@ export class DemoApi implements HrApi {
       created_at: now(),
     });
     this.notify('Заявка отозвана', 'Заявка снята с согласования.', 'request_cancelled', id);
+    for (const reviewer of request.approvers ?? []) {
+      this.notify(
+        'Заявка отозвана',
+        `${this.actor.full_name} отозвал(а) заявку.`,
+        'request_cancelled',
+        id,
+        reviewer.id,
+      );
+    }
     return copy(request);
   }
   async getNotifications(filters: NotificationFilters = {}): Promise<Notification[]> {
@@ -771,7 +871,7 @@ export class DemoApi implements HrApi {
     const course = this.findCourse(id);
     const assignment = this.findAssignment(id);
     if (assignment.status === 'completed') return copy(assignment);
-    const key = `${id}:${idempotencyKey}`;
+    const key = `${this.actor.id}:${id}:${idempotencyKey}`;
     const fingerprint = JSON.stringify(Object.entries(answers).sort());
     const previous = this.quizKeys.get(key);
     if (previous) {

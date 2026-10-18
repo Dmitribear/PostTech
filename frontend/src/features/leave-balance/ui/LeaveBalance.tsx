@@ -37,18 +37,6 @@ export function LeaveBalance({
     let loaded = false;
     setError(null);
     setBalance(null);
-    if (api.mode === 'demo') {
-      setBalance({
-        employee_id: profile.id,
-        official_days: profile.vacation_days_remaining,
-        pending_days: 0,
-        approved_unreconciled_days: 0,
-        available_days: profile.vacation_days_remaining,
-        request_days: 0,
-        holds: [],
-      });
-      return;
-    }
     return watchVisible(async (signal) => {
       try {
         const b = await api.workspace<Balance>(
