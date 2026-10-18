@@ -1,17 +1,89 @@
 .cal-export-range {
+  min-width: 0;
   border: 0;
   padding: 0;
-  margin: 16px 0;
+  margin: 0 0 20px;
   display: grid;
   gap: 10px;
 }
 .cal-export-range legend {
+  padding: 0;
+  color: var(--secondary);
+  font-size: 13px;
   font-weight: 600;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .cal-export-range label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 32px;
+  gap: 12px;
+  min-height: 50px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  cursor: pointer;
+  transition:
+    background-color 0.16s,
+    border-color 0.16s;
+}
+.cal-export-range label:hover:has(input:not(:checked):not(:disabled)) {
+  border-color: #b6d4c3;
+  background: #f6faf8;
+}
+.cal-export-range label:has(input:checked) {
+  border-color: var(--primary);
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-weight: 600;
+}
+.cal-export-range label:has(input:focus-visible) {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.cal-export-range input[type='radio'] {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1.5px solid #b5c1ce;
+  border-radius: 50%;
+  background: #fff;
+  cursor: inherit;
+}
+.cal-export-range input[type='radio']:checked {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+.cal-export-range input[type='radio']::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  visibility: hidden;
+}
+.cal-export-range input[type='radio']:checked::after {
+  visibility: visible;
+}
+.cal-export-range input[type='radio']:focus-visible {
+  outline: none;
+}
+.cal-export-range:disabled label {
+  cursor: wait;
+  opacity: 0.6;
+}
+@media (forced-colors: active) {
+  .cal-export-range input[type='radio'] {
+    appearance: auto;
+  }
+  .cal-export-range input[type='radio']::after {
+    display: none;
+  }
 }
