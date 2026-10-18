@@ -1,134 +1,502 @@
-# PostTech Digital HR MVP
+# PostTech — Digital HR
 
-FastAPI REST backend for the JanaMen Digital HR hackathon prototype. The MVP demonstrates one employee journey across profile, HR requests, Jana Academy, notifications, and AI Jana, with worker/manager/director/HR role enforcement.
+Веб-портал для кадровых процессов: личный кабинет сотрудника, заявки на отпуск и аванс, согласование, обучение в Jana Academy и AI-помощник Jana. Сотрудники, руководители, директора и HR работают в одном интерфейсе с разными правами доступа. Интерфейс поддерживает русский и казахский языки.
 
-The React web portal in `frontend/` connects the supplied PostTech layouts to the API: sign in, inspect the read-only profile, submit a request, review it as the employee's manager or HR, inspect its history, and read notifications. It also includes a leave calendar, Jana Academy with quizzes, AI Jana, and team management. Follow the [frontend guide](docs/frontend.md), the [step-by-step API guide](docs/leave-workflow.md), or the [HTTP examples](examples/leave-workflow.http).
+**[Фронтенд](frontend/)** · **[Бэкенд](app/)** · **[База данных](database/)** · **[Документация](docs/)**
 
-## Architecture
+## Содержание
 
-- Frontend: FSD (`app/pages/widgets/features/entities/shared`), Atomic UI primitives and checked import boundaries.
-- Backend: `domain`, `application` (use cases/ports/DTO), `infrastructure`, `presentation`; `bootstrap.py` injects adapters.
-- Transactional business commands remain in PostgreSQL; migrations `0001` through `0016` are the supported sequence.
-- See [architecture and scaling constraints](docs/architecture.md) and [branch consolidation](docs/branch-consolidation.md).
+- [Технологический стек](#технологический-стек)
+- [Возможности и роли](#возможности-и-роли)
+- [Структура проекта](#структура-проекта)
+- [Запуск](#запуск)
+- [Страницы и маршруты фронтенда](#страницы-и-маршруты-фронтенда)
+- [Реализованные API-запросы](#реализованные-api-запросы)
+- [Примеры HTTP-запросов](#примеры-http-запросов)
+- [Настройки окружения](#настройки-окружения)
+- [Проверки](#проверки)
+- [Подробная документация](#подробная-документация)
 
-## Implemented API
+## Технологический стек
 
-HR endpoints require a Supabase Auth bearer access token. Health, invitation check, registration/verification/activation, password login/recovery and refresh are public endpoints with their own input checks; refresh requires a refresh token in its body. Listing, issuing or revoking invitations requires HR authorization.
+| Часть проекта | Технологии | Назначение |
+| --- | --- | --- |
+| **[Фронтенд](frontend/)** | React 19, TypeScript 5.8, React Router 7 | Интерфейс, типизация, навигация и страницы по ролям |
+| Сборка и оформление | Vite 6, CSS, Lucide React | Сборка приложения, адаптивная вёрстка, общие стили и иконки |
+| **[Бэкенд](app/)** | Python 3.13 в Docker, FastAPI, Uvicorn, Pydantic / pydantic-settings | REST API, валидация запросов, бизнес-правила и конфигурация |
+| **[База данных](database/)** | PostgreSQL в Supabase, SQL-миграции, RPC, RLS | Хранение данных, транзакционные операции и ограничения доступа |
+| Авторизация | Supabase Auth | Вход, приглашения, подтверждение почты, восстановление пароля и обновление сессии |
+| AI Jana | OpenAI SDK; опционально локальная модель и llama.cpp | Ответы по опубликованной базе знаний с проверкой источников |
+| Письма | Resend API, SMTP в Supabase | HR-приглашения, подтверждение почты и восстановление пароля |
+| Файлы | openpyxl, defusedxml, icalendar | Импорт CSV/XLSX и экспорт отпусков в `.ics` |
+| Запуск | Docker Compose, Nginx | Сборка сервисов, раздача фронтенда и проксирование API |
+| Проверки | pytest, Ruff, Vitest, Playwright, Prettier | Проверки бэкенда, интерфейса, браузерных сценариев и форматирования |
 
-| Endpoint | Purpose and access |
+Версии фронтенда зафиксированы в [package-lock.json](frontend/package-lock.json), зависимости Docker-бэкенда — в [requirements.lock.txt](requirements.lock.txt). Основные Python-зависимости перечислены в [requirements.txt](requirements.txt).
+
+## Возможности и роли
+
+- **Личный кабинет:** профиль, остаток отпуска, последние заявки, обучение и уведомления.
+- **Заявки:** отпуск и аванс, предварительный просмотр согласующих, история, решение с комментарием и отзыв заявки владельцем.
+- **Календарь:** отображение отпусков и экспорт одобренных заявок в iCalendar.
+- **Jana Academy:** каталог, назначение курсов, уроки, сроки, тесты, повторные попытки и программы обучения.
+- **AI Jana:** ответы по базе знаний, ссылки на источники, сводка доступных пользователю задач и обращение в HR с согласия сотрудника.
+- **HR-инструменты:** приглашения, импорт сотрудников, роли, заместители, курсы и база знаний, оформление документов и контроль интеграций.
+
+| Роль в API | Пользователь | Область доступа |
+| --- | --- | --- |
+| `worker` | Сотрудник | Свои данные, заявки, назначенное обучение, уведомления и обращения |
+| `manager` | Руководитель | Личные функции, непосредственные подчинённые, доступные согласования и обучение команды |
+| `director` | Директор | Личные и управленческие функции в пределах своей линии подчинения |
+| `hr_admin` | HR-администратор | Кадровое администрирование, сотрудники, приглашения, роли и HR-процессы |
+
+Роль определяется сервером по связанному профилю сотрудника. Назначение заместителя даёт право согласования на заданный период, но не открывает ему весь профиль и обучение сотрудника. Согласовывать собственную заявку нельзя, включая HR.
+
+При подаче заявки на отпуск дни резервируются транзакционно. Отказ или отзыв освобождает резерв; одобрение сохраняет его и открывает отдельный этап кадрового оформления. Одобрение заявки само по себе не означает выпуск документа во внешней системе.
+
+## Структура проекта
+
+```text
+posttech/
+├── frontend/                  # React + TypeScript
+│   ├── src/app/               # Инициализация, оболочка и маршрутизация
+│   ├── src/pages/             # Страницы
+│   ├── src/widgets/           # Крупные блоки интерфейса
+│   ├── src/features/          # Пользовательские действия
+│   ├── src/entities/          # Сущности и сессия
+│   ├── src/shared/            # API-клиент, UI, стили и общие функции
+│   └── e2e/                   # Браузерные проверки
+├── app/                       # Python / FastAPI
+│   ├── domain/                # Модели, ошибки и предметные правила
+│   ├── application/           # Сценарии, DTO и интерфейсы адаптеров
+│   ├── infrastructure/        # База данных, AI и внешние сервисы
+│   ├── presentation/          # HTTP-маршруты и веб-интерфейс
+│   ├── bootstrap.py           # Подключение адаптеров
+│   └── main.py                # FastAPI-приложение
+├── database/migrations/       # Миграции 0001–0016
+├── knowledge_base/            # Материалы для Jana
+├── docker/frontend/           # Dockerfile фронтенда и Nginx
+├── scripts/                   # Запуск, фоновые задачи и проверки
+├── tests/                     # Тесты бэкенда и базы данных
+├── examples/                  # Примеры HTTP-запросов
+├── docs/                      # Руководства и архитектура
+├── compose.yaml               # Основной Docker-стек
+└── compose.ai.yaml            # Дополнение для локальной AI-модели
+```
+
+Фронтенд организован по FSD: `app → pages → widgets → features → entities → shared`. Бэкенд разделяет HTTP-слой, прикладные сценарии, предметные правила и инфраструктуру. Критичные изменения состояния выполняются транзакционными функциями PostgreSQL. Подробнее — [архитектура проекта](docs/architecture.md).
+
+## Запуск
+
+### Подготовка
+
+1. Установите Docker Desktop либо Python 3.13 и Node.js 22 для локальной разработки.
+2. Создайте `.env` из [.env.example](.env.example), если файл ещё не создан. Заполните `SUPABASE_URL`, `SUPABASE_KEY` и `SUPABASE_ANON_KEY`.
+3. В подготовленной Supabase-базе примените [миграции](database/migrations/) **0001–0016 по порядку**. Для существующей базы сначала проверьте схему и примените только отсутствующие миграции. Запуск контейнера миграции не выполняет.
+4. Для демонстрации используйте [seed.sql](database/seed.sql); подготовьте и свяжите Auth-аккаунты с профилями по [руководству](docs/leave-workflow.md#подготовка-учётных-записей). Новых сотрудников HR приглашает через интерфейс.
+5. Для регистрации и восстановления настройте SMTP и шаблоны писем в Supabase по [инструкции](docs/registration.md).
+
+В репозитории используются демонстрационные кадровые записи и учебные материалы. Ключи, пароли и `.env` должны оставаться вне Git.
+
+### Docker
+
+Из корня проекта:
+
+```powershell
+docker compose up --build -d --wait
+```
+
+**Портал: [http://localhost:8000](http://localhost:8000).** Можно также открыть [Start PostTech Docker.cmd](<Start PostTech Docker.cmd>).
+
+| Сервис | Что запускается |
 | --- | --- |
-| `POST /api/v1/auth/invitations/check` | Validate an HR invitation and obtain its bound email. |
-| `POST /api/v1/auth/register` | Register with an invitation code, first/last name and password; the email and role come from HR. |
-| `POST /api/v1/auth/verify-registration` | Verify the Supabase email OTP and atomically activate the invited HR profile. |
-| `POST /api/v1/auth/resend-registration` | Resend confirmation, subject to server cooldown and provider limits. |
-| `POST /api/v1/auth/complete-invitation` | Finish activation with an existing confirmed email/password; recover after a lost confirmation response. |
-| `GET /api/v1/auth/invitations`, `POST /api/v1/auth/invitations`, `POST /api/v1/auth/invitations/{id}/revoke` | HR only: list, issue and revoke invitations. Codes are returned only at creation; only hashes are stored. |
-| `POST /api/v1/auth/login` | Sign in and receive `access_token` and `refresh_token`. |
-| `POST /api/v1/auth/password-reset` | Request a recovery code with a neutral response and 60-second resend delay; does not disclose account existence. |
-| `POST /api/v1/auth/password-reset/confirm` | Verify a recovery code and set a strong password using only that user's isolated Auth session; returns no login tokens. |
-| `POST /api/v1/auth/refresh` | Exchange a refresh token for a new session. |
-| `GET /api/v1/profile` | Current user's read-only HR profile. |
-| `GET /api/v1/employees/{employee_id}` | Own profile; managers can view direct reports; HR can view all. |
-| `GET /api/v1/team` | Direct reports for managers/directors; all profiles for HR (legacy list). |
-| `GET /api/v1/team/page` | Bounded keyset page: `limit` up to 100, `after` UUID, returns `items` and `next_cursor`. |
-| `PATCH /api/v1/admin/employees/{id}/role` | HR-only audited role assignment with self-demotion/reporting-line guards. |
-| `GET /api/v1/requests/{id}/calendar.ics` | Authorized export of approved leave, inclusive end date converted to ICS exclusive end. |
-| `POST /api/v1/ai/local/ask` | Optional isolated local Jana provider; requires separately prepared models/reader. |
-| `GET /api/v1/requests` | View permitted requests; filter by `employee_id`, `status`, `request_type`, and `scope=mine/review/all`; paginate with `limit` (default 50, max 100) and `offset` (default 0). |
-| `POST /api/v1/requests` | Create a leave or advance request for the current employee; optional UUID `Idempotency-Key` prevents duplicate submission. |
-| `GET /api/v1/requests/{id}` | Owner, eligible manager in the saved reviewer snapshot, or HR can read; a newly assigned manager does not automatically gain access to old requests. Full HR profile access remains independently restricted. |
-| `GET /api/v1/requests/{id}/history` | View request events with the same employee access checks as the request itself. |
-| `PATCH /api/v1/requests/{id}/review` | An assigned reviewer or HR can approve/reject a pending request. Rejection requires a reason. Self-review is forbidden for all roles. An identical retry by the same reviewer returns the existing decision. |
-| `GET /api/v1/requests/routing` | Preview own approvers and submission policy. |
-| `POST /api/v1/requests/{id}/cancel` | Owner withdraws a pending request; retries do not duplicate events. |
-| `GET /api/v1/academy/team` | Manager sees direct reports’ learning; HR sees all assignments. Optional employee/course filters. |
-| `GET /api/v1/academy/courses/{id}/attempts` | Own scored attempt history without answer keys. |
-| `GET /api/v1/ai/sources/{id}` | Authenticated view of a published source. |
-| `GET /api/v1/academy/courses` | Active course catalog with the current user's assignment state. |
-| `GET /api/v1/academy/my-courses` | Assigned courses and progress. |
-| `GET /api/v1/academy/courses/{id}` | Course material and quiz; quiz answers are never returned. |
-| `POST /api/v1/academy/assignments` | HR or the employee's manager assigns a course. |
-| `PATCH /api/v1/academy/courses/{id}/progress` | Save course progress. |
-| `POST /api/v1/academy/courses/{id}/complete` | Submit after acknowledging material. UUID `Idempotency-Key` protects retries. Below the configured threshold the course remains in progress; a passing completion is immutable. |
-| `GET /api/v1/notifications` | Current user's notifications only; optional UUID `request_id`, `unread_only` (default `false`), `limit` (default/max 100), and `offset` (default 0). |
-| `POST /api/v1/notifications/{id}/read` | Mark an own notification as read; UUID required. Retries return the original `read_at`; another user's notification returns `404`. |
-| `POST /api/v1/ai/ask` | Jana answers from retrieved knowledge articles, returns sources, or refuses and suggests HR escalation. |
+| `frontend` | Nginx: интерфейс и прокси `/api/` к бэкенду |
+| `api` | FastAPI: внутренний порт `8000` |
+| `integrations` | Фоновые задачи напоминаний и доставки событий |
 
-Roles are `worker`, `manager`, and `hr_admin`. Official profile data is read-only. Database row-level security is enabled; direct public-key browser access is denied by default. The backend uses the server-side Supabase key and enforces access in the API, so that key must never be exposed to a client.
-
-The server derives the role from the linked employee profile. A role selected in a client or supplied in a request cannot grant additional permissions. Creation and review each save the request, its history event, and the corresponding notifications in one database transaction. Responses do not expose the internal idempotency key.
-
-## Supabase setup and demo data
-
-1. Create a Supabase project and copy `.env.example` to `.env`.
-2. Set `SUPABASE_URL`, the server-side `SUPABASE_KEY`, and the project's public `SUPABASE_ANON_KEY` in `.env`. The anon key is used only by the backend's Supabase Auth signup/login client; keep the server key private and never commit `.env`. Optionally set `OPENAI_API_KEY` and `OPENAI_MODEL` for model-selected, server-validated source excerpts; without the key Jana returns matched source excerpts instead.
-3. Apply all SQL files in `database/migrations` in numeric order, currently **0001–0010**. On an existing project apply only missing migrations; inspect the current schema first. Starting the API does not apply SQL automatically. Migrations 0009–0010 add leave reservations, course lessons, the integration outbox and the HR knowledge editor. Existing completed courses and users are preserved; pending leave now reserves days. See the [operations guide](docs/operations-extensions.md) for migration boundaries, reconciliation and the disabled-by-default integration worker.
-4. In Supabase Auth, create fictional test users with emails `hr@posttech.demo`, `manager@posttech.demo`, and `employee@posttech.demo`. Set local demo passwords in Supabase; no credentials are stored in this repository.
-5. Run [database/seed.sql](database/seed.sql). It creates fictional profiles, two courses, knowledge articles, course assignments, and sample requests with history/notifications. It uses no real employee data. Optionally add [three detailed demo courses](database/seed_academy_demo.sql) after `0004`; this insert-only seed never overwrites existing content. After migration `0006`, apply [demo status guidance](database/seed_knowledge_status.sql), which refreshes only the named fictional status article.
-6. Sign in as each seeded user through `POST /api/v1/auth/login` with the password set in step 4. Send the returned `access_token` as `Authorization: Bearer <token>` to protected API routes. Keep tokens and demo passwords in your local HTTP-client environment, outside version control. To issue a refreshed session, send its `refresh_token` to `POST /api/v1/auth/refresh`.
-7. Apply `database/migrations/0005_registration_invitations.sql`. For additional employees, HR opens **Сотрудники → Пригласить сотрудника**, sets the email, role and reporting manager, and privately passes the generated code to that employee. The employee activates the invitation, creates an account and confirms the email. Profile creation and invitation consumption are atomic; the browser cannot select a real account's role. Configure SMTP and the confirmation template as described in the [registration guide](docs/registration.md). The first HR account still needs the [bootstrap linking procedure](docs/leave-workflow.md#подготовка-учётных-записей). Without a linked profile, protected HR endpoints return `403`.
-8. Configure a mail provider and install the [signup](docs/templates/confirm-signup.html) and [password recovery](docs/templates/recovery.html) templates in Supabase. Both display `{{ .Token }}`. As of 17 October 2026, this project's Resend SMTP settings are saved and remain enabled after reload; a sending-only provider key and both Russian templates are installed, and their previews have been checked. The test sender `onboarding@resend.dev` can send only to the email associated with the Resend account; a verified domain is needed later for other recipients. The owner completed registration using the received eight-digit code: a confirmed Auth account, one worker profile and a consumed invitation were verified. Resend reports both signup and recovery emails as Delivered. **The owner also confirmed completing the password reset and signing in with the new password.** A final server read still found exactly one confirmed account, one worker profile and one consumed invitation. Earlier real Auth OTP checks passed without sending emails. A successful password-reset request is a neutral acceptance response, not a delivery receipt. See the [current verification status](docs/registration.md#статус-smtp--resend) and [test-domain restriction](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain).
-
-## Local jury stand
-
-Open `Start PostTech.cmd` to run the prepared portal at **http://127.0.0.1:8010**; `Stop PostTech.cmd` stops its owned process. Internet is required for Supabase. See the [jury runbook](docs/jury-stand.md), [Jana evaluation](docs/jana-quality.md), and [5–6 minute defense script](docs/presentation/defense-script.md). Private jury credentials stay in `.local/jury-access.html`, outside Git and presentation files.
-
-## Run
-
-With `.env` configured and database migrations applied, open `Start PostTech Docker.cmd` or run `docker compose up --build -d --remove-orphans --wait`. The launcher waits for a healthy container and opens **http://localhost:8000**. The three services are `frontend` (Nginx), `api` (Python), and `integrations` (reminders and delivery workers). Nginx serves the current frontend and proxies `/api/v1` to the internal API. Supabase remains external. See [Docker and local AI](docs/docker.md).
-
-Compose rebuilds the image on `docker compose up` (`pull_policy: build`). After changing source files, run the launcher again. Docker Desktop's Start/Restart button and `docker compose restart` only restart the existing container; they do not include new code. The separate non-Docker launcher `Start PostTech.cmd` uses port **8010**, so use port **8000** when checking Docker.
-
-The API container can start without `.env`, but Supabase-dependent endpoints will not work until valid credentials are provided. `GET /api/v1/health/live` checks process liveness. `/api/v1/health/ready` performs a real knowledge-table read and verifies the columns introduced by migration 0006. Failures return a generic 503 without configuration details.
-
-For local development, use Python 3.12+, install `requirements-dev.txt`, and run `uvicorn app.main:app --reload`. The Docker image uses Python 3.12.
-
-For frontend development, use Node.js 22+, then run `npm ci` and `npm run dev` from `frontend/`. Open `http://localhost:5173`; `/api` is proxied to `http://127.0.0.1:8000`. `npm run build` creates `frontend/dist`, which FastAPI serves after its next startup. If no build exists, `/` keeps the API information response. The login screen offers an explicit, isolated demo mode for employee, manager and HR demo roles; it does not contact Supabase or fall back to demo after a failed real login.
-
-## Scope and integration boundary
-
-- **Implemented:** invitation registration, password login/recovery, role-aware profile reads, leave/advance requests with history and retry protection, manager/HR review, notifications, assigned learning with server-side quiz scoring, and source-grounded Jana Q&A/refusal.
-- **Mocked:** employee records are seeded snapshots marked `mock-1c-zup`; courses and HR policy articles are fictional demo data.
-- **Not connected yet:** live 1C:ЗУП and Documentolog integrations. Replace the profile snapshot source with a read-only 1C adapter and add a Documentolog adapter behind service boundaries; do not let either integration make employee-editable official data.
-- **Not included:** production HR policies, real employee data, electronic signatures, original document storage, recruiting, or AI-driven personnel decisions.
-
-Leave requests reserve days in a transactional ledger. Approval preserves the reservation; rejection or withdrawal releases it. Official balance is reconciled by HR against an external snapshot. Approval starts a separate HR document-fulfillment stage and does not claim that 1C or Documentolog has issued a document. The explicit prototype policy uses inclusive calendar dates and the Asia/Qyzylorda business date: past starts and overlaps with pending/approved leave are blocked. Owners can withdraw pending requests. Official entitlement, holiday calendars, notice periods, substitutes and recall of approved leave require a confirmed company policy and are not inferred. A manager’s own request goes to their eligible superior or HR; an HR employee cannot review their own request. With no eligible approver, submission is blocked with an explanation.
-
-## Tests
-
-Install `requirements-dev.txt` and run `pytest`. The default API tests use local substitutes for external services. Real PostgreSQL tests are opt-in and skipped unless `POSTTECH_TEST_DATABASE_URL` is set. Neither test suite confirms that migrations are installed in your Supabase project; use the [manual leave workflow](docs/leave-workflow.md) against a prepared demo database to verify that full path.
-
-To run the [database tests](tests/test_request_workflow_db.py), prepare an empty local PostgreSQL control database named `posttech_test_*` (for example, `posttech_test_control`). Use a local test administrator allowed to create databases and roles (`CREATEDB`, `CREATEROLE`), initialize the test `service_role` with `BYPASSRLS`, and `SET ROLE` to the test roles. A local PostgreSQL installation is sufficient; Docker and a Supabase account are not required. Then run in PowerShell, replacing the connection placeholders locally:
+PostgreSQL и Auth используются во внешнем Supabase-проекте. Внешние получатели 1С / Documentolog включаются отдельно после настройки; стандартный запуск не подключает их автоматически.
 
 ```powershell
-python -m pip install -r requirements-dev.txt
-python -m pip install -r tests/requirements-db.txt
-$env:POSTTECH_TEST_DATABASE_URL = 'postgresql://TEST_USER:TEST_PASSWORD@127.0.0.1:5432/posttech_test_control'
-python -m pytest tests/test_request_workflow_db.py tests/test_request_lifecycle_db.py tests/test_academy.py -q
-Remove-Item Env:POSTTECH_TEST_DATABASE_URL
+# Состояние сервисов
+docker compose ps
+
+# Логи API
+docker compose logs -f api
+
+# Применить изменённый .env к API
+docker compose up -d --no-deps --force-recreate api
+
+# Остановить проект
+docker compose stop
 ```
 
-Tests create a separate `posttech_test_<UUID>` database, apply the real migrations there, and drop only that generated database afterward. They do not clear the control database or connect to a configured Supabase project. Missing cluster roles `anon`, `authenticated`, and `service_role` are created for the fixture and retained; existing roles are checked, not modified. Use a dedicated local test PostgreSQL instance and keep its connection credentials outside version control.
+После изменения исходников повторите команду запуска со сборкой. `docker compose restart` перезапускает существующий контейнер без применения нового кода и окружения.
 
-Latest consolidation verification (17 October 2026): **1119 backend tests passed**, including real PostgreSQL tests on isolated disposable databases. See [consolidation report](docs/branch-consolidation.md) for frontend checks and deployment prerequisites.
+### Локальная разработка
 
-The guarded live recovery check creates only one uniquely marked fictional Auth account and sends no emails. It generates a real Supabase recovery OTP administratively, changes the password through the public application endpoint, rejects replay and the old password, verifies the new password, and checks revocation of the previous refresh session:
+Бэкенд — в первом терминале из корня проекта:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/verify_password_recovery.py --live --project-ref zcsoipcwymhowmvnytxf
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-The explicit project reference must match the configured project; the API URL must be loopback. Retain the ignored `.local/recovery-credentials.json` checkpoint when retrying: the script validates its administrative fixture marker before any change. Existing employee and scenario accounts are never selected. The secret-free result is saved to `.local/recovery-verification.json`. The first live run passed 12 checks across 8 API calls; email delivery remains unverified. Password recovery has local per-email/IP limits in addition to Supabase limits; multiple API workers need a shared proxy limit.
+Фронтенд — во втором терминале:
 
-## Role demonstration and evaluation
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
 
-See the [role matrix and six-minute demo](docs/hackathon-scenarios.md), [architecture and integration boundaries](docs/architecture.md), and [live verification record](docs/live-verification.md). All demonstration accounts are fictional. `scripts/provision_scenario_accounts.py --project-ref zcsoipcwymhowmvnytxf` creates a repeatable seven-account hierarchy and writes passwords only to ignored `.local/scenario-credentials.json`; never publish that file. `scripts/verify_role_scenarios.py` exercises the installed API with this fixture and intentionally accepts only this test project. For another project, review and adapt the fixture guard before running it. The login uses one email/password form: the server chooses rights from the linked profile, while the separately labelled demo picker works entirely in memory.
+Интерфейс открывается на **[http://localhost:5173](http://localhost:5173)**. Vite проксирует `/api` на `http://127.0.0.1:8000`; другой адрес задаётся через `API_PROXY_TARGET` в `frontend/.env.local`. При занятом Docker-порту `8000` сначала остановите Docker-стек либо настройте другой порт API и цель прокси.
 
+При прямом запуске FastAPI доступны **[Swagger UI](http://127.0.0.1:8000/docs)**, **[ReDoc](http://127.0.0.1:8000/redoc)** и **[OpenAPI JSON](http://127.0.0.1:8000/openapi.json)**. В стандартном Docker-стеке Nginx проксирует только `/api/`; путь `/docs` на адресе портала не является Swagger.
 
-## Stages 7–10
+Отдельный демонстрационный запуск через [Start PostTech.cmd](<Start PostTech.cmd>) использует порт `8010` — см. [руководство для демонстрации](docs/jury-stand.md).
 
-The subsequent [five HR workflow improvements](docs/hr-workflows.md) add HR document fulfillment, atomic CSV/XLSX employee import previews, sequential onboarding tracks, role-scoped Jana operational reports, and deduplicated reminders. Apply migrations 0011–0012 before rebuilding. The standard Compose stack runs reminders in `integrations`; direct Python launches need `python -m scripts.workflow_worker` in a separate process. Achievements/gamification are intentionally omitted.
+## Страницы и маршруты фронтенда
 
-The live stand now includes date-limited approval deputies, an HR course editor with immutable published versions, assignment deadlines, Russian/Kazakh UI and translated course content, and consent-based in-portal HR tickets. See [verification and boundaries](docs/stages-7-10.md). Run `python scripts/verify_workspace_live.py` only with the marked fictional jury/scenario fixtures; the checkpoint prevents duplicate submissions.
+В Docker к пути добавляется `http://localhost:8000`, в режиме Vite — `http://localhost:5173`. При отсутствии сессии показывается экран авторизации. Формы приглашения, регистрации, подтверждения почты и восстановления пароля входят в сценарий авторизации.
 
-New authenticated API routes are under `/api/v1/workspace`: `/delegations`, `/courses`, `/assignments/{id}/deadline`, and `/tickets`. Only HR can administer deputies/course content or answer tickets. A manager's temporary approval right does not grant employee-profile or learning-management rights. `Accept-Language: kk` selects translated course content and notification labels; missing content translations are explicitly shown as Russian originals.
+| Маршрут | Страница / действие | Доступ |
+| --- | --- | --- |
+| `/login` | Вход; при активной сессии переход на главную | Без сессии / все роли |
+| `/` | Личный кабинет: отпуск, заявки и обучение | Все роли |
+| `/requests` | Свои заявки, поиск и фильтры | Все роли |
+| `/requests/new?type=leave` | Создание заявки на отпуск | Все роли |
+| `/requests/new?type=advance` | Создание заявки на аванс | Все роли |
+| `/requests/{request_id}` | Карточка заявки, решение, история и оформление | По доступу к заявке |
+| `/requests?scope=review` | Очередь согласования | Руководитель, директор, HR |
+| `/calendar` | Календарь отпусков | Все роли; данные ограничены правами |
+| `/calendar?select=1` | Выбор дат для заявки на отпуск | Все роли |
+| `/academy` | Каталог, назначенные курсы, уроки и тесты | Все роли |
+| `/academy?tab=team` | Обучение команды | Руководитель, директор, HR |
+| `/jana` | AI-помощник Jana | Все роли |
+| `/profile` | Свой кадровый профиль | Все роли |
+| `/notifications` | Центр уведомлений | Все роли, только свои события |
+| `/activity` | Лента событий | Все роли |
+| `/team` | Сотрудники и обучение команды | Руководитель, директор, HR |
+| `/help` | Помощь и ссылки на поддержку | Все роли |
+| `/services` | Каталог сервисов | Все роли |
+| `/support` | Обращения в HR; у HR — очередь обращений | Все роли, с разделением данных |
+| `/settings` | Настройки интерфейса и выход | Все роли |
+| `/hr-tools` | Навигация по HR-инструментам | Только HR |
+| `/operations` | Остатки отпусков, база знаний и интеграции | Только HR |
+| `/delegations` | Назначение и отзыв заместителей | Только HR |
+| `/course-editor` | Создание, публикация и архивирование курсов | Только HR |
+| `/hr-workflow` | Оформление, импорт сотрудников, программы и напоминания | Только HR |
+
+Маршруты определены в [App.tsx](frontend/src/app/App.tsx). Сервер дополнительно проверяет права каждого API-запроса: доступ к странице не заменяет проверку данных на бэкенде.
+
+## Реализованные API-запросы
+
+Базовый префикс — **`/api/v1`**. Ниже перечислены все **79 операций** из [HTTP-маршрутов](app/presentation/http/routes/), подключённых в основном приложении.
+
+Для защищённых запросов передавайте заголовок:
+
+```http
+Authorization: Bearer <access_token>
+Content-Type: application/json
+Accept-Language: ru
+```
+
+`Accept-Language: kk` выбирает казахскую локализацию там, где она поддержана. Права `HR` ниже означают роль `hr_admin`; «согласующий» — пользователя, которому сервер разрешает рассмотреть конкретную заявку. Состояние, принадлежность записи и линия подчинения проверяются дополнительно.
+
+### Авторизация и приглашения
+
+| Метод | Маршрут | Назначение | Доступ |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/auth/invitations/check` | Проверить код приглашения и получить привязанный email | Без сессии, по коду |
+| `POST` | `/api/v1/auth/register` | Зарегистрироваться по приглашению: имя, фамилия, пароль | Без сессии, по приглашению |
+| `POST` | `/api/v1/auth/verify-registration` | Подтвердить email-код и активировать профиль | Без сессии, по приглашению и OTP |
+| `POST` | `/api/v1/auth/resend-registration` | Повторно отправить код подтверждения | Без сессии, с ограничением частоты |
+| `POST` | `/api/v1/auth/complete-invitation` | Завершить активацию с подтверждённой почтой и паролем | Без сессии, по приглашению и учётным данным |
+| `POST` | `/api/v1/auth/login` | Получить `access_token` и `refresh_token` | По email и паролю |
+| `POST` | `/api/v1/auth/refresh` | Обновить сессию | По `refresh_token` в теле |
+| `POST` | `/api/v1/auth/password-reset` | Запросить код восстановления пароля | Без сессии; ответ не раскрывает существование аккаунта |
+| `POST` | `/api/v1/auth/password-reset/confirm` | Подтвердить код и задать новый пароль | Без сессии, по email и OTP |
+| `GET` | `/api/v1/auth/invitations` | Получить приглашения | HR |
+| `POST` | `/api/v1/auth/invitations` | Выпустить приглашение с ролью, должностью и руководителем | HR |
+| `POST` | `/api/v1/auth/invitations/{invitation_id}/send` | Отправить письмо с приглашением | HR; требуется почтовый провайдер |
+| `POST` | `/api/v1/auth/invitations/{invitation_id}/revoke` | Отозвать приглашение | HR |
+| `DELETE` | `/api/v1/auth/invitations/{invitation_id}` | Альтернативный маршрут отзыва приглашения | HR |
+
+### Профили, сотрудники и роли
+
+| Метод | Маршрут | Назначение | Доступ |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/profile` | Получить свой профиль, обучение и уведомления | Все роли |
+| `GET` | `/api/v1/employees/{employee_id}` | Прочитать кадровый профиль | Владелец; руководитель / директор своего подчинённого; HR |
+| `GET` | `/api/v1/team` | Получить сотрудников команды; для HR — сотрудников организации | Руководитель, директор, HR |
+| `GET` | `/api/v1/team/page` | Получить страницу сотрудников с курсором `after` и `limit` до 100 | Руководитель, директор, HR |
+| `GET` | `/api/v1/admin/employees` | Получить административный список сотрудников | HR |
+| `PATCH` | `/api/v1/admin/employees/{employee_id}/role` | Изменить роль с аудитом и проверкой иерархии | HR |
+
+### Заявки и календарь отпусков
+
+| Метод | Маршрут | Назначение | Доступ |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/requests` | Получить доступные заявки с фильтрами и пагинацией | Все роли, в пределах прав |
+| `GET` | `/api/v1/requests/routing` | Проверить возможность подачи и увидеть согласующих | Все роли, для себя |
+| `POST` | `/api/v1/requests` | Создать заявку `leave` или `advance` | Все роли, для себя |
+| `GET` | `/api/v1/requests/{request_id}` | Получить карточку заявки | Владелец, допустимый согласующий, HR |
+| `GET` | `/api/v1/requests/{request_id}/history` | Получить историю событий заявки | По доступу к заявке |
+| `PATCH` | `/api/v1/requests/{request_id}/review` | Одобрить или отклонить заявку; для отказа нужен комментарий | Допустимый согласующий / HR, кроме владельца |
+| `POST` | `/api/v1/requests/{request_id}/cancel` | Отозвать ожидающую решения заявку | Владелец |
+| `GET` | `/api/v1/requests/{request_id}/calendar.ics` | Скачать одобренный отпуск как `.ics` | По доступу к заявке |
+| `GET` | `/api/v1/requests/calendar.ics` | Скачать календарь доступных одобренных отпусков | Все роли, с проверкой области экспорта |
+
+Список заявок принимает `employee_id`, `status`, `request_type`, `scope=mine|review|all`, `limit` (1–100, по умолчанию 50) и `offset`. Статусы: `pending`, `approved`, `rejected`, `cancelled`.
+
+Календарный экспорт принимает `scope=mine|team|all`, `employee_id`, `start_date`, `end_date`. Создание заявки поддерживает UUID-заголовок `Idempotency-Key`: повтор того же запроса с тем же ключом не создаёт дубль. Даты отпуска включают начальный и конечный день; прошедшие даты и пересечения проверяются сервером.
+
+### Jana Academy и редактор курсов
+
+| Метод | Маршрут | Назначение | Доступ |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/academy/courses` | Получить активный каталог и состояние назначения | Все роли |
+| `GET` | `/api/v1/academy/my-courses` | Получить своё назначенное обучение | Все роли |
+| `GET` | `/api/v1/academy/team` | Получить обучение команды с фильтрами по сотруднику и курсу | Руководитель, директор, HR |
+| `GET` | `/api/v1/academy/courses/{course_id}` | Получить материал, уроки и тест без ключей ответов | Назначенный сотрудник; руководитель, директор, HR |
+| `GET` | `/api/v1/academy/courses/{course_id}/attempts` | Получить свои результаты попыток | Владелец назначения |
+| `POST` | `/api/v1/academy/assignments` | Назначить курс сотруднику | Его руководитель / директор либо HR |
+| `PATCH` | `/api/v1/academy/courses/{course_id}/progress` | Сохранить прогресс от 0 до 99 процентов | Владелец назначения |
+| `POST` | `/api/v1/academy/courses/{course_id}/complete` | Отправить ответы и получить вычисленный результат | Владелец назначения |
+| `POST` | `/api/v1/workspace/courses/{course_id}/lessons/{lesson_id}/complete` | Отметить прохождение урока | Владелец назначения |
+| `PATCH` | `/api/v1/workspace/assignments/{assignment_id}/deadline` | Изменить срок назначенного обучения | Руководитель / директор сотрудника либо HR |
+| `GET` | `/api/v1/workspace/courses` | Получить курсы для редактора, включая черновики | HR |
+| `POST` | `/api/v1/workspace/courses` | Создать, сохранить, опубликовать или архивировать курс | HR |
+
+Порог прохождения задаётся курсом. При неудаче сохраняется попытка и доступен повтор; успешно завершённое обучение защищено от изменения. Отправка теста поддерживает UUID `Idempotency-Key`. Редактор использует `action=create|save|publish|archive`, `id`, `revision` и данные курса; опубликованные версии сохраняют историю обучения.
+
+### Программы обучения
+
+| Метод | Маршрут | Назначение | Доступ |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/workspace/tracks` | Получить активные программы и шаги | HR |
+| `POST` | `/api/v1/workspace/tracks` | Создать последовательную программу обучения | HR |
+| `DELETE` | `/api/v1/workspace/tracks/{track_id}` | Архивировать программу | HR |
+| `POST` | `/api/v1/workspace/tracks/{track_id}/enroll` | Включить сотрудника в программу | HR |
+| `GET` | `/api/v1/workspace/my-tracks` | Получить программы и прогресс; `employee_id` — для доступного сотрудника | Владелец, его руководитель / директор, HR |
+
+### AI Jana и обращения в HR
+
+| Метод | Маршрут | Назначение | Доступ |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/ai/ask` | Ответить на вопрос по базе знаний либо показать ролевую сводку | Все роли |
+| `GET` | `/api/v1/ai/sources/{source_id}` | Открыть опубликованный источник; поддерживается `version` | Все роли |
+| `POST` | `/api/v1/ai/local/ask` | Задать вопрос изолированному локальному провайдеру | Все роли; нужны подготовленные модели |
+| `GET` | `/api/v1/ai/local/sources/{article_id}` | Прочитать источник локального провайдера | Все роли |
+| `GET` | `/api/v1/workspace/summary` | Получить сводку доступных заявок, обучения и задач | Все роли, по области доступа |
+| `GET` | `/api/v1/workspace/tickets` | Получить обращения; фильтры `status`, `search`, `limit`, `offset` | Владелец видит свои, HR — все |
+| `GET` | `/api/v1/workspace/tickets/{ticket_id}` | Открыть обращение и ответ | Владелец или HR |
+| `POST` | `/api/v1/workspace/tickets` | Создать обращение с вопросом и контекстом | Все роли; требуется `consent: true` |
+| `POST` | `/api/v1/workspace/tickets/{ticket_id}/answer` | Ответить на обращение | HR |
+
+Без `OPENAI_API_KEY` основной OpenAI-провайдер возвращает найденную выдержку из базы знаний с `mode=excerpt` и причиной fallback. С ключом выполняется генерация и проверка опоры на источники; ошибки провайдера также могут привести к выдержке. Локальный режим настраивается отдельно — [инструкция](docs/docker.md).
+
+### Уведомления
+
+| Метод | Маршрут | Назначение | Доступ |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/notifications` | Получить уведомления: `request_id`, `unread_only`, `limit`, `offset` | Только собственные |
+| `POST` | `/api/v1/notifications/{notification_id}/read` | Отметить уведомление прочитанным | Только владелец |
+
+### Заместители, остатки и база знаний
+
+| Метод | Маршрут | Назначение | Доступ |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/workspace/delegations` | Получить назначения заместителей | HR — все; остальные — где участвуют |
+| `POST` | `/api/v1/workspace/delegations` | Назначить заместителя на период | HR |
+| `DELETE` | `/api/v1/workspace/delegations/{delegation_id}` | Отозвать замещение | HR |
+| `GET` | `/api/v1/workspace/leave-balance` | Получить остаток и резервы; `employee_id` либо `request_id` | Владелец, допустимый руководитель / согласующий, HR |
+| `POST` | `/api/v1/workspace/leave-balance/reconcile` | Сверить остаток с кадровым источником и учесть заявки | HR |
+| `GET` | `/api/v1/workspace/knowledge` | Получить статьи и черновики с пагинацией | HR |
+| `GET` | `/api/v1/workspace/knowledge/{article_id}/history` | Получить историю изменений статьи | HR |
+| `POST` | `/api/v1/workspace/knowledge` | Создать, сохранить, утвердить или архивировать статью | HR |
+
+Редактор базы знаний принимает `action=create|save|approve|archive`, `id`, `revision`, содержимое `data` и срок проверки `due`. В ответах Jana используются опубликованные источники с проверкой актуальности.
+
+### Кадровое оформление, импорт и интеграции
+
+| Метод | Маршрут | Назначение | Доступ |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/workspace/fulfillment` | Получить очередь оформления: `state`, `offset` | HR |
+| `GET` | `/api/v1/workspace/fulfillment/{request_id}` | Получить этап оформления, историю и доставки | По доступу к заявке |
+| `POST` | `/api/v1/workspace/fulfillment/{request_id}` | Начать или завершить оформление: `action=start` / `action=complete` | HR |
+| `GET` | `/api/v1/workspace/employee-import/template` | Скачать CSV-шаблон сотрудников | HR |
+| `POST` | `/api/v1/workspace/employee-import/preview` | Проверить CSV/XLSX и подготовить предпросмотр изменений | HR |
+| `POST` | `/api/v1/workspace/employee-import/{batch_id}/apply` | Атомарно применить проверенный пакет | HR |
+| `GET` | `/api/v1/workspace/integrations` | Получить состояние подключений и очередь событий | HR |
+| `GET` | `/api/v1/workspace/integrations/{event_id}/attempts` | Получить историю доставки события | HR |
+| `POST` | `/api/v1/workspace/integrations/{event_id}/retry` | Поставить событие на повторную доставку | HR |
+| `GET` | `/api/v1/workspace/workflow-policy` | Прочитать настройки напоминаний и эскалаций | HR |
+| `PUT` | `/api/v1/workspace/workflow-policy` | Сохранить настройки напоминаний | HR |
+| `POST` | `/api/v1/workspace/workflow-policy/run` | Выполнить обработку напоминаний вручную | HR |
+
+Импорт принимает JSON с полями `filename` и `content` (содержимое файла в Base64), а не `multipart/form-data`. Предпросмотр отделён от применения. Получатели 1С / Documentolog должны быть настроены явно; без них автоматическая отправка документов не считается выполненной. Подробности — [HR-процессы](docs/hr-workflows.md) и [операционные расширения](docs/operations-extensions.md).
+
+### Состояние сервиса
+
+| Метод | Маршрут | Назначение | Доступ |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/health/live` | Проверить, что процесс API работает | Без авторизации |
+| `GET` | `/api/v1/health/ready` | Проверить чтение Supabase и необходимые таблицы / столбцы | Без авторизации |
+
+`live` не подтверждает готовность базы данных. `ready` выполняет реальные чтения и при недоступной зависимости или неполной схеме возвращает `503`.
+
+### Форматы и ошибки
+
+Точные обязательные поля и схемы ответов описаны в OpenAPI, [DTO](app/application/dto/) и моделях соответствующих [прикладных сценариев](app/application/use_cases/).
+
+| Код | Значение |
+| --- | --- |
+| `200` | Успешное чтение или изменение |
+| `201` | Успешное создание для операций с этим статусом |
+| `401` | Нет действующей авторизации |
+| `403` | Недостаточно прав либо отсутствует связанный профиль |
+| `404` | Ресурс отсутствует или скрыт правилами доступа |
+| `409` | Конфликт состояния, версии или бизнес-правил |
+| `413` | Превышен допустимый объём, например при экспорте календаря |
+| `422` | Ошибка входных данных |
+| `429` | Превышена частота запросов |
+| `503` | Зависимость или сервис временно недоступны |
+
+## Примеры HTTP-запросов
+
+Примеры подходят для HTTP-клиента с переменными. Укажите собственные тестовые данные; даты отпуска выбирайте в будущем, с учётом остатка и отсутствия пересечений. Каждый новый запрос создания должен иметь новый UUID `submissionKey`; для повтора того же запроса сохраняйте его.
+
+```http
+@baseUrl = http://localhost:8000/api/v1
+@accessToken = <access_token после входа>
+@reviewerToken = <access_token согласующего>
+@requestId = <UUID созданной заявки>
+@submissionKey = <новый UUID для этой заявки>
+@leaveStart = <дата YYYY-MM-DD>
+@leaveEnd = <дата YYYY-MM-DD>
+
+### Вход
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "employee@example.com",
+  "password": "<пароль тестового пользователя>"
+}
+
+### Свои заявки на отпуск
+GET {{baseUrl}}/requests?scope=mine&request_type=leave&limit=20&offset=0
+Authorization: Bearer {{accessToken}}
+
+### Создание заявки на отпуск
+POST {{baseUrl}}/requests
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Idempotency-Key: {{submissionKey}}
+
+{
+  "request_type": "leave",
+  "start_date": "{{leaveStart}}",
+  "end_date": "{{leaveEnd}}",
+  "comment": "Плановый отпуск"
+}
+
+### Создание заявки на аванс
+POST {{baseUrl}}/requests
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "request_type": "advance",
+  "amount": 20000,
+  "comment": "Прошу согласовать аванс"
+}
+
+### Решение согласующего
+PATCH {{baseUrl}}/requests/{{requestId}}/review
+Authorization: Bearer {{reviewerToken}}
+Content-Type: application/json
+
+{
+  "status": "approved",
+  "reviewer_comment": "Согласовано"
+}
+
+### Вопрос AI Jana
+POST {{baseUrl}}/ai/ask
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Accept-Language: ru
+
+{
+  "question": "Как оформить отпуск?"
+}
+```
+
+Для отказа используйте `status: "rejected"` и непустой `reviewer_comment`. Дополнительные примеры — [leave-workflow.http](examples/leave-workflow.http) и [пошаговый сценарий заявок](docs/leave-workflow.md).
+
+## Настройки окружения
+
+Полный шаблон — [.env.example](.env.example). Серверные ключи используются только бэкендом.
+
+| Переменная | Для чего нужна |
+| --- | --- |
+| `SUPABASE_URL` | Адрес Supabase-проекта |
+| `SUPABASE_KEY` | Серверный ключ для доступа API к данным |
+| `SUPABASE_ANON_KEY` | Ключ для операций Supabase Auth через бэкенд |
+| `OPENAI_API_KEY` | Генерация и проверка ответов Jana через OpenAI |
+| `OPENAI_MODEL` | Модель основного провайдера; по умолчанию `gpt-4o-mini` |
+| `JANA_PROVIDER` | `openai` либо `local` |
+| `JANA_READER_URL`, `JANA_READER_MODEL` | Адрес и имя локальной модели |
+| `JANA_MODEL_PATH` | Существующий GGUF-файл для `compose.ai.yaml` |
+| `RESEND_API_KEY`, `INVITATION_EMAIL_FROM` | Отправка HR-приглашений |
+| `PORTAL_PUBLIC_URL` | Адрес портала для ссылок в письмах |
+| `POSTTECH_HTTP_PORT` | Порт Docker-портала; по умолчанию `8000` |
+| `INTEGRATION_1C_*`, `INTEGRATION_DOCUMENTOLOG_*` | Включение, адреса и секреты внешних получателей |
+
+SMTP для подтверждения почты и сброса пароля настраивается в Supabase отдельно от `RESEND_API_KEY`, используемого приложением для приглашений.
+
+## Проверки
+
+Бэкенд из корня проекта:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+```
+
+Фронтенд из `frontend/`:
+
+```powershell
+npm run check:architecture
+npm run build
+npm test
+npm run format:check
+npx playwright install chromium
+npm run test:e2e
+```
+
+Основные тесты используют контролируемые замены внешних сервисов. Реальные PostgreSQL-проверки включаются через `POSTTECH_TEST_DATABASE_URL` и требуют отдельной локальной тестовой базы `posttech_test_*` с правами на создание изолированных баз и ролей. Порядок подготовки — [tests/run_database_tests.ps1](tests/run_database_tests.ps1) и [описание проверок](docs/branch-consolidation.md).
+
+Прохождение локальных тестов не подтверждает применение миграций и настройку почты в конкретном Supabase-проекте; для этого используются сценарии проверки подготовленного стенда.
+
+## Подробная документация
+
+| Тема | Руководство |
+| --- | --- |
+| Архитектура и границы слоёв | [architecture.md](docs/architecture.md) |
+| Фронтенд и локальная разработка | [frontend.md](docs/frontend.md) |
+| Docker и локальная AI-модель | [docker.md](docs/docker.md) |
+| Приглашения, подтверждение и восстановление | [registration.md](docs/registration.md) |
+| Заявки, роли и подготовка аккаунтов | [leave-workflow.md](docs/leave-workflow.md) |
+| Администрирование ролей | [hr-administration.md](docs/hr-administration.md) |
+| Контракт профиля | [profile-api.md](docs/profile-api.md) |
+| Контракт и поведение AI Jana | [ai-jana-api.md](docs/ai-jana-api.md) |
+| AI-проверки и оценка качества | [jana-quality.md](docs/jana-quality.md) |
+| Остатки, база знаний и интеграции | [operations-extensions.md](docs/operations-extensions.md) |
+| Импорт, оформление и программы обучения | [hr-workflows.md](docs/hr-workflows.md) |
+| Ролевые сценарии демонстрации | [hackathon-scenarios.md](docs/hackathon-scenarios.md) |
+| Подготовка демонстрационного стенда | [jury-stand.md](docs/jury-stand.md) |
+
+Проект реализует MVP кадрового портала. Промышленные интеграции с 1С:ЗУП и Documentolog требуют реальных получателей и настройки, а электронная подпись, оригиналы кадровых документов и производственные правовые регламенты не заявлены как готовые функции.
