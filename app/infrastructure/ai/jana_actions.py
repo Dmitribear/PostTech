@@ -1,6 +1,5 @@
 import re
 
-
 ACTION_ROUTES = {
     "leave_new": ("Оформить отпуск", "/calendar?select=1"),
     "advance_new": ("Запросить аванс", "/requests/new?type=advance"),
@@ -14,11 +13,24 @@ ACTION_ROUTES = {
 }
 
 SOURCE_ACTIONS = {
-    1: "leave_new", 2: "advance_new", 3: "profile", 4: "requests_mine",
-    5: "profile", 6: "profile", 7: "academy", 8: "academy",
-    9: "notifications", 10: "support", 11: "calendar", 12: "requests_mine",
-    13: "academy", 14: "leave_new", 15: "support", 16: "requests_review",
-    17: "requests_mine", 18: "requests_mine",
+    1: "leave_new",
+    2: "advance_new",
+    3: "profile",
+    4: "requests_mine",
+    5: "profile",
+    6: "profile",
+    7: "academy",
+    8: "academy",
+    9: "notifications",
+    10: "support",
+    11: "calendar",
+    12: "requests_mine",
+    13: "academy",
+    14: "leave_new",
+    15: "support",
+    16: "requests_review",
+    17: "requests_mine",
+    18: "requests_mine",
 }
 
 KAZAKH_ACTION_LABELS = {
@@ -58,7 +70,11 @@ def localize_ui_captions(answer: str, language: str) -> str:
     if language != "kk":
         return answer
     for label, translated in KAZAKH_UI_CAPTIONS.items():
-        answer = re.sub(r'([«"“])' + re.escape(label) + r'([»"”])', lambda match: match[1] + translated + match[2], answer)
+        answer = re.sub(
+            r'([«"“])' + re.escape(label) + r'([»"”])',
+            lambda match: match[1] + translated + match[2],
+            answer,
+        )
     return answer
 
 
@@ -76,12 +92,18 @@ def source_action_ids(sources: list[dict]) -> list[str]:
     return list(dict.fromkeys(actions))
 
 
-def action_buttons(ids: list[str], role: str = "worker", language: str = "ru") -> list[dict]:
+def action_buttons(
+    ids: list[str], role: str = "worker", language: str = "ru"
+) -> list[dict]:
     buttons = []
     for action_id in dict.fromkeys(ids):
         if action_id not in ACTION_ROUTES:
             continue
-        if action_id == "requests_review" and role not in {"manager", "director", "hr_admin"}:
+        if action_id == "requests_review" and role not in {
+            "manager",
+            "director",
+            "hr_admin",
+        }:
             continue
         label, href = ACTION_ROUTES[action_id]
         if language == "kk":

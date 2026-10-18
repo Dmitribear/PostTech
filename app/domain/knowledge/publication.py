@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
-FIELDS = "id,title,content,source_title,source_url,active,version,updated_at,reviewed_at,review_due_at"
+FIELDS = "id,title,content,source_title,source_url,active,editorial_state,version,updated_at,reviewed_at,review_due_at"
 
 
 def _timestamp(value):
@@ -26,7 +26,11 @@ def freshness(article: dict, now=None) -> str:
 
 
 def usable(article: dict, now=None) -> bool:
-    return article.get("active", True) is True and freshness(article, now) == "reviewed"
+    return (
+        article.get("active", True) is True
+        and article.get("editorial_state", "legacy") in {"legacy", "published"}
+        and freshness(article, now) == "reviewed"
+    )
 
 
 def snapshot_version(article: dict) -> str:

@@ -1,3 +1,4 @@
+import type { TelegramLink, TelegramStatus } from '@/shared/api/contracts';
 /**
  * Isolated demonstration data. This module never calls the network and is only
  * instantiated after the user explicitly chooses the labelled demo experience.
@@ -186,6 +187,34 @@ export interface DemoSnapshot {
 }
 
 export class DemoApi implements HrApi {
+  async getTelegramStatus(): Promise<TelegramStatus> {
+    return {
+      enabled: false,
+      linked: false,
+      telegram_username: null,
+      notifications_enabled: false,
+      bot_username: null,
+    };
+  }
+  async createTelegramLink(): Promise<TelegramLink> {
+    throw new ApiError(
+      403,
+      'Telegram недоступен в демонстрационном режиме. Войдите в рабочий аккаунт.',
+    );
+  }
+  async unlinkTelegram(): Promise<void> {
+    throw new ApiError(
+      403,
+      'Telegram недоступен в демонстрационном режиме. Войдите в рабочий аккаунт.',
+    );
+  }
+  async setTelegramNotifications(_enabled: boolean): Promise<TelegramStatus> {
+    throw new ApiError(
+      403,
+      'Telegram недоступен в демонстрационном режиме. Войдите в рабочий аккаунт.',
+    );
+  }
+
   readonly mode = 'demo' as const;
   private readonly employees = profiles();
   private actor: EmployeeProfile;

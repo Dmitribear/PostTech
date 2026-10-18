@@ -1,4 +1,5 @@
-﻿import type {
+import type { TelegramLink, TelegramStatus } from '@/shared/api/contracts';
+import type {
   AppRole,
   CalendarExportFilters,
   AssignedCourse,
@@ -36,7 +37,17 @@ export type { HrApi } from '@/shared/api/contracts';
 export const SESSION_KEY = 'jana.hr.session.v1';
 
 const translatedErrors: Record<string, string> = {
+  'Telegram integration is not configured':
+    'Подключение Telegram ещё не настроено. Обратитесь к администратору.',
+  'Telegram is already linked; unlink it first':
+    'Telegram уже подключён. Обновите статус или сначала отключите текущий аккаунт.',
+  'Telegram account is not linked':
+    'Telegram пока не подключён. Обновите статус и подключите аккаунт.',
+  'Telegram is temporarily unavailable': 'Telegram временно недоступен. Попробуйте позже.',
+
   'Source not found': 'Источник больше не опубликован или недоступен.',
+  'Jana AI is busy. Try again shortly':
+    'Jana сейчас отвечает на другие вопросы. Повторите вопрос немного позже.',
   'Jana AI is temporarily unavailable': 'Jana сейчас недоступна. Попробуйте ещё раз.',
   'Jana knowledge base is temporarily unavailable':
     'База знаний Jana временно недоступна. Попробуйте ещё раз.',
@@ -338,6 +349,24 @@ function queryString(filters: object = {}): string {
 }
 
 export class LiveApi implements HrApi {
+  getTelegramStatus(): Promise<TelegramStatus> {
+    return this.send('/telegram/status');
+  }
+  async createTelegramLink(): Promise<TelegramLink> {
+    return validateTelegramLink(
+      await this.send<TelegramLink>('/telegram/link', { method: 'POST' }),
+    );
+  }
+  async unlinkTelegram(): Promise<void> {
+    await this.send('/telegram/link', { method: 'DELETE' });
+  }
+  setTelegramNotifications(enabled: boolean): Promise<TelegramStatus> {
+    return this.send('/telegram/settings', {
+      method: 'PATCH',
+      body: JSON.stringify({ notifications_enabled: enabled }),
+    });
+  }
+
   readonly mode = 'live' as const;
   private readonly baseUrl: string;
   private readonly transport: typeof globalThis.fetch;
@@ -853,4 +882,30 @@ export async function calendarBlob(response: Response): Promise<Blob> {
   if (response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'text/calendar')
     throw new ApiError(502, 'Сервер вернул некорректный файл календаря.');
   return response.blob();
+}
+
+/** A one-use linking secret may only be opened at Telegram's canonical HTTPS endpoint. */
+export function validateTelegramLink(value: TelegramLink): TelegramLink {
+  try {
+    const url = new URL(value.url);
+    const params = [...url.searchParams.keys()];
+    if (
+      url.protocol !== 'https:' ||
+      url.hostname !== 't.me' ||
+      url.port ||
+      url.username ||
+      url.password ||
+      url.hash ||
+      !/^\/[a-zA-Z0-9_]{5,32}$/.test(url.pathname) ||
+      params.length !== 1 ||
+      params[0] !== 'start' ||
+      !/^[a-zA-Z0-9_-]{1,64}$/.test(url.searchParams.get('start') || '') ||
+      !Number.isFinite(Date.parse(value.expires_at)) ||
+      Date.parse(value.expires_at) <= Date.now()
+    )
+      throw new Error();
+    return value;
+  } catch {
+    throw new ApiError(502, 'Сервер вернул некорректную ссылку Telegram. Попробуйте снова.');
+  }
 }

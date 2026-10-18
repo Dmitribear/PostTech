@@ -32,3 +32,7 @@ api_router.include_router(hr_workflows_router)
 from app.presentation.http.routes import local_ai
 
 api_router.include_router(local_ai.router)
+
+from app.presentation.http.routes.telegram import router as telegram_router
+
+api_router.include_router(telegram_router)

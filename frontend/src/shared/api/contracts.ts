@@ -322,7 +322,25 @@ export interface CalendarExportFilters {
   employee_id?: string;
 }
 
+export interface TelegramStatus {
+  enabled: boolean;
+  linked: boolean;
+  telegram_username: string | null;
+  notifications_enabled: boolean;
+  bot_username: string | null;
+}
+
+export interface TelegramLink {
+  url: string;
+  expires_at: string;
+}
+
 export interface HrApi {
+  getTelegramStatus(): Promise<TelegramStatus>;
+  createTelegramLink(): Promise<TelegramLink>;
+  unlinkTelegram(): Promise<void>;
+  setTelegramNotifications(enabled: boolean): Promise<TelegramStatus>;
+
   getCalendarExport(filters?: CalendarExportFilters): Promise<Blob>;
   getLeaveCalendar(id: string): Promise<Blob>;
   workspace<T>(path: string, method?: string, body?: unknown): Promise<T>;
