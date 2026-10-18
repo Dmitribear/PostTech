@@ -8,6 +8,8 @@ import pytest
 from app.infrastructure.config import Settings
 from app.domain.knowledge.jana_errors import JanaUnavailable
 from app.infrastructure.ai.jana_local import FAQCatalog, answer_from_faq
+from app.infrastructure.ai.jana_local import FAQCard, MAX_EXCERPT_LENGTH
+from pydantic import ValidationError
 from app.infrastructure.ai.local_embeddings import LocalEmbedder
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,15 +34,46 @@ def test_all_curated_answers_are_bounded_exact_quotes_from_active_sources():
             card.source_sha256
             == hashlib.sha256(source["content"].encode("utf-8")).hexdigest()
         )
-        assert 0 < len(card.excerpt) <= 500
+        assert 0 < len(card.excerpt) <= MAX_EXCERPT_LENGTH
     assert len({c.id for c in CATALOG.cards}) == len(CATALOG.cards)
+
+
+@pytest.mark.parametrize("card_id,conditions", [
+    ("leave_apply", ("Оформить отпуск", "Комментарий необязателен", "сегодня или позже", "ожидающими или одобренными")),
+    ("advance_apply", ("положительную сумму в тенге", "автор не согласует собственную", "не выполняет банковский перевод")),
+    ("visibility", ("только своих прямых подчинённых", "Замещение не открывает чужие профили", "Роль назначает HR")),
+    ("request_status", ("если он указан", "При отклонении причина обязательна", "оформление HR — разные этапы")),
+    ("leave_balance", ("резерв освобождается один раз", "кадровый остаток не изменяется", "повторного списания нет")),
+    ("profile_fix", ("только для чтения", "Самостоятельно изменить телефон", "обратитесь в HR")),
+    ("profile_access", ("действующему приглашению", "подтверждения почты", "назначенными HR данными и ролью")),
+    ("course_find", ("если он задан", "само по себе не означает", "прямым подчинённым")),
+    ("course_assign", ("Курсы назначает HR", "своим прямым подчинённым", "не назначает курсы")),
+    ("course_finish", ("все уроки должны быть завершены до теста", "именно этого курса", "по умолчанию — 80%", "тест можно повторить")),
+    ("notification_find", ("только свои уведомления, включая HR", "при доступном соединении", "не означает, что все события дублируются")),
+    ("capabilities", ("не одобряет и не отзывает заявки", "отправку заявки подтверждает пользователь")),
+    ("hr_contact", ("только после этого подтверждения", "вся история чата автоматически не передаётся")),
+    ("calendar_import", ("без автоматической синхронизации", "может создать дубликаты", "только одобренные отпуска в пределах ваших прав")),
+    ("calendar_sync", ("исправляйте их в Google Calendar вручную", "Курсы и несогласованные отпуска", "может создать дубликаты")),
+])
+def test_current_faq_keeps_portal_qualifications(card_id, conditions):
+    card = next(card for card in CATALOG.cards if card.id == card_id)
+    for condition in conditions:
+        assert condition in card.excerpt
+
+
+def test_complete_quotes_remain_bounded_instead_of_silently_truncated():
+    assert MAX_EXCERPT_LENGTH == 1000
+    payload = CATALOG.cards[0].model_dump()
+    for text in ("", "x" * (MAX_EXCERPT_LENGTH + 1)):
+        with pytest.raises(ValidationError):
+            FAQCard.model_validate({**payload, "excerpt": text})
 
 
 def test_high_similarity_only_returns_curated_text_and_internal_source():
     result = answer_from_faq(
         "Куда подать заявление на отпуск?", ARTICLES, index_with([(0, 0.95), (-1, 0.4)])
     )
-    assert result["answer"] == CATALOG.cards[0].excerpt + " [1]"
+    assert result["answer"] == "Демо: " + CATALOG.cards[0].excerpt + " [1]"
     assert (
         result["sources"][0]["url"]
         == f"/api/v1/ai/local/sources/{CATALOG.cards[0].article_id}"
@@ -82,7 +115,7 @@ def test_existing_request_description_does_not_trigger_submission_clarification(
         question, ARTICLES, index_with([(card_index, 0.91), (-1, 0.5)])
     )
     assert result["mode"] == "excerpts"
-    assert result["answer"] == CATALOG.cards[card_index].excerpt + " [1]"
+    assert result["answer"] == "Демо: " + CATALOG.cards[card_index].excerpt + " [1]"
 
 
 @pytest.mark.parametrize(

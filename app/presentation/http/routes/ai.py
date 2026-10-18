@@ -40,7 +40,7 @@ def ask_jana(
     try:
         if get_settings().jana_provider == "local":
             return local_jana.answer_question(question, language=locale.get())
-        result = answer_question(question, language=locale.get())
+        result = answer_question(question, language=locale.get(), role=actor.role)
     except JanaUnavailable as exc:
         raise HTTPException(503, "Jana AI is temporarily unavailable") from exc
     except (RuntimeError, HTTPError, APIError) as exc:
@@ -48,7 +48,9 @@ def ask_jana(
             503, "Jana knowledge base is temporarily unavailable"
         ) from exc
     if locale.get() == "kk":
-        if not result["grounded"]:
+        if result.get("reason") == "out_of_scope":
+            result["answer"] = "Мен PostTech порталындағы демалыс, өтінімдер және оқу бойынша көмектесемін. Басқа тақырыптағы сұрақтарға жауап бермеймін."
+        elif not result["grounded"]:
             result["answer"] = (
                 "Jana бұл сұраққа дереккөздермен расталған жауап бере алмайды. Сұрақты HR-ға жіберуге болады. Жеке деректерді профильден қараңыз."
             )

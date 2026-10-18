@@ -19,6 +19,13 @@ try {
     if ($posttechPage.Content -notmatch '/assets/.*\.js') {
         throw 'The container started, but the built portal was not found.'
     }
+    try {
+        $posttechReady = Invoke-RestMethod -Uri "$posttechUrl/api/v1/health/ready" -TimeoutSec 30
+        if ($posttechReady.status -ne 'ready') { throw 'Database is not ready.' }
+    }
+    catch {
+        throw 'The UI is running, but the database is not ready. Check Supabase connectivity, server credentials and migrations 0001-0016. See docs/docker.md.'
+    }
     Write-Host "PostTech is ready: $posttechUrl"
     if (-not $NoBrowser) { Start-Process $posttechUrl }
 }

@@ -3,6 +3,7 @@ import { LeaveBalance } from '@/features/leave-balance';
 import type { Course, HrRequest, Notification } from '@/shared/api/contracts';
 import { notificationHref } from '@/shared/lib/format';
 import { homeCourses, nextCourse } from '@/shared/lib/home-learning';
+import { watchVisible } from '@/shared/lib/live-refresh';
 import { getLocale, localizedDate, t, tx } from '@/shared/lib/i18n';
 import '@/shared/styles/dashboard.css';
 import { EmptyState, ErrorState, Icon, LoadingState, PageHeader } from '@/shared/ui/index';
@@ -78,18 +79,23 @@ export default function Dashboard() {
   const [error, setError] = useState<unknown>(null);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
-    let active = true;
+    let loaded = false;
     setError(null);
-    Promise.all([api.getRequests({ employee_id: profile.id, limit: 3 }), api.getMyCourses()])
-      .then(([requests, courses]) => {
-        if (active) setData({ requests, courses: homeCourses(courses) });
-      })
-      .catch((e) => {
-        if (active) setError(e);
-      });
-    return () => {
-      active = false;
-    };
+    return watchVisible(async (signal) => {
+      try {
+        const [requests, courses] = await Promise.all([
+          api.getRequests({ employee_id: profile.id, limit: 3 }),
+          api.getMyCourses(),
+        ]);
+        if (!signal.aborted) {
+          setData({ requests, courses: homeCourses(courses) });
+          setError(null);
+          loaded = true;
+        }
+      } catch (e) {
+        if (!signal.aborted && !loaded) setError(e);
+      }
+    });
   }, [api, profile.id, refreshKey, retry]);
   const learning = nextCourse(data?.courses || []);
   return (

@@ -1,5 +1,6 @@
 import { ProfileFields } from '@/entities/employee';
 import { usePortal } from '@/entities/session';
+import { LeaveBalance } from '@/features/leave-balance';
 import { formatDate, roleLabels } from '@/shared/lib/format';
 import { t, tx } from '@/shared/lib/i18n';
 import '@/shared/styles/support.css';
@@ -41,10 +42,7 @@ export default function Profile() {
             </div>
             <div className="support-profile-leave">
               <div>
-                <span className="support-profile-stat">
-                  {tx(Number(profile.vacation_days_remaining).toLocaleString('ru-RU'))}
-                </span>
-                <span>{t('Доступно дней отпуска')}</span>
+                <LeaveBalance compact />
               </div>
               <span className="support-profile-leave-icon">
                 <Icon name="plane" size={27} />

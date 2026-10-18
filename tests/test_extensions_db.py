@@ -43,6 +43,23 @@ def advance(c, p):
     )
 
 
+def test_legacy_deduction_is_disabled_without_disabling_leave_reserves(db):
+    with db.connect(None) as c:
+        c.execute((MIGRATIONS.parent / 'legacy/main/0005_vacation_balance.sql').read_text(encoding='utf-8'))
+        migration = (MIGRATIONS / '0017_single_leave_accounting.sql').read_text(encoding='utf-8')
+        c.execute(migration)
+        c.execute(migration)
+        assert c.execute("select tgenabled from pg_trigger where tgname='hr_requests_deduct_vacation_days'").fetchone()[0] == 'D'
+        before = c.execute('select vacation_days_remaining from employee_profiles where id=%s', (db.people['worker'],)).fetchone()[0]
+        start = date.today() + timedelta(days=700)
+        created = create_request(c, db.people['worker'], start_date=start, end_date=start)
+        review_request(c, db.people['manager'], created['id'])
+        balance = c.execute('select read_leave_balance(%s)', (db.people['worker'],)).fetchone()[0]
+        assert balance['official_days'] == before
+        assert any(h['request_id'] == created['id'] and h['state'] == 'approved' and h['days'] == 1 for h in balance['holds'])
+        c.execute('delete from hr_requests where id=%s', (created['id'],))
+
+
 def test_leave_reserves_releases_and_reconciles_once(db):
     p = db.people
     with db.connect() as c:

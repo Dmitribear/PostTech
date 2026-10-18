@@ -1,0 +1,108 @@
+{
+  "results": [
+    {
+      "role": "employee",
+      "width": 1440,
+      "pendingMs": 1862,
+      "approvalMs": 2326,
+      "notification": true,
+      "balance": true,
+      "overflow": false
+    },
+    {
+      "role": "employee",
+      "width": 390,
+      "pendingMs": 1862,
+      "approvalMs": 3353,
+      "notification": true,
+      "balance": true,
+      "overflow": false
+    },
+    {
+      "role": "manager",
+      "width": 1440,
+      "pendingMs": 1164,
+      "approvalMs": 1824,
+      "notification": true,
+      "balance": true,
+      "overflow": false
+    },
+    {
+      "role": "manager",
+      "width": 390,
+      "pendingMs": 1164,
+      "approvalMs": 2826,
+      "notification": true,
+      "balance": true,
+      "overflow": false
+    },
+    {
+      "role": "director",
+      "width": 1440,
+      "pendingMs": 1867,
+      "approvalMs": 2363,
+      "notification": true,
+      "balance": true,
+      "overflow": false
+    },
+    {
+      "role": "director",
+      "width": 390,
+      "pendingMs": 1867,
+      "approvalMs": 3366,
+      "notification": true,
+      "balance": true,
+      "overflow": false
+    },
+    {
+      "role": "hr",
+      "width": 1440,
+      "pendingMs": 1393,
+      "approvalMs": 2365,
+      "notification": true,
+      "balance": true,
+      "overflow": false
+    },
+    {
+      "role": "hr",
+      "width": 390,
+      "pendingMs": 1393,
+      "approvalMs": 3361,
+      "notification": true,
+      "balance": true,
+      "overflow": false
+    }
+  ],
+  "requests": [
+    {
+      "id": "78de85d7-bb27-4128-9aad-0e74e0292521",
+      "role": "employee"
+    },
+    {
+      "id": "baf78923-bb9c-4f1f-afc7-d8bdc01c3c9d",
+      "role": "employee"
+    },
+    {
+      "id": "e5135ced-b03b-4f99-8638-14bd33bf3e66",
+      "role": "employee"
+    },
+    {
+      "id": "e4313c81-41d7-4db4-913e-2a908dcc7eec",
+      "role": "employee"
+    },
+    {
+      "id": "bf4122f0-75f3-47b1-a704-58aedc77566a",
+      "role": "manager"
+    },
+    {
+      "id": "a4ca6993-7d6e-423b-a497-6e5dc5528b44",
+      "role": "director"
+    },
+    {
+      "id": "267d76cf-8cf4-4b1b-8e4a-02341bb1bd40",
+      "role": "hr"
+    }
+  ],
+  "at": "2026-10-17T20:21:36.032Z",
+  "cleaned": true
+}

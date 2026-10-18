@@ -1,0 +1,323 @@
+{
+  "verifiedOn": "2026-10-18",
+  "environment": "Docker frontend/API + Supabase, marked synthetic accounts",
+  "liveCasesPassed": 16,
+  "roles": [
+    "employee",
+    "manager",
+    "director",
+    "hr"
+  ],
+  "viewportWidths": [
+    1440,
+    390
+  ],
+  "actions": [
+    "cancel_pending",
+    "reject_pending"
+  ],
+  "homeRefreshMs": {
+    "min": 666,
+    "max": 2850,
+    "definition": "Time after mutation response until the already-open home shows terminal status and restored available balance."
+  },
+  "results": [
+    {
+      "role": "employee",
+      "width": 1440,
+      "action": "cancel",
+      "reviewer": "manager",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 2839,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 6990
+    },
+    {
+      "role": "employee",
+      "width": 1440,
+      "action": "reject",
+      "reviewer": "manager",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 2850,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 8176
+    },
+    {
+      "role": "employee",
+      "width": 390,
+      "action": "cancel",
+      "reviewer": "manager",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 1910,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 5928
+    },
+    {
+      "role": "employee",
+      "width": 390,
+      "action": "reject",
+      "reviewer": "manager",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 2791,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 6733
+    },
+    {
+      "role": "manager",
+      "width": 1440,
+      "action": "cancel",
+      "reviewer": "hr",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 2232,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 5924
+    },
+    {
+      "role": "manager",
+      "width": 1440,
+      "action": "reject",
+      "reviewer": "hr",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 1729,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 7324
+    },
+    {
+      "role": "manager",
+      "width": 390,
+      "action": "cancel",
+      "reviewer": "hr",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 1151,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 5691
+    },
+    {
+      "role": "manager",
+      "width": 390,
+      "action": "reject",
+      "reviewer": "hr",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 1899,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 6668
+    },
+    {
+      "role": "director",
+      "width": 1440,
+      "action": "cancel",
+      "reviewer": "hr",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 2580,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 9794
+    },
+    {
+      "role": "director",
+      "width": 1440,
+      "action": "reject",
+      "reviewer": "hr",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 2333,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 6684
+    },
+    {
+      "role": "director",
+      "width": 390,
+      "action": "cancel",
+      "reviewer": "hr",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 1047,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 6025
+    },
+    {
+      "role": "director",
+      "width": 390,
+      "action": "reject",
+      "reviewer": "hr",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 666,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 6425
+    },
+    {
+      "role": "hr",
+      "width": 1440,
+      "action": "cancel",
+      "reviewer": "backup_hr",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 1691,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 5921
+    },
+    {
+      "role": "hr",
+      "width": 1440,
+      "action": "reject",
+      "reviewer": "backup_hr",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 1767,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 6046
+    },
+    {
+      "role": "hr",
+      "width": 390,
+      "action": "cancel",
+      "reviewer": "backup_hr",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 1801,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 6033
+    },
+    {
+      "role": "hr",
+      "width": 390,
+      "action": "reject",
+      "reviewer": "backup_hr",
+      "daysReserved": 2,
+      "availableBefore": 24,
+      "availableAfter": 24,
+      "officialUnchanged": true,
+      "homeMs": 1484,
+      "notifications": true,
+      "idempotent": true,
+      "staleApprovalBlocked": true,
+      "checksAfterDecisionMs": 5421
+    }
+  ],
+  "additionalLiveDeputyCase": {
+    "passed": true,
+    "oneNotificationPerRecipient": [
+      "author",
+      "assigned_manager",
+      "active_deputy"
+    ],
+    "pendingQueueCleared": true,
+    "terminalRequestAccessRevoked": true,
+    "balanceRestored": true,
+    "testDelegationRevoked": true
+  },
+  "automated": {
+    "frontend": {
+      "passed": 32,
+      "file": "frontend/e2e/leave-release-refresh.spec.ts",
+      "environment": "Final Docker frontend, mocked API, desktop + Pixel 7",
+      "documentReloadsAfterInitialNavigation": 0
+    },
+    "database": {
+      "passed": 9,
+      "file": "tests/test_leave_terminal_db.py",
+      "environment": "Isolated PostgreSQL through migration 0018"
+    },
+    "typescriptAndProductionBuild": "passed"
+  },
+  "cleanup": {
+    "testRequestsRemoved": true,
+    "testRequestNotificationsRemoved": true,
+    "testDelegationAnnouncementRemoved": true,
+    "fixtureRoleRestored": true,
+    "finalBalances": {
+      "employee": {
+        "available_days": 24.0,
+        "official_days": 24.0
+      },
+      "manager": {
+        "available_days": 24.0,
+        "official_days": 24.0
+      },
+      "director": {
+        "available_days": 24.0,
+        "official_days": 24.0
+      },
+      "hr": {
+        "available_days": 24.0,
+        "official_days": 24.0
+      }
+    }
+  },
+  "limits": [
+    "This covers cancellation before approval; cancellation of already approved leave needs a separate HR workflow.",
+    "Live mobile cases use a 390px viewport; Pixel 7 device emulation is covered by the automated UI suite.",
+    "Updates use visible-page polling; the 1-second interval follows completion of the previous request.",
+    "checksAfterDecisionMs includes API/idempotency checks and is not an isolated UI refresh latency.",
+    "Profile and calendar were not separately retested in this run; they share the previously verified leave-balance refresh component."
+  ]
+}

@@ -307,7 +307,8 @@ def test_seed_matches_json_and_evaluation_sources_exist():
         encoding="utf-8"
     ) == render_sql()
     ids = {article["id"] for article in DATA["articles"]}
-    assert len(ids) == len(DATA["articles"]) == 11
+    assert len(ids) == len(DATA["articles"])
+    assert {f"20000000-0000-4000-8000-{i:012d}" for i in range(1, 12)} <= ids
     for article in DATA["articles"]:
         assert article["source_title"].startswith("Демо:")
     evaluation = json.loads(

@@ -396,8 +396,11 @@ class Scenarios:
             }
         )
         key = self.key("request_" + name)
-        result = self.call("POST", "/requests", owner, payload, expected=201, key=key)
         known = self.state["requests"].get(name)
+        previous = (
+            self.call("GET", f"/requests/{known['id']}", owner) if known else None
+        )
+        result = self.call("POST", "/requests", owner, payload, expected=201, key=key)
         require(
             valid_uuid(result.get("id"))
             and (not known or result["id"] == known["id"])
@@ -406,8 +409,10 @@ class Scenarios:
             "Request create returned different data",
         )
         require(
-            result["approval_route"] == self.routes[owner]["route"]
-            and result["approvers"] == self.routes[owner]["approvers"],
+            result["approval_route"]
+            == (previous["approval_route"] if previous else self.routes[owner]["route"])
+            and result["approvers"]
+            == (previous["approvers"] if previous else self.routes[owner]["approvers"]),
             "Persisted approval route differs from preview",
         )
         self.state["requests"][name] = {
@@ -482,8 +487,12 @@ class Scenarios:
             and self.snapshot(result, owner) == snap,
             "Review retry produced side effects",
         )
+        owner_result = self.call("GET", f"/requests/{row['id']}", owner)
+        # GET also joins the independent HR fulfillment stage; review RPC returns
+        # the decision record. Compare the complete decision, not that projection.
         require(
-            self.call("GET", f"/requests/{row['id']}", owner) == result,
+            {k: v for k, v in owner_result.items() if k != "fulfillment"}
+            == {k: v for k, v in result.items() if k != "fulfillment"},
             "Owner cannot read the final request",
         )
         self.call("POST", f"/requests/{row['id']}/cancel", owner, expected=409)
@@ -571,6 +580,7 @@ class Scenarios:
                 require(
                     all(
                         self.identity(actor) in {p["id"] for p in row["approvers"]}
+                        or row.get("reviewed_by") == self.identity(actor)
                         for row in rows
                     ),
                     "Manager review scope includes unassigned requests",

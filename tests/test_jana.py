@@ -16,6 +16,13 @@ from app.domain.models import UserContext
 from app.infrastructure.ai import jana
 
 
+def test_generation_schema_enforces_the_same_citation_budget_as_validation():
+    schema = jana._ANSWER_FORMAT["json_schema"]["schema"]
+    assert schema["properties"]["passage_ids"]["maxItems"] == 6
+    articles = ARTICLES * 4
+    assert jana._validated_excerpts(json.dumps({"supported": True, "passage_ids": list(range(7))}), articles) is None
+
+
 ARTICLES = [
     {
         "id": str(UUID(int=101)),
@@ -45,6 +52,30 @@ ARTICLES = [
         "keywords": ["доступ", "роль", "руководитель", "персональные данные"],
     },
 ]
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Подскажите, пожалуйста, как мне оформить отпуск через портал?",
+        "Подскажите порядок подачи заявки на аванс.",
+        "Подскажите, где посмотреть статус отправленной заявки?",
+    ],
+)
+def test_polite_phrasing_does_not_hide_supported_procedure(knowledge, question):
+    assert jana.answer_question(question)["grounded"] is True
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Подскажите, пожалуйста, сколько дней отпуска дают за вредность?",
+        "Объясните порядок автоматического одобрения аванса на 999999 тенге.",
+        "Как оформить отпуск через Telegram?",
+    ],
+)
+def test_polite_phrasing_keeps_unknown_policy_constraints(knowledge, question):
+    assert jana.answer_question(question)["grounded"] is False
 
 
 class KnowledgeDatabase:
@@ -97,6 +128,7 @@ def knowledge(monkeypatch):
     settings = SimpleNamespace(openai_api_key=None, openai_model="test-model")
     monkeypatch.setattr(jana, "get_supabase_client", lambda: database)
     monkeypatch.setattr(jana, "get_settings", lambda: settings)
+    monkeypatch.setattr(jana, "classify_scope", lambda *args, **kwargs: {"intent": "information", "actions": []}, raising=False)
     return database, settings
 
 
@@ -162,6 +194,8 @@ def model_response(monkeypatch, settings, text, verified=True):
     def complete(**kwargs):
         calls.append(kwargs)
         content = text if len(calls) == 1 else json.dumps({"supported": verified})
+        if len(calls) == 3:
+            content = json.dumps({"supported": verified, "answer": json.loads(text).get("answer", "")})
         return SimpleNamespace(
             choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
         )
@@ -208,7 +242,7 @@ def test_generated_answer_requires_exact_quotes_and_evidence_verification(
     assert result["sources"][0]["id"] == ARTICLES[0]["id"]
     assert result["sources"][0]["freshness"] == "unverified"
     context = json.loads(calls[0]["messages"][1]["content"])
-    assert set(context) == {"question", "sources"}
+    assert set(context) == {"question", "original_question", "sources"}
     assert all(
         set(source) == {"source_index", "content"} for source in context["sources"]
     )
@@ -321,7 +355,8 @@ def test_kazakh_generation_keeps_source_in_original_language(knowledge, monkeypa
         jana.answer_question("Как оформить отпуск?", language="kk")["mode"]
         == "generated"
     )
-    assert "казахском" in calls[0]["messages"][0]["content"]
+    assert "на русском" in calls[0]["messages"][0]["content"]
+    assert "Kazakh" in calls[-1]["messages"][0]["content"]
 
 
 def test_inactive_or_instruction_bearing_articles_are_excluded(knowledge):
@@ -454,4 +489,4 @@ def test_model_cannot_turn_missing_rule_into_supported_topic_quote(
         ),
     )
     assert jana.answer_question("Сколько дней отпуска положено?")["grounded"] is False
-    assert calls == []
+    assert len(calls) == 1

@@ -12,6 +12,7 @@ import {
 } from '@/entities/hr-request';
 import { usePortal } from '@/entities/session';
 import { CalendarExport } from '@/features/export-calendar';
+import { watchVisible } from '@/shared/lib/live-refresh';
 import { LeaveBalance } from '@/features/leave-balance';
 import type { EmployeeProfile } from '@/shared/api/contracts';
 import { localizedDate, t, tx } from '@/shared/lib/i18n';
@@ -144,25 +145,26 @@ export default function Calendar() {
   }
 
   useEffect(() => {
-    let active = true;
+    let loaded = false;
     setLoading(true);
     setError(null);
-    loadRequests(api, {
-      request_type: 'leave',
-      ...(isSelecting || scope === 'own' ? { scope: 'mine' } : { scope: 'all' }),
-    })
-      .then((data) => {
-        if (active) setRecords(data);
-      })
-      .catch((reason) => {
-        if (active) setError(reason);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+    return watchVisible(async (signal) => {
+      try {
+        const data = await loadRequests(api, {
+          request_type: 'leave',
+          ...(isSelecting || scope === 'own' ? { scope: 'mine' } : { scope: 'all' }),
+        });
+        if (!signal.aborted) {
+          setRecords(data);
+          setError(null);
+          loaded = true;
+        }
+      } catch (reason) {
+        if (!signal.aborted && !loaded) setError(reason);
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+    });
   }, [api, profile.id, scope, isSelecting, refreshKey, reload]);
 
   useEffect(() => {
@@ -666,9 +668,7 @@ export default function Calendar() {
                 </div>
                 <div>
                   <span>{t('Мой баланс отпуска')}</span>
-                  <strong>
-                    {tx(profile.vacation_days_remaining)} <small>{t('дн.')}</small>
-                  </strong>
+                  <LeaveBalance compact />
                 </div>
               </div>
               {tx(

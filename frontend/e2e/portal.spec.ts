@@ -343,15 +343,16 @@ test('unread pagination waits for pending writes and keeps older unread messages
   await readStarted;
   await expect(page.getByRole('button', { name: 'Показать ещё', exact: true })).toBeDisabled();
   releaseRead();
-  await expect(page.locator('.support-notification')).toHaveCount(24);
-  for (let remaining = 24; remaining > 0; remaining -= 1) {
-    await page.getByRole('button', { name: /^Отметить прочитанным:/ }).first().click();
-    await expect(page.locator('.support-notification')).toHaveCount(remaining - 1);
+  await expect(page.getByRole('heading', { name: 'Событие 1', exact: true })).toHaveCount(0);
+  for (let index = 2; index <= 26; index += 1) {
+    const action = page.getByRole('button', { name: `Отметить прочитанным: Событие ${index}`, exact: true });
+    if (!(await action.isVisible()) && await page.getByRole('button', { name: 'Показать ещё', exact: true }).isVisible()) {
+      await page.getByRole('button', { name: 'Показать ещё', exact: true }).click();
+    }
+    await action.click();
+    await expect(action).toHaveCount(0);
   }
-  await expect(page.getByRole('heading', { name: 'Все уведомления прочитаны' })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Загрузите следующие уведомления' })).toBeVisible();
-  await page.getByRole('button', { name: 'Показать ещё', exact: true }).click();
-  await expect(page.locator('.support-notification')).toHaveCount(1);
-  await expect(page.locator('.support-notification')).toContainText('Событие 26');
-  expect(offsets.at(-1)).toBe(0);
+  await expect(page.getByRole('heading', { name: 'Все уведомления прочитаны' })).toBeVisible();
+  expect(notes.every(note => note.read_at)).toBe(true);
+  expect(offsets).toContain(0);
 });

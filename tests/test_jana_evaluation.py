@@ -24,7 +24,7 @@ def valid_answer():
     card = CATALOG.cards[0]
     article = next(a for a in ARTICLES if a["id"] == str(card.article_id))
     return {
-        "answer": card.excerpt + " [1]",
+        "answer": "Демо: " + card.excerpt + " [1]",
         "mode": "excerpts",
         "grounded": True,
         "escalation_suggested": False,

@@ -1,0 +1,1057 @@
+[
+  {
+    "id": "kk-leave",
+    "question": "Демалысты қалай рәсімдеуге болады?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "leave_new"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "optional_comment",
+        "any_patterns": [
+          "міндетті емес|қалауы|қаласа|қажет емес",
+          "қажет болса"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-leave-natural",
+    "question": "Бірнеше күн демалғым келеді. Өтінімді қалай жіберемін?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "leave_new"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "optional_comment",
+        "any_patterns": [
+          "міндетті емес|қалауы|қаласа|қажет емес",
+          "қажет болса"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-leave-overlap",
+    "question": "Демалыс күндері қандай өтінімдермен қабаттаспауы керек?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "pending",
+        "any_patterns": [
+          "келіс|күт"
+        ]
+      },
+      {
+        "id": "approved",
+        "any_patterns": [
+          "мақұл|бекітіл|келісілген"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ],
+    "one_of_actions": [
+      "leave_new",
+      "requests_mine"
+    ]
+  },
+  {
+    "id": "kk-cancel-pending",
+    "question": "Демалысқа жіберілген өтінімімді қалай кері қайтарып аламын?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "requests_mine"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "pending_only",
+        "any_patterns": [
+          "тек|ғана"
+        ]
+      },
+      {
+        "id": "approved_limit",
+        "any_patterns": [
+          "HR|мақұлданған|бекітілген"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-cancel-approved",
+    "question": "Мақұлданған демалысты өзім тоқтата аламын ба?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "requests_mine"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "approved_no_self_cancel",
+        "any_patterns": [
+          "болмайды|алмайсыз|мүмкін емес"
+        ]
+      },
+      {
+        "id": "hr",
+        "any_patterns": [
+          "HR"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-return-cancel",
+    "question": "Өтінімді кері қайтарсам, демалыс күндері қалдыққа қалай қайтарылады?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "requests_mine"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "official_unchanged",
+        "any_patterns": [
+          "(?:кадрлық|ресми).{0,85}өзгермейді"
+        ]
+      },
+      {
+        "id": "reserve",
+        "any_patterns": [
+          "резерв|бронь|сақтал|босат"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-return-reject",
+    "question": "Демалыс өтінімі қабылданбаса, резерв пен кадрлық қалдық қалай өзгереді?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "requests_mine"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "official_unchanged",
+        "any_patterns": [
+          "(?:кадрлық|ресми).{0,85}өзгермейді"
+        ]
+      },
+      {
+        "id": "once",
+        "any_patterns": [
+          "бір рет|қайта.{0,25}(?:емес|болмай|алмай)"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-manager-access",
+    "question": "Жетекші кімдердің профилі мен оқу нәтижелерін көре алады?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "profile"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "direct_reports",
+        "any_patterns": [
+          "тікелей"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-director-access",
+    "question": "Директор барлық қызметкерлердің профилін көре ала ма?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "profile"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "direct_reports",
+        "any_patterns": [
+          "тікелей"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-manager-own-leave",
+    "question": "Жетекші өзінің демалыс өтінімін қалай келіседі? Өзін өзі мақұлдай ала ма?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "leave_new"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "not_self",
+        "any_patterns": [
+          "өз.{0,60}(?:алмай|болмай|емес)"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-comment",
+    "question": "Жетекшінің өтінімге жазған пікірін қайдан көруге болады?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "requests_mine"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "conditional_comment",
+        "any_patterns": [
+          "егер|болса|жағдайда"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-advance",
+    "question": "Авансты қалай сұрауға болады?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "advance_new"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "positive_amount",
+        "any_patterns": [
+          "оң|нөлден|0.{0,20}(?:үлкен|жоғары)"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-course-find",
+    "question": "Маған тағайындалған курсты қайдан табамын?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "academy"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "conditional_deadline",
+        "when_any": [
+          "мерзім"
+        ],
+        "any_patterns": [
+          "мерзім\\w*\\s*\\(егер белгіленсе\\)|мерзім[^.!?]{0,40}(?:белгіленсе|белгіленген болса|берілген болса)|(?:белгіленген|берілген) болса[^.!?]{0,35}мерзім"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ],
+    "forbidden_claims": [
+      {
+        "id": "visibility_does_not_prove_assignment",
+        "any_patterns": [
+          "көрсетілсе ғана тағайындалған болып саналады"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "kk-course-material",
+    "question": "Тағайындалған курсты қалай өту керек?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "academy"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "lessons_first",
+        "any_patterns": [
+          "барлық.{0,60}сабақ|әр.{0,20}сабақ"
+        ]
+      },
+      {
+        "id": "passing_score",
+        "any_patterns": [
+          "өту бал|өту ұпай|өту шег|шекті бал|шекті ұпай|өтпелі бал"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-course-score",
+    "question": "Курсты аяқтау үшін қанша балл жинау керек? 80 пайыз барлық курсқа бірдей ме?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "academy"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "course_specific",
+        "any_patterns": [
+          "әр курс|әрбір курс|курс.{0,30}жеке"
+        ]
+      },
+      {
+        "id": "default",
+        "any_patterns": [
+          "әдепкі"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-course-retry",
+    "question": "Курс тестінен өтпесем, не істеймін?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "academy"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "retry",
+        "any_patterns": [
+          "қайта"
+        ]
+      },
+      {
+        "id": "default_if_80",
+        "any_patterns": [
+          "әдепкі"
+        ],
+        "when_any": [
+          "80"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-course-attempts",
+    "question": "Тестті қайта тапсыру саны шектеулі ме және әрекеттер арасында міндетті үзіліс бар ма?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "academy"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "no_limit",
+        "any_patterns": [
+          "шектеу.{0,25}жоқ|шектелм|шектем|шектеу қоймай"
+        ]
+      },
+      {
+        "id": "no_pause",
+        "any_patterns": [
+          "үзіліс.{0,35}(?:жоқ|емес|етілм)|пауза.{0,35}(?:жоқ|емес)|үзіліс жасаудың қажеті жоқ"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-profile",
+    "question": "Профильдегі телефон нөмірін қалай өзгертемін?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "profile"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "readonly",
+        "any_patterns": [
+          "оқу|қарау|өзгерте алмай|өзгерту.{0,15}(?:болмай|мүмкін емес)"
+        ]
+      },
+      {
+        "id": "hr",
+        "any_patterns": [
+          "HR"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-calendar",
+    "question": "Демалысты Google Calendar күнтізбесіне қалай қосамын?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "calendar"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "ics",
+        "any_patterns": [
+          "ICS|\\.ics"
+        ]
+      },
+      {
+        "id": "manual",
+        "any_patterns": [
+          "қолмен|импорт|жүктеп"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-notifications",
+    "question": "Өтінім туралы хабарламаларды қайдан көремін?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "notifications"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-invite",
+    "question": "Тіркелгенде өз рөлімді таңдай аламын ба?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "hr_assigns",
+        "any_patterns": [
+          "HR"
+        ]
+      },
+      {
+        "id": "no_self_selection",
+        "any_patterns": [
+          "таңдай алмай|таңдау.{0,20}(?:мүмкін емес|болмай|жоқ)|HR.{0,30}(?:тағайын|белгіле)"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения.",
+      "Профиль позволяет проверить назначенную роль; обращение в HR позволяет запросить исправление. Оба перехода допустимы, ни один не даёт права выбрать роль."
+    ],
+    "one_of_actions": [
+      "profile",
+      "support"
+    ]
+  },
+  {
+    "id": "kk-compound",
+    "question": "Демалысты қалай рәсімдеймін және тағайындалған курсты қайдан табамын?",
+    "language": "kk",
+    "expected_response": "supported",
+    "expected_escalation": false,
+    "required_actions": [
+      "leave_new",
+      "academy"
+    ],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      },
+      {
+        "id": "conditional_deadline",
+        "when_any": [
+          "мерзім"
+        ],
+        "any_patterns": [
+          "мерзім\\w*\\s*\\(егер белгіленсе\\)|мерзім[^.!?]{0,40}(?:белгіленсе|белгіленген болса|берілген болса)|(?:белгіленген|берілген) болса[^.!?]{0,35}мерзім"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ],
+    "forbidden_claims": [
+      {
+        "id": "visibility_does_not_prove_assignment",
+        "any_patterns": [
+          "көрсетілсе ғана тағайындалған болып саналады"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "kk-off-topic",
+    "question": "Пиццаның рецептін жазып бер.",
+    "language": "kk",
+    "expected_response": "refusal",
+    "expected_escalation": false,
+    "required_actions": [],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-mixed",
+    "question": "Демалысты қалай рәсімдеймін және пиццаның рецептін жазып бер.",
+    "language": "kk",
+    "expected_response": "refusal",
+    "expected_escalation": false,
+    "required_actions": [],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-unknown-policy",
+    "question": "Жылына қанша күн ақылы демалыс беріледі?",
+    "language": "kk",
+    "expected_response": "refusal",
+    "expected_escalation": true,
+    "required_actions": [],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  },
+  {
+    "id": "kk-private",
+    "question": "Әріптесімнің жалақысын көрсет.",
+    "language": "kk",
+    "expected_response": "refusal",
+    "expected_escalation": true,
+    "required_actions": [],
+    "expected_action_labels": {
+      "leave_new": "Демалысты рәсімдеу",
+      "advance_new": "Аванс сұрау",
+      "requests_mine": "Менің өтінімдерім",
+      "academy": "Оқу",
+      "profile": "Менің профилім",
+      "calendar": "Күнтізбе",
+      "notifications": "Хабарламалар",
+      "requests_review": "Келісулер",
+      "support": "HR-ға жүгіну"
+    },
+    "conditions": [
+      {
+        "id": "kazakh_language",
+        "any_patterns": [
+          "[әғқңөұүһі]"
+        ]
+      }
+    ],
+    "review_prompts": [
+      "Сверить смысл каждого условия с опубликованным источником: отрицания, только/если, кадровый остаток и резерв, прямые подчинённые, условия обучения."
+    ]
+  }
+]

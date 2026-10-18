@@ -9,6 +9,7 @@ import { Avatar, ErrorState, Icon, LoadingState, Modal, PageHeader } from '@/sha
 import { OperationalReport } from '@/widgets/hr-workflow';
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { answerActions } from '../model/actions';
 
 type Message =
   | { id: number; role: 'user'; text: string }
@@ -18,29 +19,21 @@ const prompts = [
     text: 'Как оформить отпуск?',
     short: 'Оформить отпуск',
     icon: 'plane',
-    href: '/calendar?select=1',
-    action: 'Оформить отпуск',
   },
   {
     text: 'Как запросить аванс?',
     short: 'Запросить аванс',
     icon: 'wallet',
-    href: '/requests/new?type=advance',
-    action: 'Запросить аванс',
   },
   {
     text: 'Где посмотреть статус заявки?',
     short: 'Статус заявки',
     icon: 'clipboard',
-    href: '/requests',
-    action: 'Мои заявки',
   },
   {
     text: 'Кто видит мои кадровые данные?',
     short: 'Защита данных',
     icon: 'shield',
-    href: '/profile',
-    action: 'Мой профиль',
   },
 ];
 function safeSourceUrl(url: string | null): string | null {
@@ -324,26 +317,20 @@ export default function Jana({
                             </div>
                           ),
                         )}
-                        {message.result.grounded &&
-                          !message.result.escalation_suggested &&
-                          prompts
-                            .filter(
-                              (prompt) =>
-                                message.question === prompt.text ||
-                                message.question === t(prompt.text),
-                            )
-                            .map((prompt) => (
-                              <Link
-                                key={prompt.href}
-                                className="btn btn-secondary support-answer-action"
-                                to={prompt.href}
-                              >
-                                <Icon name={prompt.icon} size={16} />
-                                {t(prompt.action)}
-                                <Icon name="arrow-right" size={16} />
-                              </Link>
-                            ))}
-                        {(!message.result.grounded || message.result.escalation_suggested) && (
+                        <div className="support-answer-actions">
+                          {answerActions(message.result, profile.role).map((action) => (
+                            <Link
+                              key={action.id}
+                              className="btn btn-secondary support-answer-action"
+                              to={action.href}
+                            >
+                              <Icon name={action.icon} size={16} />
+                              <span>{t(action.label)}</span>
+                              <Icon name="arrow-right" size={16} />
+                            </Link>
+                          ))}
+                        </div>
+                        {message.result.escalation_suggested && (
                           <button
                             className="btn btn-secondary"
                             onClick={() =>

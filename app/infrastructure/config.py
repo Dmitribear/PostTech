@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     supabase_anon_key: SecretStr | str | None = None
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-4o-mini"
+    jana_kazakh_model: str | None = None
     jana_provider: Literal['openai', 'local'] = 'openai'
     resend_api_key: SecretStr | None = None
     invitation_email_from: str = "PostTech <onboarding@resend.dev>"

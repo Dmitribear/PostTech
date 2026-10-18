@@ -1869,8 +1869,28 @@ body[data-density='compact'] .support-notification {
   font-size: 12px;
 }
 
-.support-answer-action {
+.support-answer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 14px;
+}
+.support-answer-actions:empty {
+  display: none;
+}
+.support-answer-action {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  white-space: normal;
+  text-align: left;
+}
+.support-answer-action > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.support-answer-action > svg {
+  flex-shrink: 0;
 }
 
 /* Jana's floating launcher reuses the same chat in a compact, responsive panel. */

@@ -18,7 +18,7 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tests"))
-from test_extensions_db import db as fixture
+from test_consolidated_schema_db import db as fixture
 from test_request_workflow_db import DATABASE_URL, create_request, review_request
 
 
@@ -83,6 +83,10 @@ def main():
                     end_date=start + timedelta(days=12),
                 )
                 review_request(c, database.people["manager"], r["id"])
+                c.execute(
+                    "select fulfill_hr_request(%s,%s,'start')",
+                    (database.people["hr"], r["id"]),
+                )
                 create_request(
                     c,
                     id,

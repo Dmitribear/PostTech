@@ -12,10 +12,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def run(
-    base_url: str, credentials: Path, report: Path, require_generation: bool = False
+    base_url: str,
+    credentials: Path,
+    report: Path,
+    require_generation: bool = False,
+    corpus: Path | None = None,
 ) -> dict:
     state = json.loads(credentials.read_text(encoding="utf-8-sig"))
-    cases = json.loads((ROOT / "evals/jana_questions.json").read_text(encoding="utf-8"))
+    cases = json.loads(
+        (corpus or ROOT / "evals/jana_questions.json").read_text(encoding="utf-8")
+    )
     results = []
     with httpx.Client(base_url=base_url.rstrip("/"), timeout=50) as client:
         account = state["employee"]
@@ -28,7 +34,9 @@ def run(
         client.headers["Authorization"] = "Bearer " + login.json()["access_token"]
         for case in cases:
             response = client.post(
-                "/api/v1/ai/ask", json={"question": case["question"]}
+                "/api/v1/ai/ask",
+                json={"question": case["question"]},
+                headers={"Accept-Language": case.get("language", "ru")},
             )
             checks = {"http_ok": response.status_code == 200}
             mode, fallback_reason = None, None
@@ -66,7 +74,11 @@ def run(
                     s.get("freshness") in {"unverified", "reviewed"} for s in sources
                 )
                 checks["source_readable"] = all(
-                    client.get(f"/api/v1/ai/sources/{s['id']}").status_code == 200
+                    client.get(
+                        f"/api/v1/ai/sources/{s['id']}",
+                        params={"version": s["version"]} if s.get("version") else {},
+                    ).status_code
+                    == 200
                     for s in sources
                 )
             results.append(
@@ -96,6 +108,11 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--base-url", default="http://127.0.0.1:8000")
     p.add_argument(
+        "--corpus",
+        type=Path,
+        help="Optional additional, separately versioned question corpus",
+    )
+    p.add_argument(
         "--credentials", type=Path, default=ROOT / ".local/scenario-credentials.json"
     )
     p.add_argument(
@@ -108,7 +125,13 @@ if __name__ == "__main__":
     )
     args = p.parse_args()
     try:
-        r = run(args.base_url, args.credentials, args.report, args.require_generation)
+        r = run(
+            args.base_url,
+            args.credentials,
+            args.report,
+            args.require_generation,
+            args.corpus,
+        )
         print(
             json.dumps(
                 {

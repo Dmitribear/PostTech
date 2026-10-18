@@ -1,7 +1,7 @@
 {
-  "verified_at": "2026-10-17T10:44:09.149180+00:00",
+  "verified_at": "2026-10-17T15:15:14.007318+00:00",
   "scope": "Docker API + real Supabase, synthetic jury accounts only",
-  "api_calls": 27,
+  "api_calls": 20,
   "request_type": "leave",
   "outbox_events": 2,
   "external_delivery_enabled": false,

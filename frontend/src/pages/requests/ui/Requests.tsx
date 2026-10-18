@@ -18,6 +18,7 @@ import { LeaveConflictNotice } from '@/features/leave-conflict';
 import { ApiError } from '@/shared/api/api';
 import type { RequestRouting } from '@/shared/api/contracts';
 import { getLocale, t, tx } from '@/shared/lib/i18n';
+import { watchVisible } from '@/shared/lib/live-refresh';
 import '@/shared/styles/requests.css';
 import {
   Avatar,
@@ -107,22 +108,23 @@ function RequestList() {
     : 'all';
 
   useEffect(() => {
-    let active = true;
     setLoading(true);
     setError(null);
-    loadRequests(api, { scope })
-      .then((data) => {
-        if (active) setRecords(data);
-      })
-      .catch((reason) => {
-        if (active) setError(reason);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+    let loaded = false;
+    return watchVisible(async (signal) => {
+      try {
+        const data = await loadRequests(api, { scope });
+        if (!signal.aborted) {
+          setRecords(data);
+          setError(null);
+          loaded = true;
+        }
+      } catch (reason) {
+        if (!signal.aborted && !loaded) setError(reason);
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+    });
   }, [api, profile.id, scope, refreshKey, reload]);
 
   useEffect(() => {
@@ -1132,32 +1134,33 @@ function RequestDetails({ id }: { id: string }) {
   const reviewInFlight = useRef(false);
   const cancelInFlight = useRef(false);
   useEffect(() => {
-    let active = true;
     setLoading(true);
     setError(null);
     setHistoryError(null);
-    api
-      .getRequest(id)
-      .then((data) => {
-        if (active) setRecord(data);
-      })
-      .catch((reason) => {
-        if (active) setError(reason);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    api
-      .getRequestHistory(id)
-      .then((data) => {
-        if (active) setHistory(data);
-      })
-      .catch((reason) => {
-        if (active) setHistoryError(reason);
-      });
-    return () => {
-      active = false;
-    };
+    let loaded = false;
+    return watchVisible(async (signal) => {
+      if (reviewInFlight.current || cancelInFlight.current) return;
+      const [recordResult, historyResult] = await Promise.allSettled([
+        api.getRequest(id),
+        api.getRequestHistory(id),
+      ]);
+      if (signal.aborted || reviewInFlight.current || cancelInFlight.current) return;
+      if (recordResult.status === 'fulfilled') {
+        setRecord(recordResult.value);
+        setError(null);
+        loaded = true;
+      } else if (
+        !loaded ||
+        (recordResult.reason instanceof ApiError && [403, 404].includes(recordResult.reason.status))
+      ) {
+        setError(recordResult.reason);
+      }
+      if (historyResult.status === 'fulfilled') {
+        setHistory(historyResult.value);
+        setHistoryError(null);
+      } else setHistoryError(historyResult.reason);
+      setLoading(false);
+    });
   }, [api, id, reload, refreshKey]);
   useEffect(() => {
     let active = true;
@@ -1234,6 +1237,23 @@ function RequestDetails({ id }: { id: string }) {
     }
   }
   if (loading) return <LoadingState />;
+  if (error instanceof ApiError && error.status === 403) {
+    const reviewer = ['manager', 'director', 'hr_admin'].includes(profile.role);
+    return (
+      <EmptyState
+        title="Заявка больше недоступна"
+        description="Согласование могло завершиться или ваши права доступа изменились. Вернитесь к списку заявок."
+        action={
+          <Link
+            className="btn btn-primary"
+            to={reviewer ? '/requests?scope=review' : '/requests?scope=mine'}
+          >
+            {t(reviewer ? 'На согласование' : 'Мои заявки')}
+          </Link>
+        }
+      />
+    );
+  }
   if (error || !record)
     return (
       <div className="stack">

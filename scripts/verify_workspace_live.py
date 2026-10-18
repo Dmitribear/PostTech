@@ -16,8 +16,8 @@ from verify_live_workflow import (
 )
 
 
-def run():
-    api = API("http://127.0.0.1:8010")
+def run(base_url="http://127.0.0.1:8000"):
+    api = API(base_url)
     jury = read_json(ROOT / ".local/jury-credentials.json")
     scenario = read_json(ROOT / ".local/scenario-credentials.json")
     require(

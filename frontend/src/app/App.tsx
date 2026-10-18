@@ -1,3 +1,4 @@
+import { watchVisible } from '@/shared/lib/live-refresh';
 import { PortalContext, usePortal } from '@/entities/session';
 import Auth from '@/pages/auth';
 import Dashboard, { ActivityPage, Services } from '@/pages/dashboard';
@@ -297,18 +298,14 @@ function Shell() {
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [janaOpen]);
-  useEffect(() => {
-    let active = true;
-    api
-      .getNotifications({ unread_only: true, limit: 100 })
-      .then((n) => {
-        if (active) setUnread(n.length);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [api, refreshKey, location.pathname]);
+  useEffect(
+    () =>
+      watchVisible(async (signal) => {
+        const notifications = await api.getNotifications({ unread_only: true, limit: 100 });
+        if (!signal.aborted) setUnread(notifications.length);
+      }),
+    [api, refreshKey, location.pathname],
+  );
   const review = location.pathname === '/requests' && location.search.includes('scope=review');
   const teamLearning = location.pathname === '/academy' && location.search.includes('tab=team');
   const teamRoute =

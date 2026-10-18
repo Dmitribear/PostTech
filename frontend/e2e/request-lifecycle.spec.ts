@@ -57,6 +57,64 @@ async function mockPortal(page: Page, options: { role?: EmployeeProfile['role'];
   return { records, writes, scopes };
 }
 
+test('open reviewer inbox receives new requests without navigation and preserves search', async ({ page }) => {
+  const { records, scopes } = await mockPortal(page);
+  await page.goto('/requests?scope=review');
+  await expect.poll(() => scopes.length).toBeGreaterThan(0);
+  const search = page.getByRole('textbox', { name: 'Поиск заявок', exact: true });
+  await search.fill('Плановый');
+  records.push(request({ employee_id: employeeId, approval_route: 'manager', approvers: [approver] }));
+  await expect(page.locator('.req-list-card tbody tr')).toHaveCount(1, { timeout: 8000 });
+  await expect(search).toHaveValue('Плановый');
+  records[0].status = 'approved';
+  await expect(page.locator('.req-list-card tbody tr')).toHaveCount(0, { timeout: 8000 });
+  expect(scopes.every(scope => scope === 'review')).toBe(true);
+});
+
+test('home refreshes external requests and available leave without navigation', async ({ page }) => {
+  const { records } = await mockPortal(page, { role: 'worker' });
+  let available = 24;
+  await page.route('**/api/v1/workspace/leave-balance', route => route.fulfill({ json: { employee_id: ownId, official_days: 24, available_days: available, pending_days: 24 - available, approved_unreconciled_days: 0, request_days: 0, holds: [] } }));
+  await page.goto('/');
+  await expect(page.locator('.desk-leave-copy')).toContainText('24 дн. доступно');
+  records.push(request()); available = 20;
+  await expect(page.locator('.desk-request')).toHaveCount(1);
+  await expect(page.locator('.desk-leave-copy')).toContainText('20 дн. доступно');
+  records[0].status = 'approved';
+  await expect(page.locator('.desk-request')).toContainText('Согласовано');
+});
+
+test('notifications refresh externally read items while preserving loaded pages', async ({ page }) => {
+  await mockPortal(page);
+  const notes = Array.from({ length: 30 }, (_, i) => ({ id: `note-${i}`, employee_id: ownId, request_id: null, notification_type: 'request_approved', title: `Событие ${i}`, body: 'Изменение заявки', read_at: null as string | null, created_at: stamp }));
+  await page.route('**/api/v1/notifications?*', route => {
+    const url = new URL(route.request().url());
+    const offset = Number(url.searchParams.get('offset') || 0);
+    const limit = Number(url.searchParams.get('limit') || 25);
+    const filtered = url.searchParams.get('unread_only') === 'true' ? notes.filter(n => !n.read_at) : notes;
+    return route.fulfill({ json: filtered.slice(offset, offset + limit) });
+  });
+  await page.goto('/notifications');
+  await expect(page.locator('.support-notification')).toHaveCount(25);
+  await page.getByRole('button', { name: 'Показать ещё' }).click();
+  await expect(page.locator('.support-notification')).toHaveCount(30);
+  notes[0].read_at = stamp;
+  notes.unshift({ ...notes[1], id: 'new', title: 'Новое событие' });
+  await expect(page.locator('.support-notification')).toHaveCount(31);
+  await expect(page.getByRole('heading', { name: 'Событие 0', exact: true }).locator('xpath=ancestor::article')).not.toHaveClass(/unread/);
+  await expect(page.getByRole('heading', { name: 'Событие 29', exact: true })).toBeVisible();
+});
+
+test('open request receives external decision without navigation', async ({ page }) => {
+  const { records } = await mockPortal(page, { records: [request()] });
+  await page.goto(`/requests/${requestId}`);
+  await expect(page.getByRole('region', { name: 'Состояние заявки' })).toContainText('Согласует:');
+  records[0].status = 'approved';
+  records[0].reviewed_by = hrId;
+  records[0].reviewed_at = stamp;
+  await expect(page.getByRole('region', { name: 'Состояние заявки' })).toContainText('Заявка согласована', { timeout: 8000 });
+});
+
 test('owner sees saved HR route and cancels only after confirmation', async ({ page }) => {
   const { writes } = await mockPortal(page, { records: [request()] });
   await page.goto(`/requests/${requestId}`);

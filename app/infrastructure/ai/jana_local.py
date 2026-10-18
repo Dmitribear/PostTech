@@ -14,6 +14,7 @@ from app.domain.knowledge.jana_text import normalize_question
 from app.infrastructure.ai.local_embeddings import LocalEmbedder
 
 MAX_ARTICLES = 100
+MAX_EXCERPT_LENGTH = 1000
 _LOAD_LOCK = Lock()
 
 
@@ -23,7 +24,7 @@ class FAQCard(BaseModel):
     article_id: UUID
     source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     questions: list[str] = Field(min_length=1, max_length=20)
-    excerpt: str = Field(min_length=1, max_length=500)
+    excerpt: str = Field(min_length=1, max_length=MAX_EXCERPT_LENGTH)
 
 
 class FAQCatalog(BaseModel):

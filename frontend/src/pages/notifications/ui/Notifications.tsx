@@ -3,6 +3,7 @@ import { errorMessage } from '@/shared/api/api';
 import type { Notification } from '@/shared/api/contracts';
 import { formatDate, notificationHref } from '@/shared/lib/format';
 import { t, tx } from '@/shared/lib/i18n';
+import { watchVisible } from '@/shared/lib/live-refresh';
 import '@/shared/styles/support.css';
 import { EmptyState, ErrorState, Icon, LoadingState, PageHeader } from '@/shared/ui/index';
 import { useEffect, useRef, useState } from 'react';
@@ -21,34 +22,56 @@ export default function Notifications() {
   const [retry, setRetry] = useState(0);
   const [pending, setPending] = useState<string[]>([]);
   const generation = useRef(0);
+  const loadedCount = useRef(PAGE_SIZE);
+  const mutations = useRef(0);
+  const revision = useRef(0);
   useEffect(() => {
     const current = ++generation.current;
+    loadedCount.current = PAGE_SIZE;
+    let loaded = false;
     setLoading(true);
     setError(null);
     setActionError('');
     setItems([]);
     setLoadingMore(false);
-    api
-      .getNotifications({ unread_only: unreadOnly, limit: PAGE_SIZE })
-      .then((value) => {
-        if (generation.current === current) {
-          setItems(value);
-          setHasMore(value.length === PAGE_SIZE);
+    const stop = watchVisible(async (signal) => {
+      if (mutations.current) return;
+      const version = revision.current;
+      try {
+        const value: Notification[] = [];
+        let more = true;
+        for (let offset = 0; offset < loadedCount.current && more; offset += PAGE_SIZE) {
+          const batch = await api.getNotifications({
+            unread_only: unreadOnly,
+            limit: PAGE_SIZE,
+            offset,
+          });
+          value.push(...batch);
+          more = batch.length === PAGE_SIZE;
+          if (signal.aborted || version !== revision.current) return;
         }
-      })
-      .catch((err) => {
-        if (generation.current === current) setError(err);
-      })
-      .finally(() => {
-        if (generation.current === current) setLoading(false);
-      });
+        if (!signal.aborted && generation.current === current && version === revision.current) {
+          setItems([...new Map(value.map((item) => [item.id, item])).values()]);
+          setHasMore(more);
+          setError(null);
+          loaded = true;
+        }
+      } catch (err) {
+        if (!signal.aborted && !loaded) setError(err);
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+    });
     return () => {
+      stop();
       generation.current += 1;
     };
   }, [api, unreadOnly, retry]);
   async function loadMore() {
     if (loadingMore || pending.length) return;
     const current = generation.current;
+    mutations.current += 1;
+    revision.current += 1;
     setLoadingMore(true);
     setActionError('');
     try {
@@ -58,6 +81,7 @@ export default function Notifications() {
         offset: items.length,
       });
       if (current === generation.current) {
+        loadedCount.current += PAGE_SIZE;
         setItems((previous) => [
           ...previous,
           ...next.filter((item) => !previous.some((existing) => existing.id === item.id)),
@@ -67,12 +91,15 @@ export default function Notifications() {
     } catch (err) {
       if (current === generation.current) setActionError(errorMessage(err));
     } finally {
+      mutations.current -= 1;
       if (current === generation.current) setLoadingMore(false);
     }
   }
   async function markRead(item: Notification) {
     if (pending.includes(item.id) || loadingMore) return;
     const current = generation.current;
+    mutations.current += 1;
+    revision.current += 1;
     setPending((previous) => [...previous, item.id]);
     setActionError('');
     try {
@@ -88,6 +115,7 @@ export default function Notifications() {
     } catch (err) {
       if (current === generation.current) setActionError(errorMessage(err));
     } finally {
+      mutations.current -= 1;
       setPending((previous) => previous.filter((id) => id !== item.id));
     }
   }

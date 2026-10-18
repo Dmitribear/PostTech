@@ -1,5 +1,6 @@
 import { usePortal } from '@/entities/session';
 import { t } from '@/shared/lib/i18n';
+import { watchVisible } from '@/shared/lib/live-refresh';
 import { ErrorState } from '@/shared/ui/index';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -33,7 +34,7 @@ export function LeaveBalance({
   const [error, setError] = useState<unknown>(null);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
-    let live = true;
+    let loaded = false;
     setError(null);
     setBalance(null);
     if (api.mode === 'demo') {
@@ -48,21 +49,24 @@ export function LeaveBalance({
       });
       return;
     }
-    api
-      .workspace<Balance>(`/leave-balance${requestId ? `?request_id=${requestId}` : ''}`)
-      .then((b) => {
-        if (live) setBalance(b);
-      })
-      .catch((e) => {
-        if (live) setError(e);
-      });
-    return () => {
-      live = false;
-    };
+    return watchVisible(async (signal) => {
+      try {
+        const b = await api.workspace<Balance>(
+          `/leave-balance${requestId ? `?request_id=${requestId}` : ''}`,
+        );
+        if (!signal.aborted) {
+          setBalance(b);
+          setError(null);
+          loaded = true;
+        }
+      } catch (e) {
+        if (!signal.aborted && !loaded) setError(e);
+      }
+    });
   }, [api, profile.id, profile.vacation_days_remaining, requestId, refreshKey, retry]);
   useEffect(() => {
     onAvailable?.(balance?.available_days ?? null);
-  }, [balance, onAvailable]);
+  }, [balance?.available_days, onAvailable]);
   if (error)
     return compact ? (
       <p role="status">

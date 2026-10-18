@@ -1,7 +1,7 @@
 {
-  "verified_at": "2026-10-17T12:01:40.386228+00:00",
+  "verified_at": "2026-10-17T15:15:19.721055+00:00",
   "scope": "Docker + real Supabase, marked fictional accounts only",
-  "api_calls": 52,
+  "api_calls": 34,
   "fulfillment": "manager approval → HR document; retry safe",
   "employee_import": "CSV + XLSX preview → invitation → duplicate protection → revoked test invitation",
   "learning": "sequential unlock, both tests passed, plan completed; test courses archived",

@@ -254,8 +254,15 @@ export interface AssignedCourse extends CourseAssignment {
   course: CourseSummary | null;
 }
 
+export interface JanaAction {
+  id: string;
+  label: string;
+  href: string;
+}
+
 export interface JanaAnswer {
-  mode?: 'generated' | 'excerpt' | 'refusal' | 'summary';
+  mode?: 'generated' | 'excerpt' | 'excerpts' | 'refusal' | 'summary';
+  actions?: JanaAction[];
   report?: {
     as_of: string;
     sections: {
