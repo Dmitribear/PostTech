@@ -28,7 +28,7 @@ services:
       - --threads-batch
       - "${JANA_READER_THREADS:-4}"
       - --gpu-layers
-      - "20"
+      - "${JANA_READER_GPU_LAYERS:-20}"
       - --batch-size
       - "256"
       - --ubatch-size

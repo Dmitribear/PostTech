@@ -7,7 +7,7 @@ afterEach(()=>setLocale('ru'));
 describe('Russian and Kazakh user journeys',()=>{
  it('translates authentication, requests, learning and helpdesk',()=>{
   setLocale('kk');
-  for(const label of ['Войти','Создать аккаунт','Восстановить пароль','Оформить отпуск','Отправить заявку','На согласовании','Уведомления','Моё обучение','Замещение','Редактор курсов','Передать вопрос в HR'])expect(t(label)).not.toBe(label);
+  for(const label of ['Войти','Создать аккаунт','Восстановить пароль','Оформить отпуск','Отправить заявку','На согласовании','Уведомления','Моё обучение','Замещение','Редактор курсов','Передать вопрос в HR','Подключить Telegram','Уведомления в Telegram','Отключить Telegram','Скопировать команду'])expect(t(label)).not.toBe(label);
   expect(pluralDays(24)).toBe('24 күн');
   expect(localizedDate(new Date('2026-10-17T12:00:00Z'),{day:'numeric',month:'long',year:'numeric'})).toBe('17 қазан 2026');
   expect(t('Порог 80%')).toBe('Өту балы 80%');

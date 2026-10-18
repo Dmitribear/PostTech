@@ -298,8 +298,22 @@ export interface KnowledgeSource extends KnowledgeFreshness {
   source_url: string | null;
 }
 
+export interface TelegramStatus {
+  enabled: boolean;
+  linked: boolean;
+  telegram_username: string | null;
+  notifications_enabled: boolean;
+  bot_username: string | null;
+}
+
+export interface TelegramLink { url: string; expires_at: string }
+
 /** Shared contract: live HTTP and explicitly selected demonstration mode. */
 export interface HrApi {
+  getTelegramStatus(): Promise<TelegramStatus>;
+  createTelegramLink(): Promise<TelegramLink>;
+  unlinkTelegram(): Promise<void>;
+  setTelegramNotifications(enabled: boolean): Promise<TelegramStatus>;
   workspace<T>(path: string, method?: string, body?: unknown): Promise<T>;
   readonly mode: 'live' | 'demo';
   readonly janaAvailable: boolean;

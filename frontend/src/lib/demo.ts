@@ -11,7 +11,7 @@ import type {
   AppRole, AssignedCourse, Course, CourseAssignment, CourseDetail, EmployeeProfile,
   HrApi, HrRequest, JanaAnswer, Notification, NotificationFilters, RequestCreate,
   RequestEvent, RequestFilters, RequestReview,
-  RequestRouting, Approver, CourseAttempt, TeamCourseAssignment, KnowledgeSource,
+  RequestRouting, Approver, CourseAttempt, TeamCourseAssignment, KnowledgeSource, TelegramLink, TelegramStatus,
 } from './types';
 
 const uuid = (number: number) => `00000000-0000-4000-8000-${String(number).padStart(12, '0')}`;
@@ -73,6 +73,10 @@ function courseData(): (CourseDetail & { correctAnswers: Record<string, number> 
 }
 
 export class DemoApi implements HrApi {
+  async getTelegramStatus(): Promise<TelegramStatus> { return { enabled: false, linked: false, telegram_username: null, notifications_enabled: false, bot_username: null }; }
+  async createTelegramLink(): Promise<TelegramLink> { throw new ApiError(403, 'Telegram недоступен в демонстрационном режиме. Войдите в рабочий аккаунт.'); }
+  async unlinkTelegram(): Promise<void> { throw new ApiError(403, 'Telegram недоступен в демонстрационном режиме. Войдите в рабочий аккаунт.'); }
+  async setTelegramNotifications(_enabled: boolean): Promise<TelegramStatus> { throw new ApiError(403, 'Telegram недоступен в демонстрационном режиме. Войдите в рабочий аккаунт.'); }
   readonly mode = 'demo' as const;
   private readonly employees = profiles();
   private readonly actor: EmployeeProfile;

@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     resend_api_key: SecretStr | None = None
     invitation_email_from: str = "PostTech <onboarding@resend.dev>"
     portal_public_url: AnyHttpUrl | None = None
+    telegram_bot_token: SecretStr | None = None
+    telegram_bot_username: str = ""
+    telegram_worker_secret: SecretStr | None = None
+    telegram_api_url: str = "http://api:8000"
 
     @field_validator("portal_public_url", mode="before")
     @classmethod

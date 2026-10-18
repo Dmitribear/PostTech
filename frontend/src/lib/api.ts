@@ -5,13 +5,17 @@ import type {
   RegistrationResponse, RequestCreate, RequestEvent, RequestFilters, RequestReview,
   RequestRouting, CourseAttempt, TeamCourseAssignment, KnowledgeSource, CalendarExportFilters,
   InvitationPreview, RegistrationInput, RegistrationVerification, InvitationCompletion,
-  InvitationInput, IssuedInvitation, InvitationRecord,
+  InvitationInput, IssuedInvitation, InvitationRecord, TelegramLink, TelegramStatus,
 } from './types';
 
 export type { HrApi } from './types';
 export const SESSION_KEY = 'jana.hr.session.v1';
 
 const translatedErrors: Record<string, string> = {
+  'Telegram integration is not configured': 'Подключение Telegram ещё не настроено. Обратитесь к администратору.',
+  'Telegram is already linked; unlink it first': 'Telegram уже подключён. Обновите статус или сначала отключите текущий аккаунт.',
+  'Telegram account is not linked': 'Telegram пока не подключён. Обновите статус и подключите аккаунт.',
+  'Telegram is temporarily unavailable': 'Telegram временно недоступен. Попробуйте позже.',
   'Jana AI is temporarily unavailable': 'Локальная Jana сейчас недоступна. Попробуйте позже.',
   'Jana knowledge base is temporarily unavailable': 'База знаний Jana временно недоступна. Попробуйте позже.',
   'Source not found': 'Источник больше не опубликован или был удалён. Уточните информацию в HR.',
@@ -398,6 +402,11 @@ export class LiveApi implements HrApi {
     return payload as T;
   }
 
+  getTelegramStatus(): Promise<TelegramStatus> { return this.send('/telegram/status'); }
+  async createTelegramLink(): Promise<TelegramLink> { return validateTelegramLink(await this.send<TelegramLink>('/telegram/link', { method: 'POST' })); }
+  async unlinkTelegram(): Promise<void> { await this.send('/telegram/link', { method: 'DELETE' }); }
+  setTelegramNotifications(enabled: boolean): Promise<TelegramStatus> { return this.send('/telegram/settings', { method: 'PATCH', body: JSON.stringify({ notifications_enabled: enabled }) }); }
+
   workspace<T>(path: string, method = 'GET', body?: unknown): Promise<T> { return this.send(`/workspace${path}`, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); }
   getProfile(): Promise<EmployeeProfile> { return this.send('/profile'); }
   getEmployee(id: string): Promise<EmployeeProfile> { return this.send(`/employees/${encodeURIComponent(id)}`); }
@@ -425,6 +434,19 @@ export class LiveApi implements HrApi {
   getLeaveCalendar(id: string): Promise<Blob> { return this.send(`/requests/${encodeURIComponent(id)}/calendar.ics`, {}, true, true, 'calendar'); }
   askJana(question: string): Promise<JanaAnswer> { return this.send('/ai/ask', { method: 'POST', body: JSON.stringify({ question }) }); }
   async getKnowledgeSource(id: string, version?: string | null): Promise<KnowledgeSource> { return this.send(`${janaSourcePath(id)}${version ? `?version=${encodeURIComponent(version)}` : ''}`); }
+}
+
+/** A one-use linking secret may only be opened at Telegram's canonical HTTPS endpoint. */
+export function validateTelegramLink(value: TelegramLink): TelegramLink {
+  try {
+    const url = new URL(value.url);
+    const params = [...url.searchParams.keys()];
+    if (url.protocol !== 'https:' || url.hostname !== 't.me' || url.port || url.username || url.password || url.hash ||
+      !/^\/[a-zA-Z0-9_]{5,32}$/.test(url.pathname) || params.length !== 1 || params[0] !== 'start' ||
+      !/^[a-zA-Z0-9_-]{1,64}$/.test(url.searchParams.get('start') || '') ||
+      !Number.isFinite(Date.parse(value.expires_at)) || Date.parse(value.expires_at) <= Date.now()) throw new Error();
+    return value;
+  } catch { throw new ApiError(502, 'Сервер вернул некорректную ссылку Telegram. Попробуйте снова.'); }
 }
 
 /** Build the authenticated path from an ID, never from a source-supplied URL. */
