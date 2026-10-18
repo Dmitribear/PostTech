@@ -267,10 +267,29 @@ function tabStorage(): StoragePort | null {
   }
 }
 
+function browserStorage(): { storage: StoragePort | null; shared: boolean } {
+  try {
+    if (typeof window === 'undefined') return { storage: null, shared: false };
+    const storage = window.localStorage;
+    const probe = `${SESSION_KEY}.probe`;
+    storage.setItem(probe, '1');
+    storage.removeItem(probe);
+    // A stored null is a logout marker: an older tab must not restore its legacy session.
+    if (storage.getItem(SESSION_KEY) === null) {
+      const previous = tabStorage()?.getItem(SESSION_KEY);
+      if (previous) storage.setItem(SESSION_KEY, previous);
+    }
+    tabStorage()?.removeItem(SESSION_KEY);
+    return { storage, shared: true };
+  } catch {
+    return { storage: tabStorage(), shared: false };
+  }
+}
+
 function readSession(storage: StoragePort | null): AuthSession | null {
   try {
     const raw = storage?.getItem(SESSION_KEY);
-    if (!raw) return null;
+    if (!raw || raw === 'null') return null;
     const value: unknown = JSON.parse(raw);
     if (
       value &&
@@ -323,6 +342,7 @@ export class LiveApi implements HrApi {
   private readonly baseUrl: string;
   private readonly transport: typeof globalThis.fetch;
   private readonly storage: StoragePort | null;
+  private readonly sharedStorage: boolean;
   private session: AuthSession | null;
   private readonly listeners = new Set<SessionListener>();
   private refreshing: Promise<AuthSession> | null = null;
@@ -332,9 +352,11 @@ export class LiveApi implements HrApi {
   constructor(options: LiveApiOptions = {}) {
     this.baseUrl = (options.baseUrl || '/api/v1').replace(/\/+$/, '');
     this.transport = options.fetch ?? globalThis.fetch.bind(globalThis);
-    this.storage = options.storage === undefined ? tabStorage() : options.storage;
+    const browser = options.storage === undefined ? browserStorage() : null;
+    this.storage = browser ? browser.storage : (options.storage ?? null);
+    this.sharedStorage = browser?.shared ?? false;
     this.session = readSession(this.storage);
-    if (options.onSessionChange) this.listeners.add(options.onSessionChange);
+    if (options.onSessionChange) this.subscribeSession(options.onSessionChange);
   }
 
   getSession(): AuthSession | null {
@@ -343,18 +365,41 @@ export class LiveApi implements HrApi {
 
   subscribeSession(listener: SessionListener): () => void {
     this.listeners.add(listener);
+    const sync = (event: StorageEvent) => {
+      if (
+        (event.key === SESSION_KEY || event.key === null) &&
+        (!event.storageArea || event.storageArea === this.storage)
+      )
+        this.syncSession();
+    };
+    if (this.sharedStorage) window.addEventListener('storage', sync);
     return () => {
       this.listeners.delete(listener);
+      if (this.sharedStorage) window.removeEventListener('storage', sync);
     };
   }
 
-  private setSession(session: AuthSession | null, explicitAuthChange = false): void {
+  private syncSession(): void {
+    if (!this.sharedStorage) return;
+    const session = readSession(this.storage);
+    if (JSON.stringify(session) !== JSON.stringify(this.session))
+      this.setSession(session, session?.user_id !== this.session?.user_id, false);
+  }
+
+  private setSession(
+    session: AuthSession | null,
+    explicitAuthChange = false,
+    persist = true,
+  ): void {
     this.session = session;
     this.sessionVersion += 1;
     if (explicitAuthChange || !session) this.authenticationEpoch += 1;
     try {
-      if (session) this.storage?.setItem(SESSION_KEY, JSON.stringify(session));
-      else this.storage?.removeItem(SESSION_KEY);
+      if (persist) {
+        if (session || this.sharedStorage)
+          this.storage?.setItem(SESSION_KEY, JSON.stringify(session));
+        else this.storage?.removeItem(SESSION_KEY);
+      }
     } catch {
       /* The current tab can still use its in-memory session. */
     }
@@ -534,10 +579,16 @@ export class LiveApi implements HrApi {
 
   async refreshSession(): Promise<AuthSession> {
     if (this.refreshing) return this.refreshing;
+    this.syncSession();
     const previous = this.session;
     if (!previous) throw new ApiError(401);
-    const version = this.sessionVersion;
+    const epoch = this.authenticationEpoch;
     const refresh = async (): Promise<AuthSession> => {
+      this.syncSession();
+      if (!this.session || epoch !== this.authenticationEpoch) throw new ApiError(401);
+      // Another tab may have rotated the token while we waited for the browser lock.
+      if (this.session.refresh_token !== previous.refresh_token) return { ...this.session };
+      const version = this.sessionVersion;
       try {
         const result = await this.send<AuthResponse>(
           '/auth/refresh',
@@ -547,19 +598,26 @@ export class LiveApi implements HrApi {
           },
           false,
         );
+        this.syncSession();
         // A late refresh must never restore a session after logout or replace another login.
         if (version !== this.sessionVersion) {
-          if (this.session) return { ...this.session };
+          if (this.session && epoch === this.authenticationEpoch) return { ...this.session };
           throw new ApiError(401);
         }
         return this.acceptAuth(result);
       } catch (error) {
+        this.syncSession();
+        if (version !== this.sessionVersion && this.session && epoch === this.authenticationEpoch)
+          return { ...this.session };
         if (error instanceof ApiError && error.status === 401 && version === this.sessionVersion)
           this.setSession(null);
         throw error;
       }
     };
-    this.refreshing = refresh();
+    this.refreshing =
+      this.sharedStorage && typeof navigator !== 'undefined' && navigator.locks
+        ? navigator.locks.request(`${SESSION_KEY}:${this.baseUrl}`, refresh)
+        : refresh();
     try {
       return await this.refreshing;
     } finally {
@@ -573,6 +631,7 @@ export class LiveApi implements HrApi {
     authenticated = true,
     retry = true,
   ): Promise<T> {
+    if (authenticated) this.syncSession();
     const authenticationEpoch = this.authenticationEpoch;
     if (authenticated && this.session && this.session.expires_at <= Date.now() + 10_000)
       await this.refreshSession();
@@ -601,6 +660,7 @@ export class LiveApi implements HrApi {
       );
     }
     // Never retry a pending mutation as a different signed-in account.
+    if (authenticated) this.syncSession();
     if (authenticated && authenticationEpoch !== this.authenticationEpoch) throw new ApiError(401);
     if (response.status === 401 && authenticated && retry && this.session) {
       // Parallel requests that used an old token share the first refresh result.
@@ -608,6 +668,7 @@ export class LiveApi implements HrApi {
       return this.send<T>(path, init, true, false);
     }
     const raw = await response.text();
+    if (authenticated) this.syncSession();
     if (authenticated && authenticationEpoch !== this.authenticationEpoch) throw new ApiError(401);
     if (response.ok && path.split('?')[0].endsWith('/calendar.ics')) {
       if (

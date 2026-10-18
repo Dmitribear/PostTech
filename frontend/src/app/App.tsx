@@ -53,6 +53,7 @@ export default function App() {
   const [profileAttempt, setProfileAttempt] = useState(0);
   const [toast, setToast] = useState('');
   const signingOut = useRef(false);
+  const sessionUser = useRef(live.getSession()?.user_id);
   const navigate = useNavigate();
   const location = useLocation();
   const logout = useCallback(() => {
@@ -71,10 +72,24 @@ export default function App() {
   useEffect(
     () =>
       live.subscribeSession((session) => {
+        const previousUser = sessionUser.current;
+        sessionUser.current = session?.user_id;
         if (!session && api?.mode === 'live' && !signingOut.current) {
           setApi(null);
           setProfile(null);
+          setError(null);
           setToast('Сессия завершена. Войдите снова.');
+        } else if (
+          session &&
+          api?.mode !== 'demo' &&
+          (api !== live || previousUser !== session.user_id)
+        ) {
+          setProfile(null);
+          setError(null);
+          setToast('');
+          setLoading(true);
+          setApi(live);
+          setProfileAttempt((value) => value + 1);
         }
       }),
     [api],
@@ -301,7 +316,10 @@ function Shell() {
   useEffect(
     () =>
       watchVisible(async (signal) => {
-        const notifications = await api.getNotifications({ unread_only: true, limit: 100 });
+        const notifications = await api.getNotifications({
+          unread_only: true,
+          limit: 100,
+        });
         if (!signal.aborted) setUnread(notifications.length);
       }),
     [api, refreshKey, location.pathname],
