@@ -185,6 +185,23 @@ function CourseReader({ id, onClose }: { id: string; onClose: () => void }) {
         if (!busy) onClose();
       }}
       wide
+      subtitle={
+        course && (
+          <div className="support-reader-meta">
+            <Icon name="clock" size={15} />
+            <span>
+              {tx(course.duration_minutes)}
+              {t(' мин')}
+            </span>
+            {course.assignment && (
+              <>
+                <StatusBadge status={course.assignment.status} />
+                <Deadline due={course.assignment.due_on} status={course.assignment.status} />
+              </>
+            )}
+          </div>
+        )
+      }
     >
       {error ? (
         <ErrorState error={error} retry={() => setRetry((value) => value + 1)} />
@@ -192,21 +209,6 @@ function CourseReader({ id, onClose }: { id: string; onClose: () => void }) {
         <LoadingState />
       ) : (
         <div className="support-course-reader">
-          <div className="support-reader-meta">
-            <Icon name="clock" size={15} />
-            <span>
-              {tx(course.duration_minutes)}
-              {t(' мин')}
-            </span>
-            {tx(
-              course.assignment && (
-                <>
-                  <StatusBadge status={course.assignment.status} />
-                  <Deadline due={course.assignment.due_on} status={course.assignment.status} />
-                </>
-              ),
-            )}
-          </div>
           <div className="academy-course-facts">
             <span>{tx(course.category || 'Общее')}</span>
             <span>{tx(course.audience || 'Все сотрудники')}</span>
