@@ -72,7 +72,9 @@ export function createSharedDemoApi(
             );
           }
           const result = await method.apply(api, args);
-          if (mutations.has(String(key))) {
+          const workspaceMutation =
+            key === 'workspace' && args[1] !== undefined && args[1] !== 'GET';
+          if (mutations.has(String(key)) || workspaceMutation) {
             try {
               store.setItem(storageKey, JSON.stringify(api.snapshot()));
             } catch {

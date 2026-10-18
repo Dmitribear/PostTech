@@ -203,6 +203,10 @@ function courseData(): (CourseDetail & {
 export interface DemoSnapshot {
   courses?: ReturnType<typeof courseData>;
   personalCourseInputs?: [string, PersonalCourseInput][];
+  knowledgeArticles?: DemoKnowledgeArticle[];
+  knowledgeEvents?: [string, DemoKnowledgeEvent[]][];
+  reconciledRequests?: string[];
+  balanceReconciliations?: string[];
   employees: EmployeeProfile[];
   assignments: CourseAssignment[];
   requests: HrRequest[];
@@ -212,6 +216,25 @@ export interface DemoSnapshot {
   idempotency: [string, { body: string; id: string }][];
   quizKeys: [string, { fingerprint: string; assignment: CourseAssignment }][];
 }
+
+type DemoKnowledgeContent = {
+  title: string;
+  content: string;
+  source_title: string;
+  source_url: string | null;
+  keywords: string[];
+};
+type DemoKnowledgeArticle = DemoKnowledgeContent & {
+  id: string;
+  revision: number;
+  version: string;
+  draft: DemoKnowledgeContent | null;
+  active: boolean;
+  editorial_state: string;
+  review_due_at: string | null;
+  created_at: string;
+};
+type DemoKnowledgeEvent = { action: string; revision: number; created_at: string };
 
 export class DemoApi implements HrApi {
   async getTelegramStatus(): Promise<TelegramStatus> {
@@ -253,6 +276,10 @@ export class DemoApi implements HrApi {
   private readonly notifications: Notification[] = [];
   private readonly idempotency = new Map<string, { body: string; id: string }>();
   private readonly attempts: CourseAttempt[] = [];
+  private readonly knowledgeArticles: DemoKnowledgeArticle[] = [];
+  private readonly knowledgeEvents = new Map<string, DemoKnowledgeEvent[]>();
+  private readonly reconciledRequests = new Set<string>();
+  private readonly balanceReconciliations = new Set<string>();
   private readonly quizKeys = new Map<
     string,
     { fingerprint: string; assignment: CourseAssignment }
@@ -266,6 +293,10 @@ export class DemoApi implements HrApi {
     return copy({
       courses: this.courses,
       personalCourseInputs: [...this.personalCourseInputs],
+      knowledgeArticles: this.knowledgeArticles,
+      knowledgeEvents: [...this.knowledgeEvents],
+      reconciledRequests: [...this.reconciledRequests],
+      balanceReconciliations: [...this.balanceReconciliations],
       employees: this.employees,
       assignments: this.assignments,
       requests: this.requests,
@@ -294,6 +325,17 @@ export class DemoApi implements HrApi {
     this.personalCourseInputs.clear();
     for (const [key, value] of state.personalCourseInputs || [])
       this.personalCourseInputs.set(key, value);
+    this.knowledgeArticles.splice(
+      0,
+      this.knowledgeArticles.length,
+      ...(state.knowledgeArticles || []),
+    );
+    this.knowledgeEvents.clear();
+    for (const [key, value] of state.knowledgeEvents || []) this.knowledgeEvents.set(key, value);
+    this.reconciledRequests.clear();
+    for (const requestId of state.reconciledRequests || []) this.reconciledRequests.add(requestId);
+    this.balanceReconciliations.clear();
+    for (const id of state.balanceReconciliations || []) this.balanceReconciliations.add(id);
     this.idempotency.clear();
     for (const [key, value] of state.idempotency) this.idempotency.set(key, value);
     this.quizKeys.clear();
@@ -527,17 +569,22 @@ export class DemoApi implements HrApi {
   }
   async workspace<T>(_path: string, _method = 'GET', _body?: unknown): Promise<T> {
     const [path, query] = _path.split('?');
+    const params = new URLSearchParams(query);
     if (path === '/leave-balance' && _method === 'GET') {
-      const requestId = new URLSearchParams(query).get('request_id');
-      const employeeId = requestId ? this.findRequest(requestId).employee_id : this.actor.id;
-      const employee = this.employees.find((person) => person.id === employeeId)!;
+      const requestId = params.get('request_id');
+      const employeeId = requestId
+        ? this.findRequest(requestId).employee_id
+        : (params.get('employee_id') ?? this.actor.id);
+      const employee = this.employees.find((person) => person.id === employeeId);
+      if (!employee || !this.canSee(employeeId)) throw new ApiError(404, 'Employee not found');
       const holds = this.requests
         .filter(
           (r) =>
             r.employee_id === employeeId &&
             r.request_type === 'leave' &&
             ['pending', 'approved'].includes(r.status) &&
-            r.end_date! >= dateAt(0),
+            r.end_date! >= dateAt(0) &&
+            !this.reconciledRequests.has(r.id),
         )
         .map((r) => ({
           request_id: r.id,
@@ -560,7 +607,187 @@ export class DemoApi implements HrApi {
         holds,
       } as T;
     }
+    if (path === '/leave-balance/reconcile' && _method === 'POST') {
+      if (this.actor.role !== 'hr_admin') throw new ApiError(403);
+      const body = this.workspaceBody(_body);
+      const employeeId = body.employee_id;
+      const id = body.id;
+      const days = body.days;
+      const requests = body.requests;
+      const note = body.note;
+      if (
+        typeof employeeId !== 'string' ||
+        typeof id !== 'string' ||
+        typeof days !== 'number' ||
+        !Number.isFinite(days) ||
+        days < 0 ||
+        days > 999 ||
+        !Number.isInteger(days * 2) ||
+        !Array.isArray(requests) ||
+        requests.some((requestId) => typeof requestId !== 'string') ||
+        typeof note !== 'string' ||
+        note.trim().length < 3 ||
+        note.length > 1000
+      )
+        throw new ApiError(422, 'Проверьте данные сверки.');
+      if (this.balanceReconciliations.has(id))
+        throw new ApiError(409, 'Эта сверка уже выполнена. Обновите данные.');
+      const employee = this.employees.find((person) => person.id === employeeId);
+      if (!employee) throw new ApiError(404, 'Employee not found');
+      const approvedHolds = new Set(
+        this.requests
+          .filter(
+            (request) =>
+              request.employee_id === employeeId &&
+              request.request_type === 'leave' &&
+              request.status === 'approved' &&
+              request.end_date! >= dateAt(0) &&
+              !this.reconciledRequests.has(request.id),
+          )
+          .map((request) => request.id),
+      );
+      if (requests.some((requestId) => !approvedHolds.has(requestId as string)))
+        throw new ApiError(422, 'Выберите только учтённые согласованные заявки.');
+      employee.vacation_days_remaining = days;
+      for (const requestId of requests) this.reconciledRequests.add(requestId as string);
+      this.balanceReconciliations.add(id);
+      return { reconciled: true } as T;
+    }
+    if (path === '/knowledge' && _method === 'GET') {
+      this.requireHr();
+      const offset = Math.max(0, Number(params.get('offset') || 0));
+      const limit = Math.min(100, Math.max(1, Number(params.get('limit') || 20)));
+      if (!Number.isInteger(offset) || !Number.isInteger(limit))
+        throw new ApiError(422, 'Invalid pagination');
+      return copy(
+        [...this.knowledgeArticles]
+          .sort((a, b) => b.created_at.localeCompare(a.created_at))
+          .slice(offset, offset + limit),
+      ) as T;
+    }
+    const historyMatch = path.match(/^\/knowledge\/([^/]+)\/history$/);
+    if (historyMatch && _method === 'GET') {
+      this.requireHr();
+      if (!this.knowledgeArticles.some((article) => article.id === historyMatch[1]))
+        throw new ApiError(404);
+      return copy(this.knowledgeEvents.get(historyMatch[1]) || []) as T;
+    }
+    if (path === '/knowledge' && _method === 'POST') {
+      this.requireHr();
+      const body = this.workspaceBody(_body);
+      const { id, revision, action } = body;
+      if (
+        typeof id !== 'string' ||
+        typeof revision !== 'number' ||
+        !Number.isInteger(revision) ||
+        !['create', 'save', 'approve', 'archive'].includes(String(action))
+      )
+        throw new ApiError(422, 'Проверьте действие над источником.');
+      let article = this.knowledgeArticles.find((item) => item.id === id);
+      if (action === 'create' && article) return copy(article) as T;
+      if (action !== 'create' && (!article || article.revision !== revision))
+        throw new ApiError(article ? 409 : 404, 'Источник изменён или больше не найден.');
+
+      if (action === 'create' || action === 'save') {
+        const content = this.knowledgeContent(body.data);
+        if (!article) {
+          article = {
+            ...content,
+            id,
+            revision: 1,
+            version: '1',
+            draft: copy(content),
+            active: false,
+            editorial_state: 'draft',
+            review_due_at: null,
+            created_at: now(),
+          };
+          this.knowledgeArticles.unshift(article);
+        } else {
+          article.draft = content;
+          article.revision += 1;
+        }
+      } else if (action === 'approve') {
+        const due = body.due;
+        if (typeof due !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(due) || due <= dateAt(0))
+          throw new ApiError(422, 'Укажите будущую дату следующей проверки.');
+        const content = article!.draft || this.knowledgeContent(article);
+        Object.assign(article!, content, {
+          draft: null,
+          active: true,
+          editorial_state: 'published',
+          revision: article!.revision + 1,
+          version: String(article!.revision + 1),
+          review_due_at: due,
+        });
+      } else {
+        Object.assign(article!, {
+          active: false,
+          editorial_state: 'archived',
+          revision: article!.revision + 1,
+        });
+      }
+      const events = this.knowledgeEvents.get(id) || [];
+      events.unshift({ action: String(action), revision: article!.revision, created_at: now() });
+      this.knowledgeEvents.set(id, events);
+      return copy(article) as T;
+    }
+    if (path === '/integrations' && _method === 'GET') {
+      this.requireHr();
+      return {
+        connected: { '1c': false, documentolog: false },
+        events: [],
+      } as T;
+    }
+    const attemptsMatch = path.match(/^\/integrations\/([^/]+)\/attempts$/);
+    if (attemptsMatch && _method === 'GET') {
+      this.requireHr();
+      throw new ApiError(404, 'Integration event not found');
+    }
+    if (/^\/integrations\/[^/]+\/retry$/.test(path) && _method === 'POST') {
+      this.requireHr();
+      throw new ApiError(404, 'Integration event not found');
+    }
     throw new ApiError(409, 'Этот раздел доступен после входа в реальный портал.');
+  }
+  private requireHr(): void {
+    if (this.actor.role !== 'hr_admin') throw new ApiError(403);
+  }
+  private workspaceBody(body: unknown): Record<string, unknown> {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new ApiError(422);
+    return body as Record<string, unknown>;
+  }
+  private knowledgeContent(content: unknown): DemoKnowledgeContent {
+    if (!content || typeof content !== 'object' || Array.isArray(content))
+      throw new ApiError(422, 'Заполните текст источника.');
+    const data = content as Record<string, unknown>;
+    const { title, content: text, source_title, source_url, keywords } = data;
+    if (
+      typeof title !== 'string' ||
+      title.trim().length < 3 ||
+      title.length > 200 ||
+      typeof text !== 'string' ||
+      text.trim().length < 3 ||
+      text.length > 60000 ||
+      typeof source_title !== 'string' ||
+      source_title.trim().length < 3 ||
+      source_title.length > 300 ||
+      (source_url !== null &&
+        (typeof source_url !== 'string' ||
+          !/^https?:\/\//.test(source_url) ||
+          source_url.length > 2048)) ||
+      !Array.isArray(keywords) ||
+      keywords.length > 50 ||
+      keywords.some((keyword) => typeof keyword !== 'string')
+    )
+      throw new ApiError(422, 'Проверьте текст источника и ссылку.');
+    return {
+      title,
+      content: text,
+      source_title,
+      source_url,
+      keywords: [...keywords],
+    };
   }
   async getProfile(): Promise<EmployeeProfile> {
     return copy(this.actor);

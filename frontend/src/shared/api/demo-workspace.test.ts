@@ -168,3 +168,85 @@ test('personal courses persist across sessions and remain outside the public cat
     worker.createPersonalCourse({ ...input, title: 'Другая версия' }),
   ).rejects.toMatchObject({ status: 409 });
 });
+
+test('HR workspace operations load in demo mode and knowledge edits persist', async () => {
+  const store = storage();
+  const hr = createSharedDemoApi('hr_admin', store);
+  const people = await hr.getTeam();
+  const employee = people.find((person) => person.role === 'worker')!;
+  const balance = await hr.workspace<{
+    employee_id: string;
+    official_days: number;
+  }>(`/leave-balance?employee_id=${employee.id}`);
+  expect(balance).toMatchObject({
+    employee_id: employee.id,
+    official_days: employee.vacation_days_remaining,
+  });
+  expect(
+    await hr.workspace<{ connected: Record<string, boolean>; events: unknown[] }>(
+      '/integrations?offset=0',
+    ),
+  ).toEqual({
+    connected: { '1c': false, documentolog: false },
+    events: [],
+  });
+  expect(await hr.workspace<unknown[]>('/knowledge?limit=20&offset=0')).toEqual([]);
+
+  const worker = createSharedDemoApi('worker', store);
+  const manager = createSharedDemoApi('manager', store);
+  const leaveRequest = await worker.createRequest(leave);
+  await manager.reviewRequest(leaveRequest.id, { status: 'approved' });
+  const reconcileId = crypto.randomUUID();
+  await hr.workspace('/leave-balance/reconcile', 'POST', {
+    id: reconcileId,
+    employee_id: employee.id,
+    days: 30,
+    requests: [leaveRequest.id],
+    note: 'Сверка с кадровой системой',
+  });
+  const updatedBalance = await hr.workspace<{
+    official_days: number;
+    approved_unreconciled_days: number;
+    holds: { request_id: string }[];
+  }>(`/leave-balance?employee_id=${employee.id}`);
+  expect(updatedBalance.official_days).toBe(30);
+  expect(updatedBalance.approved_unreconciled_days).toBe(0);
+  expect(updatedBalance.holds.some((hold) => hold.request_id === leaveRequest.id)).toBe(false);
+
+  const id = crypto.randomUUID();
+  const source = {
+    title: 'Политика отпусков',
+    content: 'Правила оформления отпуска доступны сотрудникам.',
+    source_title: 'Положение об отпусках',
+    source_url: null,
+    keywords: ['отпуск'],
+  };
+  await hr.workspace('/knowledge', 'POST', { id, revision: 0, action: 'create', data: source });
+  await hr.workspace('/knowledge', 'POST', {
+    id,
+    revision: 1,
+    action: 'save',
+    data: { ...source, content: 'Обновлённые правила оформления отпуска.' },
+  });
+  await hr.workspace('/knowledge', 'POST', {
+    id,
+    revision: 2,
+    action: 'approve',
+    due: '2099-01-01',
+  });
+
+  const reopened = createSharedDemoApi('hr_admin', store);
+  const [article] = await reopened.workspace<
+    { id: string; active: boolean; editorial_state: string; revision: number; content: string }[]
+  >('/knowledge?limit=20&offset=0');
+  expect(article).toMatchObject({
+    id,
+    active: true,
+    editorial_state: 'published',
+    revision: 3,
+    content: 'Обновлённые правила оформления отпуска.',
+  });
+  expect(await reopened.workspace<{ action: string }[]>(`/knowledge/${id}/history`)).toHaveLength(
+    3,
+  );
+});
