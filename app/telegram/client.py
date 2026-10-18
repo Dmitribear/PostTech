@@ -99,12 +99,13 @@ class PortalClient:
         key=None,
         params=None,
         binary=False,
+        language="ru",
     ):
         if not path.startswith("/") or "://" in path or ".." in path:
             raise ValueError("Internal API path required")
         headers = {
             "X-Telegram-Worker-Key": self.config.worker_secret.get_secret_value(),
-            "Accept-Language": "ru",
+            "Accept-Language": "kk" if language == "kk" else "ru",
         }
         if user_id is not None:
             headers["X-Telegram-User-Id"] = str(user_id)

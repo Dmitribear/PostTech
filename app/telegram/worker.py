@@ -109,10 +109,10 @@ class Poller:
                 self.retry_at.pop(uid, None)
 
     async def run(self):
+        HEARTBEAT.unlink(missing_ok=True)
         await self.initialize()
         try:
             while True:
-                HEARTBEAT.write_text(str(time.time()), encoding="ascii")
                 try:
                     await self.checkpoint()
                     updates = await self.tg.call(
@@ -124,6 +124,7 @@ class Poller:
                             "allowed_updates": ["message", "callback_query"],
                         },
                     )
+                    HEARTBEAT.write_text(str(time.time()), encoding="ascii")
                     self.accept(updates or [])
                     # With unfinished jobs Telegram may return the same window
                     # immediately. This bound avoids a busy network loop.
@@ -131,7 +132,8 @@ class Poller:
                         await asyncio.sleep(1)
                 except RemoteError as exc:
                     logger.warning(
-                        "Telegram polling temporarily unavailable (status=%s)",
+                        "Telegram polling temporarily unavailable (service=%s, status=%s)",
+                        exc.service,
                         exc.status,
                     )
                     await asyncio.sleep(min(exc.retry_after, 30))

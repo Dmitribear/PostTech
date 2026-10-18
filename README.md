@@ -92,7 +92,7 @@ posttech/
 
 1. Установите Docker Desktop либо Python 3.13 и Node.js 22 для локальной разработки.
 2. Создайте `.env` из [.env.example](.env.example), если файл ещё не создан. Заполните `SUPABASE_URL`, `SUPABASE_KEY` и `SUPABASE_ANON_KEY`.
-3. В подготовленной Supabase-базе примените [миграции](database/migrations/) **0001–0016 по порядку**. Для существующей базы сначала проверьте схему и примените только отсутствующие миграции. Запуск контейнера миграции не выполняет.
+3. В подготовленной Supabase-базе примените [миграции](database/migrations/) в порядке [плана миграций](database/migration-plan.json). Для существующей базы сначала проверьте схему и примените только отсутствующие миграции. Запуск контейнера миграции не выполняет.
 4. Для демонстрации используйте [seed.sql](database/seed.sql); подготовьте и свяжите Auth-аккаунты с профилями по [руководству](docs/leave-workflow.md#подготовка-учётных-записей). Новых сотрудников HR приглашает через интерфейс.
 5. Для регистрации и восстановления настройте SMTP и шаблоны писем в Supabase по [инструкции](docs/registration.md).
 
@@ -125,10 +125,17 @@ docker compose -f compose.yaml -f compose.lan.yaml up -d --no-deps --no-build fr
 Из корня проекта:
 
 ```powershell
-docker compose up --build -d --wait
+powershell -ExecutionPolicy Bypass -File scripts/start_portal.ps1
 ```
 
 **Портал: [http://localhost:8000](http://localhost:8000).** Можно также открыть [Start PostTech Docker.cmd](<Start PostTech Docker.cmd>).
+
+Запуск сохраняет уже подключённые Telegram, доступ с телефона и локальную модель.
+Для первого включения бота подготовьте `.local/telegram.env` и миграцию по
+[инструкции](docs/telegram.md#подключение-к-существующей-установке-main), затем выполните
+`scripts/start_portal.ps1 -Telegram`. Параметр `-LanHost 192.168.1.5` добавляет доступ
+с телефона в той же сети. Базовый `docker compose up` не подключает Telegram overlay;
+используйте скрипт или ярлык, чтобы сохранить полный набор сервисов.
 
 | Сервис | Что запускается |
 | --- | --- |

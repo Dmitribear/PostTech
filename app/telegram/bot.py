@@ -14,10 +14,11 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from urllib.parse import quote
 
+from app.infrastructure.ai.jana_actions import ACTION_ROUTES, KAZAKH_ACTION_LABELS
 from app.telegram.client import RemoteError, mutation_key, public_portal_url
 
 STATUS = {
-    "pending": "У руководителя",
+    "pending": "Ждёт решения",
     "pending_hr": "У HR",
     "pending_director": "У директора",
     "approved": "Согласовано",
@@ -33,6 +34,17 @@ ROLE = {
 }
 PAGE = 10
 TTL = 900
+JANA_CALLBACKS = {
+    "leave_new": "new:leave",
+    "advance_new": "new:advance",
+    "requests_mine": "requests:mine:0",
+    "academy": "courses:0",
+    "profile": "profile",
+    "calendar": "calendar",
+    "notifications": "notifications:0",
+    "requests_review": "requests:review:0",
+    "support": "new:ticket",
+}
 
 
 def keyboard(rows):
@@ -61,6 +73,31 @@ def parse_date(value):
         except ValueError:
             pass
     raise ValueError("Введите две даты: 10.11.2026 12.11.2026.")
+
+
+def summary_sections(report):
+    if not isinstance(report, dict) or not isinstance(report.get("sections"), list):
+        return []
+    return [section for section in report["sections"][:8] if isinstance(section, dict)]
+
+
+def summary_text(sections):
+    blocks = []
+    for section in sections:
+        count = section.get("count", 0)
+        count = count if isinstance(count, int) and count >= 0 else 0
+        lines = [f"{str(section.get('title') or 'Раздел')[:160]}: {count}"]
+        items = section.get("items") or []
+        if not isinstance(items, list):
+            items = []
+        items = [
+            item for item in items[:8] if isinstance(item, dict) and item.get("label")
+        ]
+        lines.extend("• " + str(item["label"])[:300] for item in items)
+        if count > len(items):
+            lines.append(f"Ещё {count - len(items)} — в портале.")
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
 
 
 @dataclass
@@ -285,6 +322,7 @@ class Bot:
                 chat, uid, update_id, names.get(command, command[1:]), session
             )
         elif command == "/ask":
+            session.flow = None
             if not argument.strip():
                 await self.tg.send(
                     chat,
@@ -423,33 +461,117 @@ class Bot:
                     "consent": True,
                 },
             )
+        elif flow["step"] == "course_progress":
+            value = text.removesuffix("%").strip()
+            if not value.isascii() or not value.isdigit() or not 0 <= int(value) <= 100:
+                await self.tg.send(
+                    chat, "Введите целое число от 0 до 100. /cancel — отмена."
+                )
+                return
+            progress = int(value)
+            if progress <= flow["current_progress"]:
+                await self.tg.send(
+                    chat,
+                    f"Сейчас отмечено {flow['current_progress']}%. Укажите больший прогресс или /cancel.",
+                )
+                return
+            title = f"{flow['title']}\nВаш прогресс: {progress}%"
+            if progress == 100:
+                title += "\nВы подтверждаете, что прошли курс. Это ваша отметка, а не проверка площадкой."
+            await self.confirm(
+                chat,
+                uid,
+                update_id,
+                session,
+                title,
+                "PATCH",
+                f"/academy/courses/{flow['course_id']}/progress",
+                {"progress_percent": progress},
+            )
 
     async def ask(self, chat, uid, question, session):
+        language = (
+            "kk" if any(letter in question.lower() for letter in "әғқңөұүһі") else "ru"
+        )
         if not 3 <= len(question) <= 2000:
-            await self.tg.send(chat, "Введите вопрос длиной от 3 до 2000 символов.")
+            await self.tg.send(
+                chat,
+                "Сұрақ 3–2000 таңбадан тұруы керек."
+                if language == "kk"
+                else "Введите вопрос длиной от 3 до 2000 символов.",
+            )
             return
         # Verify account before a potentially long model request and acknowledge wait.
         initial_link = await self.sync_link(uid, session)
         await self.tg.send(
             chat,
-            "Jana ищет ответ в опубликованной базе знаний. Если модель занята, вопрос подождёт в очереди.",
+            "Jana білім базасынан жауап іздеп жатыр. Сәл күте тұрыңыз."
+            if language == "kk"
+            else "Jana ищет ответ в базе знаний. Немного подождите.",
         )
         answer = await self.api.request(
-            "POST", "/ai/ask", uid, body={"question": question}
+            "POST", "/ai/ask", uid, body={"question": question}, language=language
         )
         if await self.sync_link(uid, session) != initial_link:
             await self.tg.send(
-                chat, "Подключён другой аккаунт. Задайте вопрос заново через /menu."
+                chat,
+                "Басқа аккаунт қосылды. /menu арқылы сұрақты қайта қойыңыз."
+                if language == "kk"
+                else "Подключён другой аккаунт. Задайте вопрос заново через /menu.",
             )
             return
         rows = []
+        sections = summary_sections(answer.get("report"))
+        actions = list(answer.get("actions") or [])
+        report_actions = {
+            route: action_id for action_id, (_, route) in ACTION_ROUTES.items()
+        }
+        for section in sections:
+            action_id = report_actions.get(section.get("href"))
+            if action_id:
+                actions.append(
+                    {
+                        "id": action_id,
+                        "label": KAZAKH_ACTION_LABELS[action_id]
+                        if language == "kk"
+                        else ACTION_ROUTES[action_id][0],
+                    }
+                )
+        seen_actions = set()
+        for action in actions:
+            if not isinstance(action, dict):
+                continue
+            action_id = action.get("id")
+            if action_id not in JANA_CALLBACKS or action_id in seen_actions:
+                continue
+            label = ACTION_ROUTES[action_id][0]
+            if action.get("label") == KAZAKH_ACTION_LABELS[action_id]:
+                label = action["label"]
+            rows.append([(label, JANA_CALLBACKS[action_id])])
+            seen_actions.add(action_id)
+            if len(seen_actions) == 3:
+                break
         for index, source in enumerate(answer.get("sources", []), 1):
             token = session.ref(
                 {"kind": "source", "id": source["id"], "version": source.get("version")}
             )
-            rows.append([(f"Источник {index}: {source['title'][:45]}", f"ref:{token}")])
-        rows.append([("Задать вопрос HR", "new:ticket")])
-        await self.tg.send(chat, answer["answer"], keyboard(rows))
+            source_label = "Дереккөз" if language == "kk" else "Источник"
+            rows.append(
+                [(f"{source_label} {index}: {source['title'][:45]}", f"ref:{token}")]
+            )
+        if "support" not in seen_actions:
+            rows.append(
+                [
+                    (
+                        "HR-ға сұрақ қою" if language == "kk" else "Задать вопрос HR",
+                        "new:ticket",
+                    )
+                ]
+            )
+        text = answer["answer"]
+        if sections:
+            text += "\n\n" + summary_text(sections)
+        await self.tg.send(chat, text, keyboard(rows))
 
     async def request_card(self, chat, uid, rid):
         row = await self.api.request("GET", f"/requests/{rid}", uid)
@@ -469,6 +591,25 @@ class Bot:
             rows.append([("Скачать .ics", f"ics:{rid}")])
         rows.append([("История", f"history:{rid}"), ("Обновить", f"request:{rid}")])
         extra = f"\nКомментарий: {row.get('comment') or '—'}\nОтвет: {row.get('reviewer_comment') or '—'}"
+        if row.get("employee_id") != profile.get("id"):
+            author = f"ID {str(row.get('employee_id') or '')[:8]}"
+            try:
+                employee = await self.api.request(
+                    "GET", f"/employees/{row['employee_id']}", uid
+                )
+                author = employee.get("full_name") or author
+            except RemoteError as exc:
+                if exc.status not in (403, 404, 503):
+                    raise
+            extra = f"\nСотрудник: {author}" + extra
+        if row.get("status") == "pending":
+            names = ", ".join(
+                person["full_name"]
+                for person in row.get("approvers", [])
+                if person.get("full_name")
+            )
+            if names:
+                extra = f"\nСогласует: {names}" + extra
         await self.tg.send(
             chat, short_request(row) + extra + f"\nID: {rid}", keyboard(rows)
         )
@@ -477,6 +618,37 @@ class Bot:
         course = await self.api.request("GET", f"/academy/courses/{cid}", uid)
         assignment = course.get("assignment") or {}
         rows = []
+        if course.get("course_type") == "external":
+            if (
+                assignment
+                and assignment.get("status") != "completed"
+                and assignment.get("progress_percent", 0) < 100
+            ):
+                rows.append([("Отметить прогресс", f"progress:{cid}")])
+            rows.append([("Обновить", f"course:{cid}"), ("Мои курсы", "courses:0")])
+            markup = keyboard(rows)
+            link = course.get("external_url")
+            if (
+                isinstance(link, str)
+                and not any(c.isspace() for c in link)
+                and "\\" not in link
+                and public_portal_url(link)
+            ):
+                markup["inline_keyboard"].insert(
+                    0, [{"text": "Открыть курс", "url": link}]
+                )
+            text = f"{course['title']}\nПлощадка: {course.get('provider') or '—'}"
+            if course.get("description"):
+                text += f"\n{course['description']}"
+            if assignment:
+                text += f"\nПрогресс: {assignment.get('progress_percent', 0)}% · указан вами"
+                text += f"\nСрок: {assignment.get('due_on') or 'Без срока'}"
+                if assignment.get("status") == "completed":
+                    text += "\nКурс отмечен пройденным."
+            else:
+                text += "\nКурс пока не добавлен в ваше обучение. Добавить его можно на сайте."
+            await self.tg.send(chat, text, markup)
+            return
         for lesson in course.get("lessons") or []:
             token = session.ref(
                 {"kind": "lesson", "course_id": cid, "lesson_id": lesson["id"]}
@@ -489,11 +661,12 @@ class Bot:
             rows.append([(lesson["title"][:50] + done, f"ref:{token}")])
         if not course.get("lessons"):
             rows.append([("Читать материал", f"material:{cid}")])
-        if assignment:
+        if assignment and course.get("quiz"):
             rows.append([("Пройти тест", f"quiz:{cid}")])
+        score = assignment.get("score_percent")
         await self.tg.send(
             chat,
-            f"{course['title']}\n{course.get('description', '')}\nПрогресс: {assignment.get('progress_percent', 0)}% · Результат: {assignment.get('score_percent') or 0}%",
+            f"{course['title']}\n{course.get('description', '')}\nПрогресс: {assignment.get('progress_percent', 0)}% · Результат: {str(score) + '%' if score is not None else 'Тест не пройден'}",
             keyboard(rows),
         )
 
@@ -550,9 +723,19 @@ class Bot:
             text = "Сохранено. Изменения доступны и на сайте."
             if result and "request_type" in result:
                 text += "\n" + short_request(result)
-            elif result and "score_percent" in result:
+            elif result and result.get("score_percent") is not None:
                 text += f"\nРезультат: {result['score_percent']}% · {'Пройдено' if result.get('status') == 'completed' else 'Повторите материал и попробуйте снова'}"
-            await self.tg.send(chat, text)
+            elif result and "progress_percent" in result:
+                text += f"\nПрогресс: {result['progress_percent']}%"
+                if result.get("status") == "completed":
+                    text += " · Курс отмечен пройденным"
+            markup = None
+            if value["path"].startswith("/academy/courses/") and value["path"].endswith(
+                "/progress"
+            ):
+                cid = value["path"].split("/")[3]
+                markup = keyboard([[("Открыть курс", f"course:{cid}")]])
+            await self.tg.send(chat, text, markup)
             session.refs.pop(token, None)
         elif kind == "source":
             source = await self.api.request(
@@ -602,6 +785,22 @@ class Bot:
     async def callback(self, chat, uid, update_id, data, session):
         parts = data.split(":")
         action = parts[0]
+        if action in {
+            "menu",
+            "ask",
+            "profile",
+            "requests",
+            "request",
+            "courses",
+            "course",
+            "notifications",
+            "tickets",
+            "ticket",
+            "team",
+            "calendar",
+            "ics",
+        }:
+            session.flow = None
         if action == "ref" and len(parts) == 2:
             await self.use_ref(chat, uid, update_id, parts[1], session)
         elif action == "menu":
@@ -652,16 +851,34 @@ class Bot:
             action == "requests" and len(parts) == 3 and parts[1] in ("mine", "review")
         ):
             offset = max(0, int(parts[2]))
+            params = {"scope": parts[1], "limit": PAGE, "offset": offset}
+            if parts[1] == "review":
+                params["status"] = "pending"
             rows = await self.api.request(
                 "GET",
                 "/requests",
                 uid,
-                params={"scope": parts[1], "limit": PAGE, "offset": offset},
+                params=params,
             )
-            buttons = [
-                [(short_request(row).replace("\n", " · ")[:60], f"request:{row['id']}")]
-                for row in rows
-            ]
+            people = {}
+            if parts[1] == "review" and rows:
+                try:
+                    team = await self.api.request("GET", "/team", uid)
+                    if isinstance(team, list):
+                        people = {person["id"]: person["full_name"] for person in team}
+                except RemoteError as exc:
+                    if exc.status not in (403, 404, 503):
+                        raise
+            buttons = []
+            for row in rows:
+                label = short_request(row).replace("\n", " · ")[:60]
+                if parts[1] == "review":
+                    author = (
+                        people.get(row.get("employee_id"))
+                        or f"ID {str(row.get('employee_id') or '')[:8]}"
+                    )
+                    label = f"{author[:35]} · {label}"
+                buttons.append([(label, f"request:{row['id']}")])
             if offset:
                 buttons.append(
                     [("Назад", f"requests:{parts[1]}:{max(0, offset - PAGE)}")]
@@ -738,13 +955,43 @@ class Bot:
                 buttons.append([("Далее", f"courses:{offset + PAGE}")])
             await self.tg.send(
                 chat,
-                "Ваши назначенные курсы:" if rows else "Назначенных курсов пока нет.",
+                "Ваши курсы:"
+                if rows
+                else "Курсов пока нет. Добавить курс можно в разделе «Обучение» на сайте.",
                 keyboard(buttons),
             )
         elif action == "course" and len(parts) == 2:
             await self.course_card(chat, uid, parts[1], session)
+        elif action == "progress" and len(parts) == 2:
+            session.flow = None
+            course = await self.api.request("GET", f"/academy/courses/{parts[1]}", uid)
+            assignment = course.get("assignment") or {}
+            if course.get("course_type") != "external" or not assignment:
+                await self.tg.send(
+                    chat,
+                    "Самостоятельно отмечать прогресс можно только у своего внешнего курса.",
+                )
+                return
+            progress = assignment.get("progress_percent", 0)
+            if assignment.get("status") == "completed" or progress >= 100:
+                await self.tg.send(chat, "Курс уже отмечен пройденным.")
+                return
+            session.flow = {
+                "step": "course_progress",
+                "course_id": parts[1],
+                "title": course["title"],
+                "current_progress": progress,
+            }
+            await self.tg.send(
+                chat,
+                f"{course['title']}\nСейчас отмечено {progress}%. Введите новый прогресс от 0 до 100. /cancel — отмена.",
+            )
         elif action in ("material", "quiz") and len(parts) == 2:
             course = await self.api.request("GET", f"/academy/courses/{parts[1]}", uid)
+            if course.get("course_type") == "external":
+                session.flow = None
+                await self.course_card(chat, uid, parts[1], session)
+                return
             if action == "material":
                 await self.tg.send(
                     chat, course.get("material_markdown") or "Материал не добавлен."
@@ -771,6 +1018,8 @@ class Bot:
                         "key": mutation_key(uid, update_id, "quiz"),
                     },
                 )
+            else:
+                await self.tg.send(chat, "Для этого курса тест не добавлен.")
         elif action == "notifications":
             offset = max(0, int(parts[1])) if len(parts) == 2 else 0
             rows = await self.api.request(

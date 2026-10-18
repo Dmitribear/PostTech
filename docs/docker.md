@@ -1,22 +1,33 @@
 # Docker и локальная Jana
 
-Основной запуск использует три контейнера:
+Основной запуск использует три контейнера; при подключении Telegram добавляется четвёртый:
 
 | Сервис | Назначение |
 | --- | --- |
 | frontend | Собранный React, Nginx, проксирование /api/ |
 | api | FastAPI, авторизация, бизнес-логика, обращения к Supabase и AI |
 | integrations | Два независимых процесса: напоминания/обучение и доставка outbox в 1С/Documentolog |
+| telegram-bot | При подключении Telegram: сообщения бота и доставка уведомлений |
 
-Supabase остаётся внешним: база и Auth не переносятся и не очищаются. Локальная модель — дополнительный, четвёртый контейнер. Самостоятельный Supabase потребует дополнительных сервисов PostgreSQL, Auth и REST; обычный PostgreSQL не заменяет используемый Supabase API.
+Supabase остаётся внешним: база и Auth не переносятся и не очищаются. Локальная модель — ещё один дополнительный контейнер. Самостоятельный Supabase потребует дополнительных сервисов PostgreSQL, Auth и REST; обычный PostgreSQL не заменяет используемый Supabase API.
 
 ```powershell
-docker compose up --build -d --remove-orphans --wait
-docker compose ps
-docker compose logs --tail 100 api integrations
+powershell -ExecutionPolicy Bypass -File scripts/start_portal.ps1
+docker ps --filter label=com.docker.compose.project=posttech
 ```
 
-Открыть http://localhost:8000. Только frontend публикует порт, по умолчанию на 127.0.0.1. POSTTECH_HTTP_PORT меняет порт. Для публичного сервера нужно отдельно настроить HTTPS и внешний reverse proxy. Команда remove-orphans удаляет устаревшие контейнеры воркеров этого Compose-проекта; данные внешнего Supabase не затрагивает. Docker restart не пересобирает код.
+Открыть http://localhost:8000. **Start PostTech Docker.cmd** запускает тот же скрипт.
+Он пересобирает текущие исходники, сохраняет подключённые Telegram, LAN и локальную
+модель, затем проверяет готовность сайта и Supabase. Только frontend публикует порт,
+по умолчанию на 127.0.0.1; POSTTECH_HTTP_PORT меняет порт. Для доступа с телефона
+добавьте `-LanHost 192.168.1.5`, заменив адрес на приватный IPv4 своего компьютера.
+Для публичного сервера нужен HTTPS и внешний reverse proxy. Docker restart не пересобирает код.
+
+Чтобы включить Telegram в существующий проект, подготовьте токен и миграцию по
+[инструкции](telegram.md#подключение-к-существующей-установке-main), затем запустите
+`scripts/start_portal.ps1 -Telegram`. Настройки `.env` и действующие данные Supabase
+сохраняются. Базовый `docker compose up --remove-orphans` не подходит для стека
+с Telegram: без overlay он удаляет контейнер бота.
 
 Интеграции отправляют данные только при включённых INTEGRATION_1C_ENABLED / INTEGRATION_DOCUMENTOLOG_ENABLED. При падении дочернего процесса supervisor завершает контейнер и Docker перезапускает оба процесса. Ошибки отдельных циклов обрабатываются существующими воркерами; наличие запущенного контейнера само по себе не подтверждает доступность БД или доставку.
 

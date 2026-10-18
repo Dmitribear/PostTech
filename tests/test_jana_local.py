@@ -49,6 +49,8 @@ def test_all_curated_answers_are_bounded_exact_quotes_from_active_sources():
     ("course_find", ("если он задан", "само по себе не означает", "прямым подчинённым")),
     ("course_assign", ("Курсы назначает HR", "своим прямым подчинённым", "не назначает курсы")),
     ("course_finish", ("все уроки должны быть завершены до теста", "именно этого курса", "по умолчанию — 80%", "тест можно повторить")),
+    ("course_personal", ("«Свой курс»", "ссылку https:// без логина и пароля", "обязательный срок", "в общий каталог он не добавляется", "прямых подчинённых")),
+    ("course_external_progress", ("«Сохранить прогресс»", "прогресс уменьшить нельзя", "без внутреннего теста", "самоотчёт сотрудника")),
     ("notification_find", ("только свои уведомления, включая HR", "при доступном соединении", "не означает, что все события дублируются")),
     ("capabilities", ("не одобряет и не отзывает заявки", "отправку заявки подтверждает пользователь")),
     ("hr_contact", ("только после этого подтверждения", "вся история чата автоматически не передаётся")),
@@ -59,6 +61,29 @@ def test_current_faq_keeps_portal_qualifications(card_id, conditions):
     card = next(card for card in CATALOG.cards if card.id == card_id)
     for condition in conditions:
         assert condition in card.excerpt
+
+
+@pytest.mark.parametrize("card_id,question", [
+    ("course_personal", "Как добавить свой внешний курс и отметить прогресс?"),
+    ("course_external_progress", "Как сохранить прогресс внешнего курса?"),
+    ("course_external_progress", "Нужно ли сдавать внутренний тест для курса Яндекс Практикума?"),
+])
+def test_external_learning_faq_answers_from_current_published_source(card_id, question):
+    position = next(i for i, card in enumerate(CATALOG.cards) if card.id == card_id)
+    result = answer_from_faq(question, ARTICLES, index_with([(position, 0.95), (-1, 0.2)]))
+    assert result["mode"] == "excerpts"
+    assert result["grounded"] is True
+    assert result["sources"][0]["id"] == "20000000-0000-4000-8000-000000000007"
+    assert CATALOG.cards[position].excerpt in result["answer"]
+
+
+def test_learning_sources_distinguish_internal_tests_from_external_self_reporting():
+    assignment = next(card for card in CATALOG.cards if card.id == "course_assign")
+    finish = next(card for card in CATALOG.cards if card.id == "course_finish")
+    assert "Для внутреннего курса с уроками и тестом нужно назначение" in assignment.excerpt
+    assert "без назначения HR" in assignment.excerpt
+    assert finish.excerpt.startswith("Для внутреннего курса")
+    assert "Для самостоятельного прохождения нужен назначенный курс" not in assignment.excerpt
 
 
 def test_complete_quotes_remain_bounded_instead_of_silently_truncated():
