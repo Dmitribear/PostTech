@@ -11,7 +11,7 @@ from app.main import app
 from app.domain.models import UserContext
 from app.application.dto.jana import JanaAnswer
 from app.infrastructure.ai import local_jana as jana
-from app.domain.knowledge.jana_errors import JanaUnavailable
+from app.domain.knowledge.jana_errors import JanaBusy, JanaUnavailable
 from app.domain.knowledge.jana_intent import Decision
 from examples.jana_mock import app as mock_app
 from scripts.export_jana_demo import render_sql
@@ -22,6 +22,23 @@ DATA = json.loads(
 )
 ARTICLE = DATA["articles"][0]
 SOURCE_PATH = f"/api/v1/ai/local/sources/{ARTICLE['id']}"
+
+
+@pytest.mark.parametrize("path", ["/api/v1/ai/ask", "/api/v1/ai/local/ask"])
+def test_busy_local_reader_returns_retryable_response(live_client, monkeypatch, path):
+    from app.presentation.http.routes import ai as main_ai
+
+    monkeypatch.setattr(main_ai, "get_settings", lambda: SimpleNamespace(jana_provider="local"))
+
+    def busy(*args, **kwargs):
+        raise JanaBusy("Internal reader details must not be exposed")
+
+    monkeypatch.setattr(jana, "answer_question", busy)
+    monkeypatch.setattr(ai, "answer_question", busy)
+    response = live_client.post(path, json={"question": "Как оформить отпуск?"})
+    assert response.status_code == 429
+    assert response.headers["retry-after"] == "5"
+    assert response.json() == {"detail": "Jana AI is busy. Try again shortly"}
 
 
 @pytest.fixture
@@ -74,6 +91,7 @@ class ArticleQuery:
 def use_articles(monkeypatch, rows):
     rows = [
         {
+            "editorial_state": "legacy",
             "reviewed_at": "2026-01-01T00:00:00Z",
             "review_due_at": "2099-01-01T00:00:00Z",
             **row,

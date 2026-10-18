@@ -20,10 +20,18 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-4o-mini"
     jana_kazakh_model: str | None = None
-    jana_provider: Literal['openai', 'local'] = 'openai'
+    jana_provider: Literal["openai", "local"] = "openai"
     resend_api_key: SecretStr | None = None
     invitation_email_from: str = "PostTech <onboarding@resend.dev>"
     portal_public_url: AnyHttpUrl | None = None
+    telegram_bot_token: SecretStr | None = None
+    telegram_bot_username: str = ""
+    telegram_worker_secret: SecretStr | None = None
+    telegram_api_url: str = "http://api:8000"
+    jana_warmup_enabled: bool = False
+    jana_warmup_poll_seconds: float = Field(default=10, ge=5, le=300)
+    jana_response_cache_ttl_seconds: float = Field(default=0, ge=0, le=3600)
+    jana_response_cache_max_entries: int = Field(default=64, ge=1, le=512)
     jana_model_timeout_seconds: float = Field(default=20, ge=1, le=60)
     jana_reader_url: str = "http://127.0.0.1:8081"
     jana_reader_allow_docker_host: bool = False

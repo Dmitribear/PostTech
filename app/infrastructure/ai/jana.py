@@ -22,7 +22,11 @@ from app.infrastructure.ai.jana_conditions import (
     retain_leave_conditions,
     retain_portal_terms,
 )
-from app.infrastructure.ai.jana_prompts import ANSWER_INSTRUCTIONS, VERIFY_INSTRUCTIONS, KAZAKH_TRANSLATION_INSTRUCTIONS
+from app.infrastructure.ai.jana_prompts import (
+    ANSWER_INSTRUCTIONS,
+    KAZAKH_TRANSLATION_INSTRUCTIONS,
+    VERIFY_INSTRUCTIONS,
+)
 from app.infrastructure.ai.jana_scope import classify_scope
 from app.infrastructure.config import get_settings
 from app.infrastructure.database.client import get_supabase_client
@@ -133,7 +137,9 @@ _UNSAFE_REQUEST = re.compile(
     r"\b(?:approve|reject|fire|dismiss)\s+(?:my|this|the|an?|employee|request)\b",
     re.IGNORECASE,
 )
-_ACTION_COMMAND = re.compile(r"\b(?:отмени|отмените|создай|создайте|измени|измените|оформи|оформите)\b", re.I)
+_ACTION_COMMAND = re.compile(
+    r"\b(?:отмени|отмените|создай|создайте|измени|измените|оформи|оформите)\b", re.I
+)
 _PRIVATE_REQUEST = re.compile(
     r"зарплат\w*|оклад\w*|\bиин\b|паспорт\w*|телефон\w*|домашн\w*\s+адрес|"
     r"диагноз\w*|больничн\w*\s+(?:коллег|сотрудник)|чуж\w*\s+(?:данн|профил|заявк)|"
@@ -192,9 +198,22 @@ _ANSWER_FORMAT = _format(
     "jana_answer",
     {
         "supported": {"type": "boolean"},
-        "reason": {"type": "string", "enum": ["supported", "missing_information", "out_of_scope", "personal_data", "action_request", "instructions"]},
+        "reason": {
+            "type": "string",
+            "enum": [
+                "supported",
+                "missing_information",
+                "out_of_scope",
+                "personal_data",
+                "action_request",
+                "instructions",
+            ],
+        },
         "answer": {"type": "string"},
-        "actions": {"type": "array", "items": {"type": "string", "enum": list(ACTION_ROUTES)}},
+        "actions": {
+            "type": "array",
+            "items": {"type": "string", "enum": list(ACTION_ROUTES)},
+        },
         "passage_ids": {
             "type": "array",
             "maxItems": 6,
@@ -202,7 +221,10 @@ _ANSWER_FORMAT = _format(
         },
     },
 )
-_CHECK_FORMAT = _format("jana_evidence_check", {"supported": {"type": "boolean"}, "answer": {"type": "string"}})
+_CHECK_FORMAT = _format(
+    "jana_evidence_check",
+    {"supported": {"type": "boolean"}, "answer": {"type": "string"}},
+)
 
 
 def _refuse(message: str = _REFUSAL, reason: str = "missing_information") -> dict:
@@ -381,9 +403,7 @@ def _validated_excerpts(
             if not isinstance(quote, str) or not 20 <= len(quote.strip()) <= 3000:
                 return None
             article = articles[index]
-            if quote not in str(article["content"]) or _INJECTION.search(
-                quote
-            ):
+            if quote not in str(article["content"]) or _INJECTION.search(quote):
                 return None
             if article not in selected:
                 selected.append(article)
@@ -397,10 +417,7 @@ def _generated_answer(payload: dict, quotes: list[str]) -> str | None:
     answer = payload.get("answer")
     if not isinstance(answer, str) or not 15 <= len(answer.strip()) <= 1800:
         return None
-    if (
-        _UNSAFE_REQUEST.search(answer)
-        or re.search(r"https?://|www\.", answer, re.I)
-    ):
+    if _UNSAFE_REQUEST.search(answer) or re.search(r"https?://|www\.", answer, re.I):
         return None
     # Dates, money and limits must not appear without literal evidence.
     if not set(re.findall(r"\d+(?:[.,]\d+)?", answer)) <= set(
@@ -411,8 +428,16 @@ def _generated_answer(payload: dict, quotes: list[str]) -> str | None:
 
 
 def answer_question(question: str, language: str = "ru", role: str = "worker") -> dict:
-    procedure = re.search(r"\bкак\b.{0,70}(?:изменить|обновить|исправить).{0,50}(?:телефон|данные|профиль)", question, re.I)
-    if language == "kk" and re.search(r"қалай.{0,50}(?:өзгерт|түзет|жаңарт)", question, re.I) and re.search(r"телефон|профил|дерек", question, re.I):
+    procedure = re.search(
+        r"\bкак\b.{0,70}(?:изменить|обновить|исправить).{0,50}(?:телефон|данные|профиль)",
+        question,
+        re.I,
+    )
+    if (
+        language == "kk"
+        and re.search(r"қалай.{0,50}(?:өзгерт|түзет|жаңарт)", question, re.I)
+        and re.search(r"телефон|профил|дерек", question, re.I)
+    ):
         procedure = True
     if _PRIVATE_REQUEST.search(question) and not procedure:
         return _refuse(
@@ -432,18 +457,23 @@ def answer_question(question: str, language: str = "ru", role: str = "worker") -
         .execute()
     )
     available = [
-            article
-            for article in result.data or []
-            if not _INJECTION.search(str(article.get("content", "")))
-            and _source_freshness(article)["freshness"] != "review_overdue"
+        article
+        for article in result.data or []
+        if not _INJECTION.search(str(article.get("content", "")))
+        and _source_freshness(article)["freshness"] != "review_overdue"
     ]
     if not available:
         return _refuse()
     settings = get_settings()
-    model = (getattr(settings, "jana_kazakh_model", None) if language == "kk" else None) or settings.openai_model
+    model = (
+        getattr(settings, "jana_kazakh_model", None) if language == "kk" else None
+    ) or settings.openai_model
     fallback_reason = "not_configured"
     if settings.openai_api_key and settings.openai_api_key.get_secret_value().strip():
-        if len(available) > 100 or sum(len(str(a["content"])) for a in available) > 60000:
+        if (
+            len(available) > 100
+            or sum(len(str(a["content"])) for a in available) > 60000
+        ):
             raise JanaUnavailable("Knowledge base exceeds semantic context budget")
         articles = [
             {**article, "content": paragraph, "full_content": article["content"]}
@@ -464,7 +494,8 @@ def answer_question(question: str, language: str = "ru", role: str = "worker") -
             )
             scope = (
                 classify_scope(client, model, question, language="kk")
-                if language == "kk" else classify_scope(client, model, question)
+                if language == "kk"
+                else classify_scope(client, model, question)
             )
             if scope["intent"] != "information":
                 return _refuse(reason=scope["intent"])
@@ -487,7 +518,11 @@ def answer_question(question: str, language: str = "ru", role: str = "worker") -
                     {
                         "role": "user",
                         "content": json.dumps(
-                            {"question": model_question, "original_question": question, "sources": context},
+                            {
+                                "question": model_question,
+                                "original_question": question,
+                                "sources": context,
+                            },
                             ensure_ascii=False,
                         ),
                     },
@@ -533,7 +568,12 @@ def answer_question(question: str, language: str = "ru", role: str = "worker") -
                                 "original_question": question,
                                 "answer": answer,
                                 "evidence": quotes,
-                                "sources": list(dict.fromkeys(a.get("full_content", a["content"]) for a in selected)),
+                                "sources": list(
+                                    dict.fromkeys(
+                                        a.get("full_content", a["content"])
+                                        for a in selected
+                                    )
+                                ),
                                 "actions": payload.get("actions", []),
                             },
                             ensure_ascii=False,
@@ -553,7 +593,9 @@ def answer_question(question: str, language: str = "ru", role: str = "worker") -
             )
             if not isinstance(checked, dict) or checked.get("supported") is not True:
                 return _refuse()
-            answer = _generated_answer({"answer": checked.get("answer", answer)}, quotes)
+            answer = _generated_answer(
+                {"answer": checked.get("answer", answer)}, quotes
+            )
             if not answer:
                 return _refuse()
             if missing_policy_answer(model_question, answer):
@@ -569,7 +611,10 @@ def answer_question(question: str, language: str = "ru", role: str = "worker") -
                     response_format=_CHECK_FORMAT,
                     messages=[
                         {"role": "system", "content": KAZAKH_TRANSLATION_INSTRUCTIONS},
-                        {"role": "user", "content": json.dumps({"text": answer}, ensure_ascii=False)},
+                        {
+                            "role": "user",
+                            "content": json.dumps({"text": answer}, ensure_ascii=False),
+                        },
                     ],
                 )
                 if not translation.choices or (
@@ -577,8 +622,15 @@ def answer_question(question: str, language: str = "ru", role: str = "worker") -
                     or getattr(translation.choices[0].message, "refusal", None)
                 ):
                     return _refuse()
-                translated = json.loads(translation.choices[0].message.content or "{}") if translation.choices else {}
-                if not isinstance(translated, dict) or translated.get("supported") is not True:
+                translated = (
+                    json.loads(translation.choices[0].message.content or "{}")
+                    if translation.choices
+                    else {}
+                )
+                if (
+                    not isinstance(translated, dict)
+                    or translated.get("supported") is not True
+                ):
                     return _refuse()
                 answer = _generated_answer(translated, quotes)
                 if not answer or not re.search(r"[әғқңөұүһі]", answer, re.I):
@@ -587,16 +639,23 @@ def answer_question(question: str, language: str = "ru", role: str = "worker") -
             answer = localize_ui_captions(answer, language)
             source_actions = source_action_ids(selected)
             scoped_actions = [
-                action for action in scope.get("actions", [])
+                action
+                for action in scope.get("actions", [])
                 if not source_actions or action in source_actions
             ]
             return {
                 "answer": answer,
-                "sources": _source_payload(list({a["id"]: a for a in selected}.values())),
+                "sources": _source_payload(
+                    list({a["id"]: a for a in selected}.values())
+                ),
                 "grounded": True,
                 "escalation_suggested": False,
                 "mode": "generated",
-                "actions": action_buttons(scoped_actions or source_actions[:1] or payload.get("actions", []), role, language),
+                "actions": action_buttons(
+                    scoped_actions or source_actions[:1] or payload.get("actions", []),
+                    role,
+                    language,
+                ),
             }
         except OpenAIError as exc:
             status = getattr(exc, "status_code", None)
@@ -613,15 +672,16 @@ def answer_question(question: str, language: str = "ru", role: str = "worker") -
             if client is not None:
                 client.close()
 
-    articles = _rank_articles(question, [a for a in available if _covers_question(question, [a])])
+    articles = _rank_articles(
+        question, [a for a in available if _covers_question(question, [a])]
+    )
     if not articles or not _covers_question(question, articles):
         return _refuse()
     # The best covering article is enough for the deterministic fallback. Lower
     # ranked pages often mention the same topic only to distinguish a workflow.
     articles = articles[:1]
     excerpts = "\n\n".join(
-        f"{article['source_title']}: {str(article['content'])}"
-        for article in articles
+        f"{article['source_title']}: {str(article['content'])}" for article in articles
     )
     return {
         "answer": f"Привожу найденный фрагмент базы знаний (AI-генерация сейчас недоступна):\n\n{excerpts}",

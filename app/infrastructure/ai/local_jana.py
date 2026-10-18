@@ -12,6 +12,11 @@ from app.domain.knowledge.publication import (
     usable,
 )
 from app.infrastructure.ai.jana_reader import LocalReader, answer_from_knowledge
+from app.infrastructure.ai.jana_runtime import (
+    reader_runtime,
+    response_cache,
+    snapshot_identity,
+)
 from app.infrastructure.config import get_settings
 from app.infrastructure.database.client import get_supabase_client
 
@@ -53,7 +58,27 @@ def _published_articles() -> list[dict]:
 
 def answer_question(question: str, language: str = "ru") -> dict:
     articles = _published_articles()
-    answer = answer_from_knowledge(question, articles, LocalReader(get_settings()))
+    settings = get_settings()
+    reader = LocalReader(settings)
+    ttl = getattr(settings, "jana_response_cache_ttl_seconds", 0)
+    if ttl > 0:
+        identity = reader_runtime.reader_identity(reader)
+
+        def compute():
+            result = answer_from_knowledge(question, articles, reader)
+            if _published_articles() != articles:
+                raise JanaUnavailable("Knowledge changed during inference; retry")
+            return result
+
+        answer = response_cache.get_or_compute(
+            (question, snapshot_identity(articles), identity),
+            compute,
+            ttl=ttl,
+            max_entries=settings.jana_response_cache_max_entries,
+            wait_seconds=reader.timeout + 5,
+        )
+    else:
+        answer = answer_from_knowledge(question, articles, reader)
     if _published_articles() != articles:
         raise JanaUnavailable("Knowledge changed during inference; retry")
     indexed = {str(article["id"]): article for article in articles}
@@ -66,3 +91,7 @@ def answer_question(question: str, language: str = "ru") -> dict:
             "Дереккөздер мен жауаптың түпнұсқа тілі — орыс тілі.\n\n" + answer["answer"]
         )
     return answer
+
+
+def runtime_status() -> dict:
+    return reader_runtime.status()

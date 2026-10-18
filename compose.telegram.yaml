@@ -1,0 +1,33 @@
+# Optional Telegram channel. Prepare .local/telegram.env first; see docs/telegram.md.
+# Only the bot has Telegram network access and the bot token. The API/database
+# and the local Jana model remain on the internal network.
+services:
+  api:
+    networks: [default, private]
+    environment:
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:?Run scripts/prepare_telegram.py --check}
+      TELEGRAM_WORKER_SECRET: ${TELEGRAM_WORKER_SECRET:?Run scripts/prepare_telegram.py}
+  telegram-bot:
+    build: {context: ., dockerfile: Dockerfile, target: api}
+    command: [python, -m, scripts.telegram_worker]
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?Save the BotFather token in .local/telegram.env}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME}
+      TELEGRAM_WORKER_SECRET: ${TELEGRAM_WORKER_SECRET}
+      TELEGRAM_API_URL: http://api:8000
+      PORTAL_PUBLIC_URL: ${PORTAL_PUBLIC_URL:-}
+    depends_on:
+      api: {condition: service_healthy}
+    networks: [private, telegram]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, python, -c, "import pathlib,time; p=pathlib.Path('/tmp/telegram-worker-heartbeat'); assert p.exists() and time.time()-float(p.read_text())<180"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+networks:
+  telegram: {}
+  private:
+    internal: true

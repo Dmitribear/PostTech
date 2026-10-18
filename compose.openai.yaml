@@ -1,0 +1,23 @@
+# Apply after compose.demo.yaml and compose.telegram.yaml. Docker Compose 2.24.4+.
+# The local database remains unchanged; only the API can call OpenAI.
+services:
+  model-init:
+    profiles: [local-model]
+  jana-reader:
+    profiles: [local-model]
+  api:
+    depends_on: !override
+      supabase: {condition: service_healthy}
+    environment:
+      JANA_PROVIDER: openai
+      JANA_WARMUP_ENABLED: "false"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?Save the key in .local/openai.env}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+    networks: [openai]
+  workflow-worker:
+    environment:
+      JANA_PROVIDER: openai
+      JANA_WARMUP_ENABLED: "false"
+
+networks:
+  openai: {}

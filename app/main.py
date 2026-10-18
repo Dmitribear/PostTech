@@ -1,4 +1,20 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
+
+from app.infrastructure.ai.jana_runtime import reader_runtime
+from app.infrastructure.config import get_settings
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    settings = get_settings()
+    if settings.jana_provider == "local":
+        reader_runtime.start(settings)
+    try:
+        yield
+    finally:
+        reader_runtime.stop()
+
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -13,6 +29,7 @@ app = FastAPI(
     title="PostTech API",
     description="Digital HR MVP API for profiles, requests, learning, notifications, and Jana AI.",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 configure_application()

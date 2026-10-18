@@ -5,7 +5,7 @@ from httpx import HTTPError
 from postgrest.exceptions import APIError
 
 from app.application.dto.digital_hr import JanaQuestion
-from app.domain.knowledge.jana_errors import JanaUnavailable
+from app.domain.knowledge.jana_errors import JanaBusy, JanaUnavailable
 from app.domain.localization import locale
 from app.domain.models import UserContext
 from app.infrastructure.ai import local_jana
@@ -41,6 +41,10 @@ def ask_jana(
         if get_settings().jana_provider == "local":
             return local_jana.answer_question(question, language=locale.get())
         result = answer_question(question, language=locale.get(), role=actor.role)
+    except JanaBusy as exc:
+        raise HTTPException(
+            429, "Jana AI is busy. Try again shortly", headers={"Retry-After": "5"}
+        ) from exc
     except JanaUnavailable as exc:
         raise HTTPException(503, "Jana AI is temporarily unavailable") from exc
     except (RuntimeError, HTTPError, APIError) as exc:
@@ -49,7 +53,9 @@ def ask_jana(
         ) from exc
     if locale.get() == "kk":
         if result.get("reason") == "out_of_scope":
-            result["answer"] = "Мен PostTech порталындағы демалыс, өтінімдер және оқу бойынша көмектесемін. Басқа тақырыптағы сұрақтарға жауап бермеймін."
+            result["answer"] = (
+                "Мен PostTech порталындағы демалыс, өтінімдер және оқу бойынша көмектесемін. Басқа тақырыптағы сұрақтарға жауап бермеймін."
+            )
         elif not result["grounded"]:
             result["answer"] = (
                 "Jana бұл сұраққа дереккөздермен расталған жауап бере алмайды. Сұрақты HR-ға жіберуге болады. Жеке деректерді профильден қараңыз."
@@ -81,3 +87,8 @@ def knowledge_source(
     return (
         get_source(source_id, version) if version is not None else get_source(source_id)
     )
+
+
+@router.get("/status")
+def jana_status(actor: UserContext = Depends(get_current_user)) -> dict:
+    return local_jana.runtime_status()

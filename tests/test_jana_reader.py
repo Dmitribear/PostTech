@@ -1,5 +1,9 @@
 """Reader transport and evidence safety; these tests do not score model semantics."""
 
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
+from time import monotonic, sleep
+from app.infrastructure.ai.jana_reader import InferenceAdmission, request_budget
 import copy
 import json
 
@@ -540,3 +544,121 @@ def test_malformed_template_is_not_forwarded_to_tokenizer_or_inference(
     with pytest.raises(InvalidDecision):
         local_reader().select("Вопрос", [])
     assert captured["requests"][-1].url.path == "/apply-template"
+
+
+def wait_for_queue(gate, count):
+    deadline = monotonic()+2
+    while monotonic() < deadline:
+        with gate._condition:
+            if len(gate._waiting) == count:
+                return
+        sleep(0.005)
+    raise AssertionError("Expected inference queue state was not reached")
+
+def test_two_different_questions_wait_past_old_two_second_limit_and_both_answer(monkeypatch):
+    gate, entered, release = InferenceAdmission(), Event(), Event()
+    monkeypatch.setattr(jana_reader, "_INFERENCE", gate)
+    rows = [article()]
+    span = prepare_evidence(rows).spans[0]
+    calls = []
+    class SlowReader:
+        timeout = 300
+        def select(self, question, _context):
+            calls.append(question)
+            if question == "Как получить оборудование?":
+                entered.set()
+                assert release.wait(5)
+            return decision(ids=[span.id])
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(answer_from_knowledge, "Как получить оборудование?", rows, SlowReader())
+        assert entered.wait(1)
+        second = pool.submit(answer_from_knowledge, "Где получить устройство?", rows, SlowReader())
+        try:
+            wait_for_queue(gate, 1)
+            sleep(2.15)  # regression: this used to fail with 503 after two seconds
+            assert not second.done()
+        finally:
+            release.set()
+        results = [first.result(timeout=2), second.result(timeout=2)]
+    assert calls == ["Как получить оборудование?", "Где получить устройство?"]
+    assert all(result["grounded"] and result["sources"][0]["excerpt"] == span.text for result in results)
+    assert not gate._active and not gate._waiting
+
+def test_queue_is_bounded_fifo_and_background_cannot_overtake_waiting_users():
+    gate, order = InferenceAdmission(max_waiting=2), []
+    assert gate.acquire(timeout=0)
+    def user(number):
+        assert gate.acquire(timeout=2)
+        try:
+            order.append(number)
+        finally:
+            gate.release()
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(user, 1)
+        wait_for_queue(gate, 1)
+        second = pool.submit(user, 2)
+        wait_for_queue(gate, 2)
+        began = monotonic()
+        assert not gate.acquire(timeout=60)  # rejected immediately; no third waiter
+        assert monotonic()-began < 0.5
+        assert not gate.acquire_background()
+        with gate._condition:
+            gate.release()
+            # Waiting users still own the queue while their threads wake up.
+            assert not gate.acquire_background()
+        first.result(timeout=2)
+        second.result(timeout=2)
+    assert order == [1, 2]
+    assert gate.acquire_background()
+    gate.release()
+
+def test_queue_timeout_removes_waiter_and_does_not_leak_inference_slot():
+    gate = InferenceAdmission()
+    assert gate.acquire(timeout=0)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        assert pool.submit(gate.acquire, 0.02).result(timeout=1) is False
+    assert not gate._waiting and gate._active
+    gate.release()
+    assert gate.acquire(timeout=0)
+    gate.release()
+    with pytest.raises(RuntimeError, match="not acquired"):
+        gate.release()
+
+def test_queue_and_all_http_stages_share_one_total_budget(mock_server, monkeypatch):
+    now, released, budgets = [0.0], [], []
+    monkeypatch.setattr(jana_reader, "monotonic", lambda: now[0])
+    class WaitingGate:
+        def acquire(self, timeout):
+            assert timeout == 60
+            now[0] += 60
+            return True
+        def release(self): released.append(True)
+    monkeypatch.setattr(jana_reader, "_INFERENCE", WaitingGate())
+    base_handler = preflight_server()
+    def handler(request):
+        budgets.append(request.extensions["timeout"]["read"])
+        now[0] += 10
+        return base_handler(request)
+    mock_server(handler, preflight=True)
+    reader = LocalReader(Settings(_env_file=None, jana_reader_timeout_seconds=300))
+    with request_budget(300):
+        result = answer_from_knowledge("Вопрос", [article()], reader)
+    assert budgets == [240, 230, 220, 210]
+    assert result["mode"] == "refusal" and released == [True]
+    assert jana_reader._REQUEST_DEADLINE.get() is None
+
+def test_expired_total_budget_stops_before_more_http_calls_and_releases_slot(mock_server, monkeypatch):
+    now = [0.0]
+    monkeypatch.setattr(jana_reader, "monotonic", lambda: now[0])
+    gate = InferenceAdmission()
+    monkeypatch.setattr(jana_reader, "_INFERENCE", gate)
+    base_handler = preflight_server()
+    def handler(request):
+        now[0] += 301
+        return base_handler(request)
+    captured = mock_server(handler, preflight=True)
+    reader = LocalReader(Settings(_env_file=None, jana_reader_timeout_seconds=300))
+    with pytest.raises(JanaUnavailable, match="budget expired"):
+        answer_from_knowledge("Вопрос", [article()], reader)
+    assert len(captured["requests"]) == 1
+    assert not gate._active and not gate._waiting

@@ -7,13 +7,17 @@ complete published knowledge snapshot, independently of historical FAQ examples.
 
 import json
 import logging
-from threading import BoundedSemaphore
+from collections import deque
+from contextlib import contextmanager
+from contextvars import ContextVar
+from threading import Condition
+from time import monotonic
 from urllib.parse import urlsplit
 
 import httpx
 from pydantic import ValidationError
 
-from app.domain.knowledge.jana_errors import JanaUnavailable
+from app.domain.knowledge.jana_errors import JanaBusy, JanaUnavailable
 from app.domain.knowledge.jana_evidence import prepare_evidence, select_excerpts
 from app.domain.knowledge.jana_intent import (
     Decision,
@@ -24,7 +28,80 @@ from app.domain.knowledge.jana_intent import (
 from app.infrastructure.config import Settings
 
 logger = logging.getLogger(__name__)
-_INFERENCE = BoundedSemaphore(1)
+_REQUEST_DEADLINE = ContextVar("jana_request_deadline", default=None)
+
+
+@contextmanager
+def request_budget(seconds=300):
+    """Queue and all HTTP stages share one budget below the client's 330s limit."""
+    previous = _REQUEST_DEADLINE.get()
+    deadline = monotonic() + min(seconds, 300)
+    token = _REQUEST_DEADLINE.set(
+        min(previous, deadline) if previous is not None else deadline
+    )
+    try:
+        yield
+    finally:
+        _REQUEST_DEADLINE.reset(token)
+
+
+def remaining_budget(maximum):
+    deadline = _REQUEST_DEADLINE.get()
+    remaining = maximum if deadline is None else min(maximum, deadline - monotonic())
+    if remaining <= 0:
+        raise JanaUnavailable("Local reader request budget expired")
+    return remaining
+
+
+class InferenceAdmission:
+    """One active inference and a small FIFO queue; background work never queues."""
+
+    def __init__(self, max_waiting=2):
+        self._condition = Condition()
+        self._waiting = deque()
+        self._active = False
+        self._max_waiting = max_waiting
+
+    def acquire(self, timeout=60):
+        with self._condition:
+            if not self._active and not self._waiting:
+                self._active = True
+                return True
+            if timeout <= 0 or len(self._waiting) >= self._max_waiting:
+                return False
+            ticket, deadline = object(), monotonic() + timeout
+            self._waiting.append(ticket)
+            try:
+                while True:
+                    remaining = deadline - monotonic()
+                    if remaining <= 0:
+                        return False
+                    if not self._active and self._waiting[0] is ticket:
+                        self._waiting.popleft()
+                        self._active = True
+                        return True
+                    self._condition.wait(remaining)
+            finally:
+                if ticket in self._waiting:
+                    self._waiting.remove(ticket)
+                    self._condition.notify_all()
+
+    def acquire_background(self):
+        with self._condition:
+            if self._active or self._waiting:
+                return False
+            self._active = True
+            return True
+
+    def release(self):
+        with self._condition:
+            if not self._active:
+                raise RuntimeError("Inference slot was not acquired")
+            self._active = False
+            self._condition.notify_all()
+
+
+_INFERENCE = InferenceAdmission()
 
 
 class InvalidDecision(ValueError):
@@ -38,6 +115,8 @@ class LocalReader:
             port = address.port
         except ValueError as exc:
             raise JanaUnavailable("Invalid local reader address") from exc
+        # Compose uses this one fixed internal service. An opt-in does not turn
+        # this setting into a general HTTP client or enable a cloud fallback.
         docker_service = (
             settings.jana_reader_allow_docker_host
             and address.hostname == "jana-reader"
@@ -62,11 +141,12 @@ class LocalReader:
 
     def _check_context(self, client: httpx.Client, messages: list[dict]) -> None:
         """Count the server's real chat template tokens; never truncate sources."""
-        props = client.get(self.url + "/props")
+        props = client.get(self.url + "/props", timeout=remaining_budget(self.timeout))
         props.raise_for_status()
         context_size = props.json()["default_generation_settings"]["n_ctx"]
         templated = client.post(
             self.url + "/apply-template",
+            timeout=remaining_budget(self.timeout),
             json={
                 "messages": messages,
                 "chat_template_kwargs": {"enable_thinking": False},
@@ -78,6 +158,7 @@ class LocalReader:
             raise InvalidDecision("Invalid model template")
         tokens = client.post(
             self.url + "/tokenize",
+            timeout=remaining_budget(self.timeout),
             json={
                 "content": prompt,
                 "add_special": True,
@@ -117,13 +198,23 @@ class LocalReader:
             },
         }
         try:
-            with httpx.Client(
-                timeout=self.timeout, trust_env=False, follow_redirects=False
-            ) as client:
+            with (
+                request_budget(self.timeout),
+                httpx.Client(
+                    timeout=self.timeout,
+                    trust_env=False,
+                    follow_redirects=False,
+                ) as client,
+            ):
                 self._check_context(client, messages)
-                response = client.post(self.url + "/v1/chat/completions", json=payload)
+                response = client.post(
+                    self.url + "/v1/chat/completions",
+                    json=payload,
+                    timeout=remaining_budget(self.timeout),
+                )
                 response.raise_for_status()
                 raw = response.json()
+                remaining_budget(self.timeout)
             choice = raw["choices"][0]
             if choice["finish_reason"] != "stop":
                 raise InvalidDecision("Incomplete model decision")
@@ -158,11 +249,18 @@ def unavailable_evidence() -> dict:
 def answer_from_knowledge(
     question: str, articles: list[dict], reader: LocalReader
 ) -> dict:
+    with request_budget(getattr(reader, "timeout", 300)):
+        return _answer_from_knowledge(question, articles, reader)
+
+
+def _answer_from_knowledge(
+    question: str, articles: list[dict], reader: LocalReader
+) -> dict:
     bundle = prepare_evidence(articles)
     if not bundle.spans:
         return unavailable_evidence()
-    if not _INFERENCE.acquire(timeout=2):
-        raise JanaUnavailable("Local reader is busy")
+    if not _INFERENCE.acquire(timeout=remaining_budget(60)):
+        raise JanaBusy("Local reader is busy")
     try:
         context = json.loads(bundle.prompt_text)["articles"]
         decision = reader.select(question, context)

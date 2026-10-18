@@ -6,7 +6,7 @@ from postgrest.exceptions import APIError
 
 from app.application.dto.digital_hr import JanaQuestion
 from app.application.dto.jana import JanaAnswer, JanaArticle, JanaError
-from app.domain.knowledge.jana_errors import JanaUnavailable
+from app.domain.knowledge.jana_errors import JanaBusy, JanaUnavailable
 from app.domain.models import UserContext
 from app.infrastructure.ai.local_jana import answer_question, get_source_article
 from app.presentation.http.security import get_current_user
@@ -26,6 +26,10 @@ def ask_jana(
 ) -> dict:
     try:
         return answer_question(payload.question)
+    except JanaBusy as exc:
+        raise HTTPException(
+            429, "Jana AI is busy. Try again shortly", headers={"Retry-After": "5"}
+        ) from exc
     except JanaUnavailable as exc:
         raise HTTPException(
             status_code=503, detail="Jana AI is temporarily unavailable"
@@ -50,7 +54,11 @@ def read_jana_source(
     actor: UserContext = Depends(get_current_user),
 ) -> dict:
     try:
-        article = get_source_article(str(article_id), version) if version is not None else get_source_article(str(article_id))
+        article = (
+            get_source_article(str(article_id), version)
+            if version is not None
+            else get_source_article(str(article_id))
+        )
     except (RuntimeError, HTTPError, APIError) as exc:
         raise HTTPException(
             status_code=503, detail="Jana knowledge base is temporarily unavailable"

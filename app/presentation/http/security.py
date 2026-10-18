@@ -1,4 +1,7 @@
-from fastapi import Depends, HTTPException, status
+import secrets
+from typing import Annotated
+
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase_auth.errors import (
     AuthApiError,
@@ -8,14 +11,56 @@ from supabase_auth.errors import (
 
 from app.application.use_cases.permissions import get_profile_by_auth_id
 from app.domain.models import UserContext
+from app.infrastructure.config import get_settings
 from app.infrastructure.database.client import get_supabase_client
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
+def require_telegram_worker(
+    x_telegram_worker_key: Annotated[str | None, Header()] = None,
+) -> None:
+    configured = get_settings().telegram_worker_secret
+    expected = configured.get_secret_value() if configured else ""
+    if len(expected) < 32:
+        raise HTTPException(
+            status_code=503, detail="Telegram integration is not configured"
+        )
+    if not x_telegram_worker_key or not secrets.compare_digest(
+        expected.encode("utf-8"), x_telegram_worker_key.encode("utf-8")
+    ):
+        raise HTTPException(
+            status_code=401, detail="Invalid Telegram worker credentials"
+        )
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    x_telegram_worker_key: Annotated[str | None, Header()] = None,
+    x_telegram_user_id: Annotated[str | None, Header()] = None,
 ) -> UserContext:
+    if x_telegram_worker_key is not None or x_telegram_user_id is not None:
+        # Worker identity is always resolved from the active link and current HR
+        # role. Neither a supplied employee UUID nor cached role is authoritative.
+        require_telegram_worker(x_telegram_worker_key)
+        if (
+            not x_telegram_user_id
+            or len(x_telegram_user_id) > 19
+            or not x_telegram_user_id.isascii()
+            or not x_telegram_user_id.isdigit()
+        ):
+            raise HTTPException(
+                status_code=401, detail="Telegram user identity required"
+            )
+        telegram_user_id = int(x_telegram_user_id)
+        if not 0 < telegram_user_id < 2**63:
+            raise HTTPException(
+                status_code=401, detail="Invalid Telegram user identity"
+            )
+        from app.infrastructure.telegram import resolve_actor
+
+        return resolve_actor(telegram_user_id)
+
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -86,3 +131,10 @@ def get_current_user(
         role=profile["role"],
         manager_id=str(profile["manager_id"]) if profile.get("manager_id") else None,
     )
+
+
+def get_website_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> UserContext:
+    """Issuing a link requires an existing website login, never worker headers."""
+    return get_current_user(credentials, None, None)

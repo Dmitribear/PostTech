@@ -126,6 +126,8 @@ supabase-functions==2.33.0
     # via supabase
 tqdm==4.70.1
     # via openai
+truststore==0.10.5 ; sys_platform == 'win32'
+    # via -r requirements.txt
 typing-extensions==4.16.0
     # via
     #   anyio

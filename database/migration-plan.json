@@ -1,0 +1,26 @@
+{
+  "purpose": "Fresh isolated main demo database only; never auto-upgrade shared Supabase.",
+  "migrations": [
+    "database/migrations/0001_digital_hr.sql",
+    "database/migrations/0002_request_workflow.sql",
+    "database/migrations/0003_request_lifecycle.sql",
+    "database/migrations/0004_academy_workflow.sql",
+    "database/migrations/0005_registration_invitations.sql",
+    "database/migrations/0006_knowledge_freshness.sql",
+    "database/migrations/0007_delegation_learning_support.sql",
+    "database/migrations/0008_course_seed_compatibility.sql",
+    "database/migrations/0009_leave_lessons_outbox.sql",
+    "database/migrations/0010_knowledge_editor.sql",
+    "database/migrations/0011_hr_workflows.sql",
+    "database/migrations/0012_employee_import.sql",
+    "database/migrations/0013_invitation_email.sql",
+    "database/migrations/0014_director_role.sql",
+    "database/migrations/0015_director_workflows.sql",
+    "database/migrations/0016_query_scalability.sql",
+    "database/migrations/0017_single_leave_accounting.sql",
+    "database/migrations/0018_cancel_delegation_notifications.sql",
+    "database/migrations/0019_telegram.sql",
+    "database/migrations/0019_external_learning.sql",
+    "database/migrations/0020_personal_courses.sql"
+  ]
+}

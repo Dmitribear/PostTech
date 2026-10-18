@@ -1,3 +1,4 @@
+import { TelegramSettings } from '@/features/telegram';
 import { usePortal } from '@/entities/session';
 import { roleLabels } from '@/shared/lib/format';
 import { LanguageSwitch, t, tx } from '@/shared/lib/i18n';
@@ -80,6 +81,7 @@ export default function Settings() {
           </Link>
         </div>
       </section>
+      <TelegramSettings />
       <section className="card support-settings-section">
         <h2>{t('Сеанс работы')}</h2>
         <p>
