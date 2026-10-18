@@ -31,7 +31,7 @@ export interface AuthResponse {
 }
 
 export interface AuthSession extends AuthResponse {
-  /** Unix timestamp in milliseconds; only kept in this tab's sessionStorage. */
+  /** Unix timestamp in milliseconds; the session is shared across same-origin tabs. */
   expires_at: number;
 }
 
