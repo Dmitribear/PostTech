@@ -2,6 +2,7 @@
 
 from datetime import date
 from typing import Literal
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
@@ -101,14 +102,17 @@ class Lesson(Payload):
 class CourseTranslation(Payload):
     title: str = Field(min_length=3, max_length=200)
     description: str = Field(max_length=2000)
-    material_markdown: str = Field(min_length=3, max_length=60000)
-    quiz: list[EditorQuestion] = Field(min_length=1, max_length=50)
+    material_markdown: str = Field(default="", max_length=60000)
+    quiz: list[EditorQuestion] = Field(default_factory=list, max_length=50)
     lessons: list[Lesson] = Field(default_factory=list, max_length=50)
 
 
 class CourseData(CourseTranslation):
+    course_type: Literal["internal", "external"] = "internal"
+    provider: str = Field(default="", max_length=160)
+    external_url: str | None = Field(default=None, max_length=2000)
     family_id: UUID | None = None
-    duration_minutes: int = Field(ge=1, le=1440)
+    duration_minutes: int = Field(ge=0, le=525600)
     passing_score: int = Field(ge=1, le=100)
     category: str = Field(min_length=1, max_length=100)
     audience: str = Field(min_length=1, max_length=100)
@@ -116,11 +120,39 @@ class CourseData(CourseTranslation):
 
     @model_validator(mode="after")
     def matching_quiz(self):
+        if self.course_type == "external":
+            link = urlsplit(self.external_url or "")
+            if (
+                link.scheme != "https"
+                or not link.hostname
+                or link.username
+                or link.password
+                or not self.provider
+            ):
+                raise ValueError(
+                    "External courses need a provider and an HTTPS URL without credentials"
+                )
+            if self.lessons or self.quiz:
+                raise ValueError(
+                    "External courses track progress on the provider platform"
+                )
+        elif (
+            len(self.material_markdown.strip()) < 3
+            or not self.quiz
+            or self.duration_minutes < 1
+        ):
+            raise ValueError("Internal courses need material and a quiz")
         if len({lesson.id for lesson in self.lessons}) != len(self.lessons):
             raise ValueError("Lesson IDs must be unique")
         if len({q.id for q in self.quiz}) != len(self.quiz):
             raise ValueError("Question IDs must be unique")
         for translated in self.translations.values():
+            if self.course_type == "internal" and (
+                len(translated.material_markdown.strip()) < 3 or not translated.quiz
+            ):
+                raise ValueError(
+                    "Internal course translations need material and a quiz"
+                )
             if [x.id for x in translated.lessons] != [x.id for x in self.lessons]:
                 raise ValueError("Translations must preserve lesson IDs and order")
             if [(q.id, len(q.options), q.answer_index) for q in translated.quiz] != [
@@ -141,7 +173,7 @@ class CourseEdit(Payload):
 
 def editor_courses(actor: UserContext = None):
     hr(actor)
-    return read_all_rows(
+    rows = read_all_rows(
         lambda: (
             data_gateway()
             .table("courses")
@@ -151,9 +183,22 @@ def editor_courses(actor: UserContext = None):
         )
     )
 
+    return [row for row in rows if not row.get("owner_employee_id")]
+
 
 def edit_course(payload: CourseEdit, actor: UserContext = None):
     hr(actor)
+    ids = [str(payload.id)]
+    if payload.data and payload.data.family_id:
+        ids.append(str(payload.data.family_id))
+    existing = (
+        execute_query(
+            data_gateway().table("courses").select("owner_employee_id").in_("id", ids)
+        )
+        or []
+    )
+    if any(row.get("owner_employee_id") for row in existing):
+        raise ApplicationError(403, "Personal courses are managed in employee learning")
     if payload.action in ("create", "save") and payload.data is None:
         raise ApplicationError(422, "Course content required")
     if payload.action == "publish":

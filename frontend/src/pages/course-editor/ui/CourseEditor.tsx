@@ -20,6 +20,9 @@ type Translation = {
   lessons?: Lesson[];
 };
 type Content = Translation & {
+  course_type: 'internal' | 'external';
+  provider: string;
+  external_url: string | null;
   duration_minutes: number;
   passing_score: number;
   category: string;
@@ -34,15 +37,18 @@ interface AdminCourse extends Content {
   publication_state: 'draft' | 'published' | 'archived';
 }
 const blank = (): Content => ({
+  course_type: 'external',
+  provider: '',
+  external_url: '',
   title: '',
   description: '',
   material_markdown: '',
   lessons: [],
-  duration_minutes: 15,
+  duration_minutes: 0,
   passing_score: 80,
-  category: 'Общее',
+  category: 'Повышение квалификации',
   audience: 'Все сотрудники',
-  quiz: [{ id: 'q1', prompt: '', options: ['', ''], answer_index: 0 }],
+  quiz: [],
   translations: {},
 });
 
@@ -105,6 +111,9 @@ export default function CourseEditor() {
     setEditing(course?.publication_state === 'draft' ? course : null);
     const next = course
       ? {
+          course_type: course.course_type || 'internal',
+          provider: course.provider || '',
+          external_url: course.external_url || null,
           title: course.title,
           description: course.description,
           material_markdown: course.material_markdown,
@@ -277,9 +286,66 @@ export default function CourseEditor() {
           </div>
           <nav className="ws-section-nav" aria-label={t('Разделы курса')}>
             <a href="#course-basics">{t('Основное')}</a>
-            <a href="#course-material">{t('Материал')}</a>
-            <a href="#course-quiz">{t('Тест')}</a>
+            {data.course_type === 'internal' && (
+              <>
+                <a href="#course-material">{t('Материал')}</a>
+                <a href="#course-quiz">{t('Тест')}</a>
+              </>
+            )}
           </nav>
+          <label className="field">
+            {t('Формат курса')}
+            <select
+              className="input"
+              value={data.course_type}
+              disabled={busy || Boolean(editing) || Boolean(data.family_id)}
+              onChange={(e) =>
+                setData({
+                  ...data,
+                  course_type: e.target.value as Content['course_type'],
+                  translations: {},
+                  lessons: [],
+                  quiz:
+                    e.target.value === 'internal'
+                      ? [{ id: 'q1', prompt: '', options: ['', ''], answer_index: 0 }]
+                      : [],
+                })
+              }
+            >
+              <option value="external">{t('На внешней площадке')}</option>
+              <option value="internal">{t('Внутренний материал и тест')}</option>
+            </select>
+          </label>
+          {data.course_type === 'external' && (
+            <>
+              <label className="field">
+                {t('Площадка')}
+                <input
+                  className="input"
+                  required
+                  maxLength={160}
+                  placeholder="Яндекс Практикум, Coursera…"
+                  value={data.provider}
+                  disabled={busy}
+                  onChange={(e) => setData({ ...data, provider: e.target.value })}
+                />
+              </label>
+              <label className="field">
+                {t('Ссылка на курс')}
+                <input
+                  className="input"
+                  type="url"
+                  pattern="https://.*"
+                  required
+                  maxLength={2000}
+                  placeholder="https://…"
+                  value={data.external_url || ''}
+                  disabled={busy}
+                  onChange={(e) => setData({ ...data, external_url: e.target.value })}
+                />
+              </label>
+            </>
+          )}
           <div id="course-basics" className="ws-languages">
             <button
               type="button"
@@ -326,27 +392,29 @@ export default function CourseEditor() {
               <input
                 className="input"
                 type="number"
-                min={1}
-                max={1440}
+                min={data.course_type === 'external' ? 0 : 1}
+                max={525600}
                 required
                 value={data.duration_minutes}
                 onChange={(e) => setData({ ...data, duration_minutes: Number(e.target.value) })}
                 disabled={busy}
               />
             </label>
-            <label className="field">
-              {t('Проходной балл, %')}
-              <input
-                className="input"
-                type="number"
-                min={1}
-                max={100}
-                required
-                value={data.passing_score}
-                onChange={(e) => setData({ ...data, passing_score: Number(e.target.value) })}
-                disabled={busy}
-              />
-            </label>
+            {data.course_type === 'internal' && (
+              <label className="field">
+                {t('Проходной балл, %')}
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={100}
+                  required
+                  value={data.passing_score}
+                  onChange={(e) => setData({ ...data, passing_score: Number(e.target.value) })}
+                  disabled={busy}
+                />
+              </label>
+            )}
           </div>
           <div className="ws-columns">
             <label className="field">
@@ -372,259 +440,267 @@ export default function CourseEditor() {
               />
             </label>
           </div>
-          <label id="course-material" className="field">
-            {t('Материал курса')}
-            <textarea
-              className="input"
-              required
-              minLength={3}
-              maxLength={60000}
-              rows={12}
-              value={current.material_markdown}
-              onChange={(e) => change('material_markdown', e.target.value)}
-              disabled={busy}
-            />
-          </label>
-          <section className="ws-stack">
-            <h3>{t('Уроки')}</h3>
-            <p className="muted">
-              {t(
-                'Разделите материал на короткие уроки. Прогресс каждого урока сохраняется отдельно. Без уроков курс работает как один материал.',
-              )}
-            </p>
-            {(current.lessons || []).map((lesson, index) => (
-              <details className="lesson-editor" key={lesson.id} open={!lesson.title}>
-                <summary>
-                  {index + 1}. {lesson.title || t('Новый урок')}
-                </summary>
-                <div className="ws-stack">
-                  <label className="field">
-                    {t('Название урока')}
-                    <input
-                      className="input"
-                      required
-                      minLength={3}
-                      maxLength={200}
-                      disabled={busy}
-                      value={lesson.title}
-                      onChange={(e) =>
-                        change(
-                          'lessons',
-                          (current.lessons || []).map((l, i) =>
-                            i === index ? { ...l, title: e.target.value } : l,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    {t('Материал урока')}
-                    <textarea
-                      className="input"
-                      required
-                      minLength={3}
-                      maxLength={60000}
-                      rows={8}
-                      disabled={busy}
-                      value={lesson.material_markdown}
-                      onChange={(e) =>
-                        change(
-                          'lessons',
-                          (current.lessons || []).map((l, i) =>
-                            i === index ? { ...l, material_markdown: e.target.value } : l,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  {lang === 'ru' && !data.translations.kk && (
-                    <div className="ws-actions">
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        disabled={busy || index === 0}
-                        onClick={() => {
-                          const lessons = [...(current.lessons || [])];
-                          [lessons[index - 1], lessons[index]] = [
-                            lessons[index],
-                            lessons[index - 1],
-                          ];
-                          change('lessons', lessons);
-                        }}
-                      >
-                        {t('Выше')}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        disabled={busy || index === (current.lessons || []).length - 1}
-                        onClick={() => {
-                          const lessons = [...(current.lessons || [])];
-                          [lessons[index + 1], lessons[index]] = [
-                            lessons[index],
-                            lessons[index + 1],
-                          ];
-                          change('lessons', lessons);
-                        }}
-                      >
-                        {t('Ниже')}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        disabled={busy}
-                        onClick={() =>
-                          change(
-                            'lessons',
-                            (current.lessons || []).filter((l) => l.id !== lesson.id),
-                          )
-                        }
-                      >
-                        {t('Удалить урок')}
-                      </button>
-                    </div>
+          {data.course_type === 'internal' && (
+            <>
+              <label id="course-material" className="field">
+                {t('Материал курса')}
+                <textarea
+                  className="input"
+                  required
+                  minLength={3}
+                  maxLength={60000}
+                  rows={12}
+                  value={current.material_markdown}
+                  onChange={(e) => change('material_markdown', e.target.value)}
+                  disabled={busy}
+                />
+              </label>
+              <section className="ws-stack">
+                <h3>{t('Уроки')}</h3>
+                <p className="muted">
+                  {t(
+                    'Разделите материал на короткие уроки. Прогресс каждого урока сохраняется отдельно. Без уроков курс работает как один материал.',
                   )}
-                </div>
-              </details>
-            ))}
-            {lang === 'ru' && !data.translations.kk && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={busy || (current.lessons || []).length >= 50}
-                onClick={() =>
-                  change('lessons', [
-                    ...(current.lessons || []),
-                    {
-                      id: crypto.randomUUID(),
-                      title: '',
-                      material_markdown: '',
-                    },
-                  ])
-                }
-              >
-                {t('Добавить урок')}
-              </button>
-            )}
-          </section>
-          <h3 id="course-quiz">{t('Проверка знаний')}</h3>
-          <p className="muted">
-            {t('Правильные ответы видит только HR. В переводе сохраняйте порядок вариантов.')}
-          </p>
-          {tx(
-            current.quiz.map((q, i) => (
-              <details key={`${lang}-${q.id}`} className="ws-question" open={i === 0 || !q.prompt}>
-                <summary>
-                  {t('Вопрос ')}
-                  {i + 1}
-                  <span>{q.prompt || t('Новый вопрос')}</span>
-                </summary>
-                <div className="ws-stack">
-                  <label className="field">
-                    {t('Вопрос ')}
-                    {tx(i + 1)}
-                    <input
-                      className="input"
-                      required
-                      minLength={3}
-                      maxLength={2000}
-                      value={q.prompt}
-                      onChange={(e) => question(i, { prompt: e.target.value })}
-                      disabled={busy}
-                    />
-                  </label>
-                  {tx(
-                    q.options.map((option, j) => (
-                      <label className="field" key={j}>
-                        {t('Вариант ')}
-                        {tx(j + 1)}
+                </p>
+                {(current.lessons || []).map((lesson, index) => (
+                  <details className="lesson-editor" key={lesson.id} open={!lesson.title}>
+                    <summary>
+                      {index + 1}. {lesson.title || t('Новый урок')}
+                    </summary>
+                    <div className="ws-stack">
+                      <label className="field">
+                        {t('Название урока')}
                         <input
                           className="input"
                           required
-                          maxLength={1000}
-                          value={option}
+                          minLength={3}
+                          maxLength={200}
+                          disabled={busy}
+                          value={lesson.title}
                           onChange={(e) =>
-                            question(i, {
-                              options: q.options.map((v, k) => (j === k ? e.target.value : v)),
-                            })
+                            change(
+                              'lessons',
+                              (current.lessons || []).map((l, i) =>
+                                i === index ? { ...l, title: e.target.value } : l,
+                              ),
+                            )
                           }
+                        />
+                      </label>
+                      <label className="field">
+                        {t('Материал урока')}
+                        <textarea
+                          className="input"
+                          required
+                          minLength={3}
+                          maxLength={60000}
+                          rows={8}
+                          disabled={busy}
+                          value={lesson.material_markdown}
+                          onChange={(e) =>
+                            change(
+                              'lessons',
+                              (current.lessons || []).map((l, i) =>
+                                i === index ? { ...l, material_markdown: e.target.value } : l,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      {lang === 'ru' && !data.translations.kk && (
+                        <div className="ws-actions">
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            disabled={busy || index === 0}
+                            onClick={() => {
+                              const lessons = [...(current.lessons || [])];
+                              [lessons[index - 1], lessons[index]] = [
+                                lessons[index],
+                                lessons[index - 1],
+                              ];
+                              change('lessons', lessons);
+                            }}
+                          >
+                            {t('Выше')}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            disabled={busy || index === (current.lessons || []).length - 1}
+                            onClick={() => {
+                              const lessons = [...(current.lessons || [])];
+                              [lessons[index + 1], lessons[index]] = [
+                                lessons[index],
+                                lessons[index + 1],
+                              ];
+                              change('lessons', lessons);
+                            }}
+                          >
+                            {t('Ниже')}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            disabled={busy}
+                            onClick={() =>
+                              change(
+                                'lessons',
+                                (current.lessons || []).filter((l) => l.id !== lesson.id),
+                              )
+                            }
+                          >
+                            {t('Удалить урок')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                ))}
+                {lang === 'ru' && !data.translations.kk && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={busy || (current.lessons || []).length >= 50}
+                    onClick={() =>
+                      change('lessons', [
+                        ...(current.lessons || []),
+                        {
+                          id: crypto.randomUUID(),
+                          title: '',
+                          material_markdown: '',
+                        },
+                      ])
+                    }
+                  >
+                    {t('Добавить урок')}
+                  </button>
+                )}
+              </section>
+              <h3 id="course-quiz">{t('Проверка знаний')}</h3>
+              <p className="muted">
+                {t('Правильные ответы видит только HR. В переводе сохраняйте порядок вариантов.')}
+              </p>
+              {tx(
+                current.quiz.map((q, i) => (
+                  <details
+                    key={`${lang}-${q.id}`}
+                    className="ws-question"
+                    open={i === 0 || !q.prompt}
+                  >
+                    <summary>
+                      {t('Вопрос ')}
+                      {i + 1}
+                      <span>{q.prompt || t('Новый вопрос')}</span>
+                    </summary>
+                    <div className="ws-stack">
+                      <label className="field">
+                        {t('Вопрос ')}
+                        {tx(i + 1)}
+                        <input
+                          className="input"
+                          required
+                          minLength={3}
+                          maxLength={2000}
+                          value={q.prompt}
+                          onChange={(e) => question(i, { prompt: e.target.value })}
                           disabled={busy}
                         />
                       </label>
-                    )),
-                  )}
-                  <label className="field">
-                    {t('Правильный вариант')}
-                    <select
-                      className="input"
-                      value={q.answer_index}
-                      onChange={(e) => question(i, { answer_index: Number(e.target.value) })}
-                      disabled={busy || lang === 'kk'}
-                    >
                       {tx(
-                        q.options.map((_, j) => (
-                          <option key={j} value={j}>
+                        q.options.map((option, j) => (
+                          <label className="field" key={j}>
+                            {t('Вариант ')}
                             {tx(j + 1)}
-                          </option>
+                            <input
+                              className="input"
+                              required
+                              maxLength={1000}
+                              value={option}
+                              onChange={(e) =>
+                                question(i, {
+                                  options: q.options.map((v, k) => (j === k ? e.target.value : v)),
+                                })
+                              }
+                              disabled={busy}
+                            />
+                          </label>
                         )),
                       )}
-                    </select>
-                  </label>
-                  {tx(
-                    lang === 'ru' && !data.translations.kk && (
-                      <div className="ws-actions">
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          disabled={busy || q.options.length >= 10}
-                          onClick={() => question(i, { options: [...q.options, ''] })}
+                      <label className="field">
+                        {t('Правильный вариант')}
+                        <select
+                          className="input"
+                          value={q.answer_index}
+                          onChange={(e) => question(i, { answer_index: Number(e.target.value) })}
+                          disabled={busy || lang === 'kk'}
                         >
-                          {t('Добавить вариант')}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          disabled={busy || current.quiz.length === 1}
-                          onClick={() =>
-                            change(
-                              'quiz',
-                              current.quiz.filter((_, n) => n !== i),
-                            )
-                          }
-                        >
-                          {t('Удалить вопрос')}
-                        </button>
-                      </div>
-                    ),
-                  )}
-                </div>
-              </details>
-            )),
+                          {tx(
+                            q.options.map((_, j) => (
+                              <option key={j} value={j}>
+                                {tx(j + 1)}
+                              </option>
+                            )),
+                          )}
+                        </select>
+                      </label>
+                      {tx(
+                        lang === 'ru' && !data.translations.kk && (
+                          <div className="ws-actions">
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              disabled={busy || q.options.length >= 10}
+                              onClick={() => question(i, { options: [...q.options, ''] })}
+                            >
+                              {t('Добавить вариант')}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              disabled={busy || current.quiz.length === 1}
+                              onClick={() =>
+                                change(
+                                  'quiz',
+                                  current.quiz.filter((_, n) => n !== i),
+                                )
+                              }
+                            >
+                              {t('Удалить вопрос')}
+                            </button>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </details>
+                )),
+              )}
+              {tx(
+                lang === 'ru' && !data.translations.kk && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={busy || current.quiz.length >= 50}
+                    onClick={() =>
+                      change('quiz', [
+                        ...current.quiz,
+                        {
+                          id: crypto.randomUUID(),
+                          prompt: '',
+                          options: ['', ''],
+                          answer_index: 0,
+                        },
+                      ])
+                    }
+                  >
+                    {t('Добавить вопрос')}
+                  </button>
+                ),
+              )}
+            </>
           )}
           {tx(
-            lang === 'ru' && !data.translations.kk && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={busy || current.quiz.length >= 50}
-                onClick={() =>
-                  change('quiz', [
-                    ...current.quiz,
-                    {
-                      id: crypto.randomUUID(),
-                      prompt: '',
-                      options: ['', ''],
-                      answer_index: 0,
-                    },
-                  ])
-                }
-              >
-                {t('Добавить вопрос')}
-              </button>
-            ),
-          )}
-          {tx(
-            data.translations.kk && (
+            data.course_type === 'internal' && data.translations.kk && (
               <p className="muted">
                 {t(
                   'Структура теста общая для двух языков. Для изменения структуры сначала удалите перевод.',

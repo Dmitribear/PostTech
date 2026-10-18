@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from typing import Literal
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -115,7 +116,7 @@ class NotificationResponse(BaseModel):
 class CourseProgressUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    progress_percent: int = Field(ge=0, le=99)
+    progress_percent: int = Field(ge=0, le=100, strict=True)
 
 
 class CourseAssignmentCreate(BaseModel):
@@ -124,6 +125,31 @@ class CourseAssignmentCreate(BaseModel):
     employee_id: UUID
     course_id: UUID
     due_on: date | None = None
+
+
+class PersonalCourseCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    id: UUID
+    title: str = Field(min_length=3, max_length=200)
+    provider: str = Field(min_length=1, max_length=160)
+    external_url: str = Field(max_length=2000)
+    due_on: date
+    progress_percent: int = Field(default=0, ge=0, le=100, strict=True)
+
+    @model_validator(mode="after")
+    def validate_link(self):
+        url = urlsplit(self.external_url)
+        if (
+            url.scheme != "https"
+            or not url.hostname
+            or url.username
+            or url.password
+            or any(c.isspace() for c in self.external_url)
+            or "\\" in self.external_url
+        ):
+            raise ValueError("Use an HTTPS course link without credentials")
+        return self
 
 
 class QuizSubmission(BaseModel):

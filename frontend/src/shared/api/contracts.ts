@@ -220,7 +220,20 @@ export interface CourseAssignment extends CourseAssignmentSummary {
   assigned_by: string | null;
 }
 
+export interface PersonalCourseInput {
+  id: string;
+  title: string;
+  provider: string;
+  external_url: string;
+  due_on: string;
+  progress_percent: number;
+}
+
 export interface CourseSummary {
+  owner_employee_id?: string | null;
+  course_type?: 'internal' | 'external';
+  provider?: string;
+  external_url?: string | null;
   content_language?: string;
   id: string;
   title: string;
@@ -346,6 +359,8 @@ export interface HrApi {
   getCourses(): Promise<Course[]>;
   getMyCourses(): Promise<AssignedCourse[]>;
   getCourse(id: string): Promise<CourseDetail>;
+  createPersonalCourse(input: PersonalCourseInput): Promise<CourseAssignment>;
+  enrollExternalCourse(id: string): Promise<CourseAssignment>;
   assignCourse(employeeId: string, courseId: string, dueOn?: string): Promise<CourseAssignment>;
   updateCourseProgress(id: string, percent: number): Promise<CourseAssignment>;
   completeCourse(

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Header, status
 from app.application.dto.digital_hr import (
     CourseAssignmentCreate,
     CourseProgressUpdate,
+    PersonalCourseCreate,
     QuizSubmission,
 )
 from app.application.use_cases import academy
@@ -12,6 +13,20 @@ from app.domain.models import UserContext
 from app.presentation.http.security import get_current_user
 
 router = APIRouter(prefix="/academy", tags=["Jana Academy"])
+
+
+@router.post("/personal-courses", status_code=status.HTTP_201_CREATED)
+def create_personal_course(
+    payload: PersonalCourseCreate, actor: UserContext = Depends(get_current_user)
+) -> dict:
+    return academy.execute_command(
+        "create_personal_course",
+        {
+            "p_actor_id": actor.id,
+            "p_id": str(payload.id),
+            "p_data": payload.model_dump(mode="json", exclude={"id"}),
+        },
+    )
 
 
 @router.get("/courses")
@@ -63,6 +78,13 @@ def update_progress(
     actor: UserContext = Depends(get_current_user),
 ) -> dict:
     return academy.update_progress(actor, course_id, payload.progress_percent)
+
+
+@router.post("/courses/{course_id}/enroll")
+def enroll_external_course(
+    course_id: UUID, actor: UserContext = Depends(get_current_user)
+) -> dict:
+    return academy.enroll_external_course(actor, course_id)
 
 
 @router.post("/courses/{course_id}/complete")

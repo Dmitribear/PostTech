@@ -81,6 +81,26 @@ test('course progress survives role changes and is visible to the manager', asyn
   expect(assignments[0].progress_percent).toBe(80);
 });
 
+test('external demo learning keeps self enrollment, progress and one completion notification', async () => {
+  const store = storage();
+  const worker = createSharedDemoApi('worker', store);
+  const manager = createSharedDemoApi('manager', store);
+  const course = (await worker.getCourses()).find((c) => c.course_type === 'external')!;
+  const first = await worker.enrollExternalCourse(course.id);
+  expect((await worker.enrollExternalCourse(course.id)).id).toBe(first.id);
+  await worker.updateCourseProgress(course.id, 65);
+  const team = await manager.getTeamCourses({ course_id: course.id });
+  expect(team[0].progress_percent).toBe(65);
+  expect(team[0].course?.provider).toBe('Яндекс Практикум');
+  const completed = await worker.updateCourseProgress(course.id, 100);
+  expect(completed.status).toBe('completed');
+  expect(completed.score_percent).toBeNull();
+  await worker.updateCourseProgress(course.id, 100);
+  expect((await manager.getNotifications()).filter((n) => n.course_id === course.id)).toHaveLength(
+    1,
+  );
+});
+
 test('failed storage writes cannot report a successful submission', async () => {
   const store = storage();
   const worker = createSharedDemoApi('worker', store);
@@ -110,4 +130,41 @@ test('unread state persists in another role instance', async () => {
       unread_only: true,
     }),
   ).toHaveLength(0);
+});
+
+test('personal courses persist across sessions and remain outside the public catalog', async () => {
+  const store = storage();
+  const worker = createSharedDemoApi('worker', store);
+  const manager = createSharedDemoApi('manager', store);
+  const hr = createSharedDemoApi('hr_admin', store);
+  const input = {
+    id: crypto.randomUUID(),
+    title: 'Личный курс Excel',
+    provider: 'Практикум',
+    external_url: 'https://example.com/excel',
+    due_on: '2027-01-01',
+    progress_percent: 35,
+  };
+  const created = await worker.createPersonalCourse(input);
+  expect((await worker.createPersonalCourse(input)).id).toBe(created.id);
+  const reopened = createSharedDemoApi('worker', store);
+  expect((await reopened.getMyCourses()).find((a) => a.course_id === input.id)?.due_on).toBe(
+    input.due_on,
+  );
+  for (const api of [worker, manager, hr])
+    expect((await api.getCourses()).some((c) => c.id === input.id)).toBe(false);
+  for (const api of [manager, hr]) {
+    expect(
+      (await api.getTeamCourses()).find((a) => a.course_id === input.id)?.progress_percent,
+    ).toBe(35);
+    expect((await api.getCourse(input.id)).external_url).toBe(input.external_url);
+  }
+  await expect(manager.enrollExternalCourse(input.id)).rejects.toMatchObject({ status: 403 });
+  await reopened.updateCourseProgress(input.id, 70);
+  expect(
+    (await manager.getTeamCourses()).find((a) => a.course_id === input.id)?.progress_percent,
+  ).toBe(70);
+  await expect(
+    worker.createPersonalCourse({ ...input, title: 'Другая версия' }),
+  ).rejects.toMatchObject({ status: 409 });
 });

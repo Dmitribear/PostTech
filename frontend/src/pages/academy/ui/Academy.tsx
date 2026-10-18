@@ -1,10 +1,12 @@
 import { usePortal } from '@/entities/session';
 import { Deadline } from '@/features/deadline';
 import { LessonReader } from '@/features/lesson-reader';
+import { ExternalCourse, PersonalCourseForm } from '@/features/external-course';
 import { errorMessage } from '@/shared/api/api';
 import type { Course, CourseAssignment, CourseAttempt, CourseDetail } from '@/shared/api/contracts';
 import { formatDate } from '@/shared/lib/format';
 import { getLocale, t, tx } from '@/shared/lib/i18n';
+import { watchVisible } from '@/shared/lib/live-refresh';
 import '@/shared/styles/support.css';
 import {
   EmptyState,
@@ -47,9 +49,19 @@ function Material({ content }: { content: string }) {
   );
 }
 
-function CourseReader({ id, onClose }: { id: string; onClose: () => void }) {
+function CourseReader({
+  id,
+  employeeId,
+  onClose,
+}: {
+  id: string;
+  employeeId?: string;
+  onClose: () => void;
+}) {
   const { api, profile, refresh, notify } = usePortal();
   const [course, setCourse] = useState<CourseDetail | null>(null);
+  const [employeeName, setEmployeeName] = useState('');
+  const readOnly = Boolean(employeeId && employeeId !== profile.id);
   const [error, setError] = useState<unknown>(null);
   const [retry, setRetry] = useState(0);
   const [step, setStep] = useState<'material' | 'quiz' | 'result'>('material');
@@ -114,8 +126,17 @@ function CourseReader({ id, onClose }: { id: string; onClose: () => void }) {
       .getCourse(id)
       .then(async (value) => {
         if (!active) return;
+        if (readOnly) {
+          const rows = await api.getTeamCourses({ employee_id: employeeId, course_id: id });
+          if (!active) return;
+          const row = rows[0];
+          if (!row) throw new Error(t('Курс не назначен этому сотруднику'));
+          setEmployeeName(row.employee.full_name);
+          setCourse({ ...value, assignment: row });
+          return;
+        }
         setCourse(value);
-        if (value.assignment) {
+        if (value.assignment && value.course_type !== 'external') {
           try {
             const rows = await api.getCourseAttempts(id);
             if (active) setAttempts(rows);
@@ -130,11 +151,19 @@ function CourseReader({ id, onClose }: { id: string; onClose: () => void }) {
     return () => {
       active = false;
     };
-  }, [api, id, retry]);
+  }, [api, id, employeeId, readOnly, retry]);
   const saveAssignment = (assignment: CourseAssignment) => {
     setCourse((previous) => (previous ? { ...previous, assignment } : previous));
     refresh();
   };
+  useEffect(() => {
+    if (!readOnly) return;
+    return watchVisible(async (signal) => {
+      const rows = await api.getTeamCourses({ employee_id: employeeId, course_id: id });
+      if (!signal.aborted && rows[0])
+        setCourse((previous) => (previous ? { ...previous, assignment: rows[0] } : previous));
+    });
+  }, [api, readOnly, employeeId, id]);
   async function beginQuiz() {
     if (!course || busy) return;
     setBusy(true);
@@ -188,11 +217,15 @@ function CourseReader({ id, onClose }: { id: string; onClose: () => void }) {
       subtitle={
         course && (
           <div className="support-reader-meta">
-            <Icon name="clock" size={15} />
-            <span>
-              {tx(course.duration_minutes)}
-              {t(' мин')}
-            </span>
+            {course.duration_minutes > 0 && (
+              <>
+                <Icon name="clock" size={15} />
+                <span>
+                  {tx(course.duration_minutes)}
+                  {t(' мин')}
+                </span>
+              </>
+            )}
             {course.assignment && (
               <>
                 <StatusBadge status={course.assignment.status} />
@@ -209,266 +242,280 @@ function CourseReader({ id, onClose }: { id: string; onClose: () => void }) {
         <LoadingState />
       ) : (
         <div className="support-course-reader">
-          <details className="academy-course-facts">
-            <summary>{t('О курсе')}</summary>
-            <dl>
-              <div>
-                <dt>{t('Категория')}</dt>
-                <dd>{tx(course.category || 'Общее')}</dd>
-              </div>
-              <div>
-                <dt>{t('Для кого')}</dt>
-                <dd>{tx(course.audience || 'Все сотрудники')}</dd>
-              </div>
-              <div>
-                <dt>{t('Для зачёта')}</dt>
-                <dd>{course.passing_score ?? 80}%</dd>
-              </div>
-            </dl>
-          </details>
-          {step === 'material' && (
+          {readOnly && (
+            <p>
+              <strong>{employeeName}</strong> · {course.assignment?.progress_percent}%
+            </p>
+          )}
+          {course.course_type === 'external' ? (
+            <ExternalCourse course={course} readOnly={readOnly} onSave={saveAssignment} />
+          ) : (
             <>
-              <p className="muted">{tx(course.description)}</p>
-              {course.material_markdown ? (
+              <details className="academy-course-facts">
+                <summary>{t('О курсе')}</summary>
+                <dl>
+                  <div>
+                    <dt>{t('Категория')}</dt>
+                    <dd>{tx(course.category || 'Общее')}</dd>
+                  </div>
+                  <div>
+                    <dt>{t('Для кого')}</dt>
+                    <dd>{tx(course.audience || 'Все сотрудники')}</dd>
+                  </div>
+                  <div>
+                    <dt>{t('Для зачёта')}</dt>
+                    <dd>{course.passing_score ?? 80}%</dd>
+                  </div>
+                </dl>
+              </details>
+              {step === 'material' && (
                 <>
-                  {course.content_language === 'ru' && getLocale() === 'kk' && (
-                    <p className="muted">Материал орыс тілінде берілген</p>
-                  )}
-                  {course.lessons?.length ? (
-                    <LessonReader
-                      course={course}
-                      onSave={saveAssignment}
-                      render={(text) => <Material content={text} />}
-                    />
+                  <p className="muted">{tx(course.description)}</p>
+                  {course.material_markdown ? (
+                    <>
+                      {course.content_language === 'ru' && getLocale() === 'kk' && (
+                        <p className="muted">Материал орыс тілінде берілген</p>
+                      )}
+                      {course.lessons?.length ? (
+                        <LessonReader
+                          course={course}
+                          onSave={saveAssignment}
+                          render={(text) => <Material content={text} />}
+                        />
+                      ) : (
+                        <Material content={course.material_markdown} />
+                      )}
+                    </>
                   ) : (
-                    <Material content={course.material_markdown} />
+                    <EmptyState
+                      title={t('Материал пока не опубликован')}
+                      description={t('Обратитесь к руководителю, чтобы уточнить содержание курса.')}
+                    />
+                  )}
+                  {readOnly ? null : course.assignment?.status === 'completed' ? (
+                    <div className="course-reader-note">
+                      <p>
+                        {t('Результат теста: ')}
+                        <strong>
+                          {course.assignment.score_percent == null
+                            ? '—'
+                            : `${course.assignment.score_percent}%`}
+                        </strong>
+                      </p>
+                    </div>
+                  ) : !course.assignment ? (
+                    <div className="course-reader-note">
+                      <p>{t('Тест доступен после назначения курса.')}</p>
+                    </div>
+                  ) : !course.quiz.length ? (
+                    <div className="course-reader-note">
+                      <p>{t('Тест пока не опубликован.')}</p>
+                    </div>
+                  ) : (
+                    <div className="support-reader-actions">
+                      <span className="muted">
+                        {t('Вопросов: ')}
+                        {tx(course.quiz.length)}
+                      </span>
+                      <button
+                        className="btn btn-primary"
+                        disabled={
+                          busy ||
+                          !course.material_markdown ||
+                          Boolean(
+                            course.lessons?.some(
+                              (l) => !course.assignment?.completed_lesson_ids?.includes(l.id),
+                            ),
+                          )
+                        }
+                        onClick={beginQuiz}
+                      >
+                        {tx(busy ? 'Сохраняем прогресс…' : 'Перейти к тесту')}
+                        <Icon name="arrow-right" size={16} />
+                      </button>
+                    </div>
                   )}
                 </>
-              ) : (
-                <EmptyState
-                  title={t('Материал пока не опубликован')}
-                  description={t('Обратитесь к руководителю, чтобы уточнить содержание курса.')}
-                />
               )}
-              {course.assignment?.status === 'completed' ? (
-                <div className="course-reader-note">
-                  <p>
-                    {t('Результат теста: ')}
-                    <strong>
-                      {course.assignment.score_percent == null
-                        ? '—'
-                        : `${course.assignment.score_percent}%`}
-                    </strong>
-                  </p>
-                </div>
-              ) : !course.assignment ? (
-                <div className="course-reader-note">
-                  <p>{t('Тест доступен после назначения курса.')}</p>
-                </div>
-              ) : !course.quiz.length ? (
-                <div className="course-reader-note">
-                  <p>{t('Тест пока не опубликован.')}</p>
-                </div>
-              ) : (
-                <div className="support-reader-actions">
-                  <span className="muted">
-                    {t('Вопросов: ')}
-                    {tx(course.quiz.length)}
-                  </span>
-                  <button
-                    className="btn btn-primary"
-                    disabled={
-                      busy ||
-                      !course.material_markdown ||
-                      Boolean(
-                        course.lessons?.some(
-                          (l) => !course.assignment?.completed_lesson_ids?.includes(l.id),
-                        ),
-                      )
-                    }
-                    onClick={beginQuiz}
-                  >
-                    {tx(busy ? 'Сохраняем прогресс…' : 'Перейти к тесту')}
-                    <Icon name="arrow-right" size={16} />
-                  </button>
-                </div>
+              {tx(
+                !readOnly && step === 'quiz' && (
+                  <form onSubmit={finishQuiz}>
+                    <div className="support-note" style={{ marginBottom: 22 }}>
+                      <Icon name="info" size={17} />
+                      <p>
+                        {t('Один ответ на вопрос · проходной балл ')}
+                        {tx(course.passing_score ?? 80)}
+                        {t('% · можно повторить.')}
+                      </p>
+                    </div>
+                    {tx(
+                      course.quiz.map((question, index) => (
+                        <fieldset className="support-quiz" key={question.id} disabled={busy}>
+                          <legend>
+                            {tx(index + 1)}. {tx(question.prompt)}
+                          </legend>
+                          {tx(
+                            question.options.map((option, optionIndex) => (
+                              <label className="support-option" key={optionIndex}>
+                                <input
+                                  type="radio"
+                                  name={`quiz-${question.id}`}
+                                  value={optionIndex}
+                                  checked={answers[question.id] === optionIndex}
+                                  required
+                                  onChange={() =>
+                                    setAnswers((previous) => ({
+                                      ...previous,
+                                      [question.id]: optionIndex,
+                                    }))
+                                  }
+                                />
+                                <span>{tx(option)}</span>
+                              </label>
+                            )),
+                          )}
+                        </fieldset>
+                      )),
+                    )}
+                    <div className="support-reader-actions">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setStep('material')}
+                        disabled={busy}
+                      >
+                        {t('К материалу')}
+                      </button>
+                      <button className="btn btn-primary" disabled={busy}>
+                        {tx(busy ? 'Проверяем ответы…' : 'Завершить тест')}
+                        <Icon name="check" size={16} />
+                      </button>
+                    </div>
+                  </form>
+                ),
               )}
-            </>
-          )}
-          {tx(
-            step === 'quiz' && (
-              <form onSubmit={finishQuiz}>
-                <div className="support-note" style={{ marginBottom: 22 }}>
-                  <Icon name="info" size={17} />
-                  <p>
-                    {t('Один ответ на вопрос · проходной балл ')}
-                    {tx(course.passing_score ?? 80)}
-                    {t('% · можно повторить.')}
-                  </p>
-                </div>
-                {tx(
-                  course.quiz.map((question, index) => (
-                    <fieldset className="support-quiz" key={question.id} disabled={busy}>
-                      <legend>
-                        {tx(index + 1)}. {tx(question.prompt)}
-                      </legend>
-                      {tx(
-                        question.options.map((option, optionIndex) => (
-                          <label className="support-option" key={optionIndex}>
-                            <input
-                              type="radio"
-                              name={`quiz-${question.id}`}
-                              value={optionIndex}
-                              checked={answers[question.id] === optionIndex}
-                              required
-                              onChange={() =>
-                                setAnswers((previous) => ({
-                                  ...previous,
-                                  [question.id]: optionIndex,
-                                }))
-                              }
-                            />
-                            <span>{tx(option)}</span>
-                          </label>
-                        )),
-                      )}
-                    </fieldset>
-                  )),
-                )}
-                <div className="support-reader-actions">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setStep('material')}
-                    disabled={busy}
+              {tx(
+                step === 'result' && (
+                  <div
+                    className={`support-result ${course.assignment?.status === 'completed' ? '' : 'academy-result-failed'}`}
                   >
-                    {t('К материалу')}
-                  </button>
-                  <button className="btn btn-primary" disabled={busy}>
-                    {tx(busy ? 'Проверяем ответы…' : 'Завершить тест')}
-                    <Icon name="check" size={16} />
-                  </button>
-                </div>
-              </form>
-            ),
-          )}
-          {tx(
-            step === 'result' && (
-              <div
-                className={`support-result ${course.assignment?.status === 'completed' ? '' : 'academy-result-failed'}`}
-              >
-                <div className="support-result-icon">
-                  <Icon
-                    name={course.assignment?.status === 'completed' ? 'graduation' : 'book'}
-                    size={30}
-                  />
-                </div>
-                <h2>
-                  {tx(
-                    course.assignment?.status === 'completed'
-                      ? 'Обучение завершено'
-                      : 'Попробуйте ещё раз',
-                  )}
-                </h2>
-                <div className="support-result-score">
-                  {tx(course.assignment?.score_percent ?? '—')}%
-                </div>
-                <p>
-                  {tx(
-                    course.assignment?.status === 'completed'
-                      ? 'Результат сохранён.'
-                      : `Нужно набрать ${course.passing_score ?? 80}%. Повторите материал или попробуйте снова.`,
-                  )}
-                </p>
-                <div className="academy-result-actions">
-                  {tx(
-                    course.assignment?.status !== 'completed' && (
-                      <>
-                        <button className="btn btn-secondary" onClick={() => setStep('material')}>
-                          {t('Повторить материал')}
-                        </button>
-                        <button
-                          className="btn btn-primary"
-                          onClick={() => {
-                            setAnswers({});
-                            setActionError('');
-                            setStep('quiz');
-                          }}
-                        >
-                          {t('Повторить тест')}
-                        </button>
-                      </>
-                    ),
-                  )}
-                  <button
-                    className={`btn ${course.assignment?.status === 'completed' ? 'btn-primary' : 'btn-ghost'}`}
-                    onClick={onClose}
-                  >
-                    {t('Вернуться к курсам')}
-                  </button>
-                </div>
-              </div>
-            ),
-          )}
-          {tx(
-            course.assignment && step !== 'quiz' && (
-              <section className="academy-attempts">
-                <h3>
-                  {t('История попыток ')}
-                  <span className="muted">
-                    · {tx(course.assignment.attempt_count ?? attempts.length)}
-                  </span>
-                </h3>
-                {tx(
-                  attemptError ? (
-                    <ErrorState error={attemptError} retry={() => void refreshAttempts()} />
-                  ) : attempts.length ? (
-                    <ol>
+                    <div className="support-result-icon">
+                      <Icon
+                        name={course.assignment?.status === 'completed' ? 'graduation' : 'book'}
+                        size={30}
+                      />
+                    </div>
+                    <h2>
                       {tx(
-                        attempts.map((attempt) => (
-                          <li key={attempt.id}>
-                            <span>
-                              {t('Попытка ')}
-                              {tx(attempt.attempt_number)}
-                              <small>
-                                {tx(
-                                  formatDate(attempt.submitted_at, {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    timeZone: 'Asia/Qyzylorda',
-                                  }),
-                                )}
-                              </small>
-                            </span>
-                            <strong>{tx(attempt.score_percent)}%</strong>
-                            <span
-                              className={`badge ${attempt.passed ? 'badge-approved' : 'badge-pending'}`}
-                            >
-                              {tx(attempt.passed ? 'Зачтено' : 'Нужен повтор')}
-                            </span>
-                          </li>
-                        )),
+                        course.assignment?.status === 'completed'
+                          ? 'Обучение завершено'
+                          : 'Попробуйте ещё раз',
                       )}
-                    </ol>
-                  ) : (
-                    <p className="muted">
+                    </h2>
+                    <div className="support-result-score">
+                      {tx(course.assignment?.score_percent ?? '—')}%
+                    </div>
+                    <p>
                       {tx(
-                        course.assignment.status === 'completed'
-                          ? 'Курс завершён ранее, без истории попыток.'
-                          : 'Вы ещё не проходили тест.',
+                        course.assignment?.status === 'completed'
+                          ? 'Результат сохранён.'
+                          : `Нужно набрать ${course.passing_score ?? 80}%. Повторите материал или попробуйте снова.`,
                       )}
                     </p>
-                  ),
-                )}
-              </section>
-            ),
-          )}
-          {tx(
-            actionError && (
-              <p className="support-inline-error" role="alert">
-                {tx(actionError)}
-              </p>
-            ),
+                    <div className="academy-result-actions">
+                      {tx(
+                        course.assignment?.status !== 'completed' && (
+                          <>
+                            <button
+                              className="btn btn-secondary"
+                              onClick={() => setStep('material')}
+                            >
+                              {t('Повторить материал')}
+                            </button>
+                            <button
+                              className="btn btn-primary"
+                              onClick={() => {
+                                setAnswers({});
+                                setActionError('');
+                                setStep('quiz');
+                              }}
+                            >
+                              {t('Повторить тест')}
+                            </button>
+                          </>
+                        ),
+                      )}
+                      <button
+                        className={`btn ${course.assignment?.status === 'completed' ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={onClose}
+                      >
+                        {t('Вернуться к курсам')}
+                      </button>
+                    </div>
+                  </div>
+                ),
+              )}
+              {tx(
+                !readOnly && course.assignment && step !== 'quiz' && (
+                  <section className="academy-attempts">
+                    <h3>
+                      {t('История попыток ')}
+                      <span className="muted">
+                        · {tx(course.assignment.attempt_count ?? attempts.length)}
+                      </span>
+                    </h3>
+                    {tx(
+                      attemptError ? (
+                        <ErrorState error={attemptError} retry={() => void refreshAttempts()} />
+                      ) : attempts.length ? (
+                        <ol>
+                          {tx(
+                            attempts.map((attempt) => (
+                              <li key={attempt.id}>
+                                <span>
+                                  {t('Попытка ')}
+                                  {tx(attempt.attempt_number)}
+                                  <small>
+                                    {tx(
+                                      formatDate(attempt.submitted_at, {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        timeZone: 'Asia/Qyzylorda',
+                                      }),
+                                    )}
+                                  </small>
+                                </span>
+                                <strong>{tx(attempt.score_percent)}%</strong>
+                                <span
+                                  className={`badge ${attempt.passed ? 'badge-approved' : 'badge-pending'}`}
+                                >
+                                  {tx(attempt.passed ? 'Зачтено' : 'Нужен повтор')}
+                                </span>
+                              </li>
+                            )),
+                          )}
+                        </ol>
+                      ) : (
+                        <p className="muted">
+                          {tx(
+                            course.assignment.status === 'completed'
+                              ? 'Курс завершён ранее, без истории попыток.'
+                              : 'Вы ещё не проходили тест.',
+                          )}
+                        </p>
+                      ),
+                    )}
+                  </section>
+                ),
+              )}
+              {tx(
+                actionError && (
+                  <p className="support-inline-error" role="alert">
+                    {tx(actionError)}
+                  </p>
+                ),
+              )}
+            </>
           )}
         </div>
       )}
@@ -479,10 +526,12 @@ function CourseReader({ id, onClose }: { id: string; onClose: () => void }) {
 export default function Academy() {
   const { api, profile, refreshKey } = usePortal();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [catalogIds, setCatalogIds] = useState(new Set<string>());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [retry, setRetry] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [formatFilter, setFormatFilter] = useState('external');
   const [search, setSearch] = useState('');
   const [params, setParams] = useSearchParams();
   const opened = params.get('course');
@@ -497,6 +546,7 @@ export default function Academy() {
     const next = new URLSearchParams(params);
     next.set('tab', value);
     next.delete('course');
+    next.delete('employee');
     setParams(next);
   }
   useEffect(() => {
@@ -506,6 +556,7 @@ export default function Academy() {
     Promise.all([api.getCourses(), api.getMyCourses()])
       .then(([catalog, mine]) => {
         if (active) {
+          setCatalogIds(new Set(catalog.map((course) => course.id)));
           const merged = new Map(catalog.map((c) => [c.id, c]));
           for (const a of mine)
             if (a.course) merged.set(a.course_id, { ...a.course, assignment: a });
@@ -524,11 +575,18 @@ export default function Academy() {
   }, [api, refreshKey, retry]);
   const assigned = courses.filter((course) => course.assignment);
   const completed = assigned.filter((course) => course.assignment?.status === 'completed');
+  const hasExternal = courses.some(
+    (course) => catalogIds.has(course.id) && course.course_type === 'external',
+  );
   const visible = courses.filter(
     (course) =>
-      (tab === 'all' || !!course.assignment) &&
+      (tab === 'all' ? catalogIds.has(course.id) : !!course.assignment) &&
+      (tab !== 'all' ||
+        !hasExternal ||
+        formatFilter === 'all' ||
+        (course.course_type || 'internal') === formatFilter) &&
       (statusFilter === 'all' || course.assignment?.status === statusFilter) &&
-      `${course.title} ${course.description} ${course.category || ''}`
+      `${course.title} ${course.description} ${course.category || ''} ${course.provider || ''}`
         .toLocaleLowerCase('ru')
         .includes(search.toLocaleLowerCase('ru')),
   );
@@ -539,7 +597,38 @@ export default function Academy() {
   }
   return (
     <div className="support-page">
-      <PageHeader title={t('Обучение')} />
+      <PageHeader
+        title={t('Обучение')}
+        actions={
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              const next = new URLSearchParams(params);
+              next.delete('course');
+              next.set('add', '1');
+              setParams(next);
+            }}
+          >
+            <Icon name="plus" size={18} />
+            {t('Свой курс')}
+          </button>
+        }
+      />
+      {params.get('add') === '1' && (
+        <PersonalCourseForm
+          onClose={() => {
+            const next = new URLSearchParams(params);
+            next.delete('add');
+            setParams(next);
+          }}
+          onCreated={(assignment) => {
+            setStatusFilter('all');
+            setSearch('');
+            setRetry((value) => value + 1);
+            setParams({ tab: 'mine', course: assignment.course_id });
+          }}
+        />
+      )}
       {tab !== 'team' && <MyTracks />}
       <div className="support-tabs" role="group" aria-label={t('Разделы обучения')}>
         <button
@@ -556,7 +645,7 @@ export default function Academy() {
           onClick={() => changeTab('all')}
         >
           {t('Каталог курсов')}
-          <span>{tx(courses.length)}</span>
+          <span>{tx(catalogIds.size)}</span>
         </button>
         {tx(
           canManage && (
@@ -573,6 +662,12 @@ export default function Academy() {
       {tx(
         tab === 'team' && canManage ? (
           <TeamLearning
+            employeeId={params.get('employee') || undefined}
+            onResetEmployee={() => {
+              const next = new URLSearchParams(params);
+              next.delete('employee');
+              setParams(next);
+            }}
             courseId={params.get('courseFilter') || undefined}
             onResetCourse={() => {
               const next = new URLSearchParams(params);
@@ -616,6 +711,20 @@ export default function Academy() {
               </div>
             </div>
             <div className="support-toolbar">
+              {tab === 'all' && hasExternal && (
+                <label className="academy-filter">
+                  <span>{t('Формат курса')}</span>
+                  <select
+                    className="input"
+                    value={formatFilter}
+                    onChange={(e) => setFormatFilter(e.target.value)}
+                  >
+                    <option value="external">{t('На внешней площадке')}</option>
+                    <option value="internal">{t('Внутренний материал и тест')}</option>
+                    <option value="all">{t('Все курсы')}</option>
+                  </select>
+                </label>
+              )}
               <label className="academy-filter">
                 <span>{t('Статус')}</span>
                 <select
@@ -672,16 +781,18 @@ export default function Academy() {
                         </div>
                         <div className="support-course-body">
                           <span className="academy-card-category">
-                            {tx(course.category || 'Общее')}
+                            {tx(course.provider || course.category || 'Общее')}
                           </span>
                           <h3>{tx(course.title)}</h3>
                           <p className="support-course-description">{tx(course.description)}</p>
                           <div className="support-course-meta">
-                            <span>
-                              <Icon name="clock" size={14} />
-                              {tx(course.duration_minutes)}
-                              {t(' мин')}
-                            </span>
+                            {course.duration_minutes > 0 && (
+                              <span>
+                                <Icon name="clock" size={14} />
+                                {tx(course.duration_minutes)}
+                                {t(' мин')}
+                              </span>
+                            )}
                             <span>
                               <Icon name="users" size={14} />
                               {tx(course.audience || 'Все сотрудники')}
@@ -697,9 +808,11 @@ export default function Academy() {
                                   </strong>
                                   <span>
                                     {tx(
-                                      course.assignment.score_percent != null
-                                        ? `Тест: ${course.assignment.score_percent}%`
-                                        : `Порог ${course.passing_score ?? 80}%`,
+                                      course.course_type === 'external'
+                                        ? t('Отмечено сотрудником')
+                                        : course.assignment.score_percent != null
+                                          ? `Тест: ${course.assignment.score_percent}%`
+                                          : `Порог ${course.passing_score ?? 80}%`,
                                     )}
                                   </span>
                                 </div>
@@ -722,7 +835,9 @@ export default function Academy() {
                           )}
                           <button
                             className={`btn ${course.assignment && course.assignment.status !== 'completed' ? 'btn-primary' : 'btn-secondary'}`}
-                            disabled={!course.assignment && !canManage}
+                            disabled={
+                              !course.assignment && !canManage && course.course_type !== 'external'
+                            }
                             onClick={() => {
                               const next = new URLSearchParams(params);
                               next.set('course', course.id);
@@ -736,12 +851,16 @@ export default function Academy() {
                                   ? 'Продолжить'
                                   : course.assignment
                                     ? 'Начать курс'
-                                    : canManage
+                                    : canManage || course.course_type === 'external'
                                       ? 'Посмотреть курс'
                                       : 'Назначает руководитель',
                             )}
                             <Icon
-                              name={course.assignment || canManage ? 'arrow-right' : 'lock'}
+                              name={
+                                course.assignment || canManage || course.course_type === 'external'
+                                  ? 'arrow-right'
+                                  : 'lock'
+                              }
                               size={16}
                             />
                           </button>
@@ -762,7 +881,9 @@ export default function Academy() {
                           : 'Пока нет назначенных курсов'
                   }
                   description={
-                    search ? 'Попробуйте другой запрос.' : 'Курсы назначает руководитель или HR.'
+                    search
+                      ? 'Попробуйте другой запрос.'
+                      : 'Выберите курс в каталоге или добавьте свой по ссылке.'
                   }
                 />
               ),
@@ -770,7 +891,16 @@ export default function Academy() {
           </>
         ),
       )}
-      {tx(opened && <CourseReader key={opened} id={opened} onClose={closeCourse} />)}
+      {tx(
+        opened && (
+          <CourseReader
+            key={`${opened}:${params.get('employee') || ''}`}
+            id={opened}
+            employeeId={params.get('employee') || undefined}
+            onClose={closeCourse}
+          />
+        ),
+      )}
     </div>
   );
 }

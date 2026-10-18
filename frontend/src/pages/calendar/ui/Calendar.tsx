@@ -9,12 +9,15 @@ import {
   loadRequests,
   parseDay,
   requestNumber,
+  RequestState,
 } from '@/entities/hr-request';
 import { usePortal } from '@/entities/session';
 import { CalendarExport } from '@/features/export-calendar';
 import { watchVisible } from '@/shared/lib/live-refresh';
 import { LeaveBalance } from '@/features/leave-balance';
-import type { EmployeeProfile } from '@/shared/api/contracts';
+import type { Course, EmployeeProfile } from '@/shared/api/contracts';
+import { eventsForDay, scheduledLeaves, scheduledCourses } from '@/shared/lib/calendar-events';
+import { homeCourses } from '@/shared/lib/home-learning';
 import { localizedDate, t, tx } from '@/shared/lib/i18n';
 import '@/shared/styles/requests.css';
 import { ErrorState, Icon, LoadingState, PageHeader, StatusBadge } from '@/shared/ui/index';
@@ -22,6 +25,9 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+type CalendarCourse = Course & { eventId?: string; employee?: { id: string; full_name: string } };
+const courseLink = (course: CalendarCourse) =>
+  `/academy?course=${encodeURIComponent(course.id)}${course.employee ? `&tab=team&employee=${encodeURIComponent(course.employee.id)}` : ''}`;
 
 function safeDate(value: string | null, fallback: string): string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return fallback;
@@ -61,11 +67,14 @@ export default function Calendar() {
   const [rangeStart, setRangeStart] = useState(safeDate(params.get('start'), ''));
   const [rangeEnd, setRangeEnd] = useState(safeDate(params.get('end'), ''));
   const [records, setRecords] = useState<RequestRecord[]>([]);
+  const [courses, setCourses] = useState<CalendarCourse[]>([]);
   const [team, setTeam] = useState<EmployeeProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [reload, setReload] = useState(0);
-  const [scope, setScope] = useState<'own' | 'team'>('own');
+  const [scope, setScope] = useState<'own' | 'team'>(() =>
+    params.get('scope') === 'team' && profile.role !== 'worker' ? 'team' : 'own',
+  );
   const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 900px)').matches);
   useEffect(() => {
     const query = window.matchMedia('(max-width: 900px)');
@@ -75,6 +84,7 @@ export default function Calendar() {
   }, []);
   const [focusedDay, setFocusedDay] = useState(initial);
   const calendarRoot = useRef<HTMLElement>(null);
+  const selectedDayRoot = useRef<HTMLElement>(null);
   const pendingFocus = useRef(false);
   const [availableDays, setAvailableDays] = useState<number | null>(null);
   const isSelecting = params.get('select') === '1';
@@ -150,12 +160,37 @@ export default function Calendar() {
     setError(null);
     return watchVisible(async (signal) => {
       try {
-        const data = await loadRequests(api, {
-          request_type: 'leave',
-          ...(isSelecting || scope === 'own' ? { scope: 'mine' } : { scope: 'all' }),
-        });
+        const [data, assignments] = await Promise.all([
+          loadRequests(api, {
+            request_type: 'leave',
+            ...(isSelecting || scope === 'own'
+              ? { scope: 'mine', employee_id: profile.id }
+              : { scope: 'all' }),
+          }),
+          isSelecting
+            ? Promise.resolve([])
+            : scope === 'own'
+              ? api.getMyCourses()
+              : api.getTeamCourses(),
+        ]);
         if (!signal.aborted) {
           setRecords(data);
+          setCourses(
+            scope === 'own'
+              ? homeCourses(assignments)
+              : assignments.flatMap((a) =>
+                  a.course && 'employee' in a && a.employee_id !== profile.id
+                    ? [
+                        {
+                          ...a.course,
+                          assignment: a,
+                          eventId: a.id,
+                          employee: a.employee as CalendarCourse['employee'],
+                        },
+                      ]
+                    : [],
+                ),
+          );
           setError(null);
           loaded = true;
         }
@@ -185,13 +220,8 @@ export default function Calendar() {
 
   const activeLeaves = useMemo(
     () =>
-      records.filter(
-        (request) =>
-          (scope !== 'team' || request.employee_id !== profile.id) &&
-          request.request_type === 'leave' &&
-          request.start_date &&
-          request.end_date &&
-          (request.status === 'approved' || request.status === 'pending'),
+      scheduledLeaves(records).filter(
+        (request) => scope !== 'team' || request.employee_id !== profile.id,
       ),
     [records, scope, profile.id],
   );
@@ -199,13 +229,19 @@ export default function Calendar() {
     () => new Map([profile, ...team].map((person) => [person.id, person])),
     [profile, team],
   );
-  const selectedEvents = activeLeaves.filter(
-    (request) => request.start_date! <= selected && request.end_date! >= selected,
+  const visibleCourses = courses;
+  const { leaves: selectedEvents, courses: selectedCourses } = eventsForDay(
+    selected,
+    activeLeaves,
+    visibleCourses,
   );
   const firstKey = dateKey(month);
   const lastKey = dateKey(new Date(month.getFullYear(), month.getMonth() + 1, 0, 12));
   const monthLeaves = activeLeaves.filter(
     (request) => request.start_date! <= lastKey && request.end_date! >= firstKey,
+  );
+  const monthCourses = scheduledCourses(visibleCourses).filter(
+    (course) => course.assignment!.due_on! >= firstKey && course.assignment!.due_on! <= lastKey,
   );
   const upcoming = activeLeaves
     .filter((request) => request.end_date! >= today)
@@ -254,6 +290,42 @@ export default function Calendar() {
     setScope('own');
     if (month < monthStart(parseDay(today))) setMonth(monthStart(parseDay(today)));
     setParams({ select: '1' });
+  }
+
+  function chooseDay(day: Date, showDetails = compact) {
+    setSelected(dateKey(day));
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        next.set('date', dateKey(day));
+        return next;
+      },
+      { replace: true },
+    );
+    if (day.getMonth() !== month.getMonth() || day.getFullYear() !== month.getFullYear())
+      setMonth(monthStart(day));
+    if (showDetails)
+      requestAnimationFrame(() =>
+        selectedDayRoot.current?.scrollIntoView({
+          block: 'start',
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            ? 'instant'
+            : 'smooth',
+        }),
+      );
+  }
+
+  function changeScope(value: 'own' | 'team') {
+    setScope(value);
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        next.set('scope', value);
+        next.set('date', selected);
+        return next;
+      },
+      { replace: true },
+    );
   }
 
   function proceed() {
@@ -530,10 +602,16 @@ export default function Calendar() {
         {tx(
           isReviewer && (
             <div className="req-scope-switch cal-scope">
-              <button className={scope === 'own' ? 'active' : ''} onClick={() => setScope('own')}>
+              <button
+                className={scope === 'own' ? 'active' : ''}
+                onClick={() => changeScope('own')}
+              >
                 {t('Мой календарь')}
               </button>
-              <button className={scope === 'team' ? 'active' : ''} onClick={() => setScope('team')}>
+              <button
+                className={scope === 'team' ? 'active' : ''}
+                onClick={() => changeScope('team')}
+              >
                 {t('Команда')}
               </button>
             </div>
@@ -546,8 +624,14 @@ export default function Calendar() {
           </span>
           <span>
             <i className="cal-dot cal-dot-pending" />
-            {t('На согласовании')}
+            {t('Ждёт решения')}
           </span>
+          {
+            <span>
+              <i className="cal-dot cal-dot-course" />
+              {t('Срок курса')}
+            </span>
+          }
         </div>
       </div>
       {error ? (
@@ -560,11 +644,16 @@ export default function Calendar() {
             <div className="cal-month-note">
               <span>
                 <i className="cal-dot cal-dot-approved" />
-                {tx(scope === 'own' ? 'Мои отпуска' : 'Отпуска сотрудников')}
+                {tx(scope === 'own' ? 'Мои планы' : 'Планы команды')}
               </span>
               <span>
-                {tx(monthLeaves.length)}
-                {t(' заявок в этом месяце')}
+                {t('Отпуск')}: {monthLeaves.length}
+                {
+                  <>
+                    {' '}
+                    · {t('Сроки курсов')}: {monthCourses.length}
+                  </>
+                }
               </span>
             </div>
             <div className="cal-weekdays">
@@ -580,60 +669,97 @@ export default function Calendar() {
               {calendarDays(month).map((day) => {
                 const key = dateKey(day);
                 const isCurrentMonth = day.getMonth() === month.getMonth();
-                const events = activeLeaves.filter(
-                  (request) => request.start_date! <= key && request.end_date! >= key,
-                );
+                const events = eventsForDay(key, activeLeaves, visibleCourses);
                 const weekend = day.getDay() === 0 || day.getDay() === 6;
-                const approved = events.some((request) => request.status === 'approved');
-                const pending = events.some((request) => request.status === 'pending');
+                const approved = events.leaves.some((request) => request.status === 'approved');
+                const pending = events.leaves.some((request) => request.status === 'pending');
+                const total = events.leaves.length + events.courses.length;
+                const preview = [
+                  ...events.leaves.slice(0, events.courses.length ? 1 : 2).map((request) => ({
+                    id: `leave-${request.id}`,
+                    kind: request.status,
+                    title:
+                      scope === 'team'
+                        ? people.get(request.employee_id)?.full_name || t('Отпуск')
+                        : t('Отпуск'),
+                    href: `/requests/${request.id}`,
+                    label: `${t('Открыть заявку')}: ${formatDay(request.start_date)} — ${formatDay(request.end_date)}`,
+                  })),
+                  ...events.courses.slice(0, events.leaves.length ? 1 : 2).map((course) => ({
+                    id: `course-${course.eventId || course.id}`,
+                    kind: 'course',
+                    title: course.employee
+                      ? `${course.employee.full_name} · ${tx(course.title)}`
+                      : tx(course.title),
+                    href: courseLink(course),
+                    label: `${t('Открыть курс')}: ${course.employee?.full_name || ''} ${tx(course.title)}`,
+                  })),
+                ];
                 return (
-                  <button
+                  <div
                     key={key}
                     data-day={key}
-                    onFocus={() => setFocusedDay(key)}
-                    onKeyDown={(event) => handleDayKey(event, key)}
-                    className={`cal-day ${!isCurrentMonth ? 'outside' : ''} ${weekend ? 'weekend' : ''} ${approved ? 'has-approved' : pending ? 'has-pending' : ''} ${key === selected ? 'selected' : ''} ${key === today ? 'today' : ''}`}
-                    onClick={() => {
-                      setSelected(key);
-                      if (!isCurrentMonth) setMonth(monthStart(day));
-                    }}
-                    aria-label={`${formatDay(key, true)}, ${events.length ? `${events.length} заявок на отпуск` : 'нет заявок на отпуск'}`}
-                    aria-pressed={key === selected}
+                    className={`cal-day ${!isCurrentMonth ? 'outside' : ''} ${weekend ? 'weekend' : ''} ${approved ? 'has-approved' : pending ? 'has-pending' : ''} ${events.courses.length ? 'has-course' : ''} ${key === selected ? 'selected' : ''} ${key === today ? 'today' : ''}`}
                   >
-                    <span className="cal-day-top">
-                      <span>{tx(day.getDate())}</span>
-                      {tx(events.length > 0 && <Icon name="calendar" size={13} />)}
+                    <button
+                      type="button"
+                      className="cal-day-select"
+                      data-day={key}
+                      onFocus={() => setFocusedDay(key)}
+                      onKeyDown={(event) => handleDayKey(event, key)}
+                      onClick={() => chooseDay(day)}
+                      aria-label={`${formatDay(key, true)}, ${t('Отпуск')}: ${events.leaves.length}, ${t('Сроки курсов')}: ${events.courses.length}`}
+                      aria-pressed={key === selected}
+                    />
+                    <span className="cal-day-top" aria-hidden="true">
+                      <span>{day.getDate()}</span>
+                      {total > 0 && (
+                        <Icon name={events.leaves.length ? 'calendar' : 'graduation'} size={13} />
+                      )}
                     </span>
                     <div className="cal-day-events">
-                      {events.slice(0, 2).map((request) => (
-                        <span key={request.id} className={`cal-event cal-event-${request.status}`}>
-                          <i />
-                          {scope === 'team'
-                            ? people
-                                .get(request.employee_id)
-                                ?.full_name.split(' ')
-                                .slice(0, 2)
-                                .join(' ') || 'Отпуск'
-                            : 'Отпуск'}
-                        </span>
-                      ))}
-                      {tx(
-                        events.length > 2 && (
-                          <span className="cal-event-more">
-                            {t('Ещё ')}
-                            {tx(events.length - 2)}
-                          </span>
+                      {preview.map((event) =>
+                        compact ? (
+                          <span
+                            key={event.id}
+                            className={`cal-event cal-event-${event.kind}`}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Link
+                            key={event.id}
+                            className={`cal-event cal-event-${event.kind}`}
+                            to={event.href}
+                            aria-label={event.label}
+                            title={event.title}
+                          >
+                            <i aria-hidden="true" />
+                            {event.title}
+                          </Link>
                         ),
                       )}
+                      {total > preview.length &&
+                        (compact ? (
+                          <span className="cal-event-more" aria-hidden="true">
+                            +{total - preview.length}
+                          </span>
+                        ) : (
+                          <button
+                            className="cal-event-more cal-more-button"
+                            type="button"
+                            onClick={() => chooseDay(day, true)}
+                          >
+                            {t('Ещё ')}
+                            {total - preview.length}
+                          </button>
+                        ))}
                     </div>
-                    {tx(
-                      events.length > 0 && scope === 'own' && (
-                        <span className="cal-day-caption">
-                          {tx(approved ? 'Согласовано' : 'На согласовании')}
-                        </span>
-                      ),
+                    {events.leaves.length > 0 && scope === 'own' && (
+                      <span className="cal-day-caption" aria-hidden="true">
+                        {t(approved ? 'Согласовано' : 'Ждёт решения')}
+                      </span>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -657,7 +783,7 @@ export default function Calendar() {
                   </strong>
                 </div>
                 <div className="cal-summary-pending">
-                  <span>{t('На согласовании')}</span>
+                  <span>{t('Ждёт решения')}</span>
                   <strong>
                     {tx(countMonthDays('pending'))} <small>{t('дн.')}</small>
                   </strong>
@@ -679,16 +805,20 @@ export default function Calendar() {
                 ),
               )}
             </section>
-            <section className="card cal-selected-day">
+            <section
+              className="card cal-selected-day"
+              ref={selectedDayRoot}
+              aria-label={t('События дня')}
+            >
               <div className="cal-selected-heading">
                 <Icon name="calendar" size={22} />
                 <h2>{tx(formatDay(selected, true))}</h2>
               </div>
-              {selectedEvents.length ? (
-                <div className="cal-selected-events">
+              {selectedEvents.length || selectedCourses.length ? (
+                <div className="cal-selected-events" aria-live="polite">
                   {selectedEvents.map((request) => (
                     <div key={request.id} className="cal-selected-event">
-                      <StatusBadge status={request.status} />
+                      <RequestState request={request} />
                       <strong>
                         {scope === 'team'
                           ? people.get(request.employee_id)?.full_name || 'Сотрудник'
@@ -705,13 +835,36 @@ export default function Calendar() {
                       </Link>
                     </div>
                   ))}
+                  {selectedCourses.map((course) => (
+                    <div
+                      key={course.eventId || course.id}
+                      className="cal-selected-event cal-selected-course"
+                    >
+                      {course.employee && <strong>{course.employee.full_name}</strong>}
+                      <StatusBadge status={course.assignment!.status} />
+                      <strong>{tx(course.title)}</strong>
+                      {course.employee && (
+                        <span>
+                          {course.assignment!.progress_percent}% ·{' '}
+                          {course.provider || t('Обучение')}
+                        </span>
+                      )}
+                      <span className={selected < today ? 'cal-overdue' : undefined}>
+                        {t(selected < today ? 'Срок истёк' : 'Срок курса')}: {formatDay(selected)}
+                      </span>
+                      <Link className="btn btn-secondary" to={courseLink(course)}>
+                        {t('Открыть курс')}
+                        <Icon name="arrow-right" size={15} />
+                      </Link>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="cal-no-events">
                   <div className="cal-empty-icon">
                     <Icon name="calendar" size={24} />
                   </div>
-                  <strong>{t('Отпуск не запланирован')}</strong>
+                  <strong>{t('На этот день ничего не запланировано')}</strong>
                   <button
                     className="btn btn-secondary"
                     disabled={selected < today}

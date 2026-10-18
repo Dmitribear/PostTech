@@ -1304,6 +1304,56 @@
 .cal-day:hover {
   background: #f5fbf7;
 }
+.cal-day-select {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.cal-day-select:focus-visible {
+  outline: 2px solid #008344;
+  outline-offset: -3px;
+}
+.cal-day a.cal-event {
+  position: relative;
+  z-index: 2;
+  min-height: 24px;
+}
+.cal-day a.cal-event:hover {
+  text-decoration: underline;
+}
+.cal-day .cal-more-button {
+  position: relative;
+  z-index: 2;
+  min-height: 24px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.cal-event.cal-event-course {
+  background: #eaf2fc;
+  color: #2e67a9;
+}
+.cal-event.cal-event-course i,
+.cal-dot-course {
+  background: #3977bd;
+}
+.cal-selected-day {
+  scroll-margin-top: 90px;
+}
+.cal-selected-course > strong {
+  overflow-wrap: anywhere;
+}
+.cal-selected-event.cal-selected-course > span.cal-overdue {
+  color: #996523;
+}
 .cal-day.weekend {
   background: #fbfcfd;
 }
@@ -2525,6 +2575,9 @@
   }
   .cal-event-pending {
     background: #e1a72b;
+  }
+  .cal-event.cal-event-course {
+    background: #3977bd;
   }
   .cal-event-more {
     font-size: 8px;

@@ -1,4 +1,5 @@
 import { usePortal } from '@/entities/session';
+import { fetchAllRequests } from '@/shared/api/api';
 import { LeaveBalance } from '@/features/leave-balance';
 import { ApprovalInbox } from '@/features/approval-inbox';
 import type { Course, HrRequest, Notification } from '@/shared/api/contracts';
@@ -86,7 +87,7 @@ export default function Dashboard() {
     return watchVisible(async (signal) => {
       try {
         const [requests, courses] = await Promise.all([
-          api.getRequests({ employee_id: profile.id, limit: 3 }),
+          fetchAllRequests(api, { scope: 'mine', employee_id: profile.id }),
           api.getMyCourses(),
         ]);
         if (!signal.aborted) {
@@ -136,113 +137,120 @@ export default function Dashboard() {
         <LoadingState />
       ) : (
         <div className="desk-grid">
-          <section className="card desk-requests">
-            <div className="section-heading">
-              <h2>{t('Мои заявки')}</h2>
-              <Link to="/requests" className="text-link">
-                {t('Все заявки')}
-                <Icon name="arrow-right" size={15} />
-              </Link>
-            </div>
-            {data.requests.length ? (
-              <>
-                <div className="desk-request-head" aria-hidden="true">
-                  <span>{t('Заявка')}</span>
-                  <span>{t('Период / сумма')}</span>
-                  <span>{t('Статус')}</span>
-                  <span />
-                </div>
-                <div className="desk-request-list">
-                  {data.requests.slice(0, 3).map((r) => (
-                    <Link to={`/requests/${r.id}`} key={r.id} className="desk-request">
-                      <span className="desk-request-name">
-                        <Icon name={r.request_type === 'leave' ? 'calendar' : 'wallet'} size={23} />
-                        <strong>{t(r.request_type === 'leave' ? 'Отпуск' : 'Аванс')}</strong>
-                      </span>
-                      <span className="desk-request-period">
-                        {r.request_type === 'leave'
-                          ? `${date(r.start_date, true)} — ${date(r.end_date, true)}`
-                          : currency(r.amount)}
-                      </span>
-                      <RequestState request={r} />
-                      <Icon name="chevron-right" size={16} />
-                    </Link>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="desk-empty">
-                <p>{t('Пока нет заявок')}</p>
-                <Link to="/requests/new" className="text-link">
-                  {t('Создать заявку')}
-                  <Icon name="plus" size={16} />
+          <div className="desk-main-column">
+            <section className="card desk-requests">
+              <div className="section-heading">
+                <h2>{t('Мои заявки')}</h2>
+                <Link to="/requests" className="text-link">
+                  {t('Все заявки')}
+                  <Icon name="arrow-right" size={15} />
                 </Link>
               </div>
-            )}
-          </section>
-          <DashboardCalendar />
-          <section className="card desk-learning">
-            <div className="section-heading">
-              <h2>{t('Обучение')}</h2>
-              <Link to="/academy" className="icon-btn" aria-label={t('Все курсы')}>
-                <Icon name="chevron-right" size={18} />
-              </Link>
-            </div>
-            {learning ? (
-              <>
-                <div className="desk-course">
-                  <Icon name="file-text" size={26} />
-                  <div>
-                    <Link className="desk-course-title" to={`/academy?course=${learning.id}`}>
-                      {tx(learning.title)}
-                    </Link>
-                    <div className="desk-course-meta">
-                      <span>
-                        {learning.assignment?.due_on && (
-                          <>
-                            {t('До')} {date(learning.assignment.due_on, true)} ·{' '}
-                          </>
-                        )}
-                        {learning.duration_minutes} {t('мин')}
-                      </span>
-                      <span>{learning.assignment!.progress_percent}%</span>
-                    </div>
-                    <div
-                      className="progress-track"
-                      role="progressbar"
-                      aria-label={t('Прогресс курса')}
-                      aria-valuenow={learning.assignment!.progress_percent}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                    >
-                      <span
-                        style={{
-                          width: `${learning.assignment!.progress_percent}%`,
-                        }}
-                      />
+              {data.requests.length ? (
+                <>
+                  <div className="desk-request-head" aria-hidden="true">
+                    <span>{t('Заявка')}</span>
+                    <span>{t('Период / сумма')}</span>
+                    <span>{t('Статус')}</span>
+                    <span />
+                  </div>
+                  <div className="desk-request-list">
+                    {data.requests.slice(0, 3).map((r) => (
+                      <Link to={`/requests/${r.id}`} key={r.id} className="desk-request">
+                        <span className="desk-request-name">
+                          <Icon
+                            name={r.request_type === 'leave' ? 'calendar' : 'wallet'}
+                            size={23}
+                          />
+                          <strong>{t(r.request_type === 'leave' ? 'Отпуск' : 'Аванс')}</strong>
+                        </span>
+                        <span className="desk-request-period">
+                          {r.request_type === 'leave'
+                            ? `${date(r.start_date, true)} — ${date(r.end_date, true)}`
+                            : currency(r.amount)}
+                        </span>
+                        <RequestState request={r} />
+                        <Icon name="chevron-right" size={16} />
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="desk-empty">
+                  <p>{t('Пока нет заявок')}</p>
+                  <Link to="/requests/new" className="text-link">
+                    {t('Создать заявку')}
+                    <Icon name="plus" size={16} />
+                  </Link>
+                </div>
+              )}
+            </section>
+            <section className="card desk-learning">
+              <div className="section-heading">
+                <h2>{t('Обучение')}</h2>
+                <Link to="/academy" className="icon-btn" aria-label={t('Все курсы')}>
+                  <Icon name="chevron-right" size={18} />
+                </Link>
+              </div>
+              {learning ? (
+                <>
+                  <div className="desk-course">
+                    <Icon name="file-text" size={26} />
+                    <div>
+                      <Link className="desk-course-title" to={`/academy?course=${learning.id}`}>
+                        {tx(learning.title)}
+                      </Link>
+                      <div className="desk-course-meta">
+                        <span>
+                          {learning.assignment?.due_on && (
+                            <>
+                              {t('До')} {date(learning.assignment.due_on, true)} ·{' '}
+                            </>
+                          )}
+                          {learning.course_type === 'external'
+                            ? learning.provider
+                            : `${learning.duration_minutes} ${t('мин')}`}
+                        </span>
+                        <span>{learning.assignment!.progress_percent}%</span>
+                      </div>
+                      <div
+                        className="progress-track"
+                        role="progressbar"
+                        aria-label={t('Прогресс курса')}
+                        aria-valuenow={learning.assignment!.progress_percent}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      >
+                        <span
+                          style={{
+                            width: `${learning.assignment!.progress_percent}%`,
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
+                  <Link className="btn btn-secondary" to={`/academy?course=${learning.id}`}>
+                    {t(learning.assignment!.progress_percent ? 'Продолжить' : 'Начать курс')}
+                  </Link>
+                </>
+              ) : (
+                <div className="desk-empty">
+                  <p>
+                    {t(
+                      data.courses.some((c) => c.assignment?.status === 'completed')
+                        ? 'Все назначенные курсы пройдены'
+                        : 'Нет назначенных курсов',
+                    )}
+                  </p>
+                  <Link to="/academy?add=1" className="text-link">
+                    {t('Добавить свой курс')}
+                    <Icon name="arrow-right" size={16} />
+                  </Link>
                 </div>
-                <Link className="btn btn-secondary" to={`/academy?course=${learning.id}`}>
-                  {t(learning.assignment!.progress_percent ? 'Продолжить' : 'Начать курс')}
-                </Link>
-              </>
-            ) : (
-              <div className="desk-empty">
-                <p>
-                  {t(
-                    data.courses.some((c) => c.assignment?.status === 'completed')
-                      ? 'Все назначенные курсы пройдены'
-                      : 'Нет назначенных курсов',
-                  )}
-                </p>
-                <Link to="/academy" className="text-link">
-                  {t('Все курсы')}
-                  <Icon name="arrow-right" size={16} />
-                </Link>
-              </div>
-            )}
-          </section>
+              )}
+            </section>
+          </div>
+          <DashboardCalendar requests={data.requests} courses={data.courses} />
           <Link to="/jana" className="card desk-help">
             <Icon name="message" size={25} />
             <div>
@@ -310,7 +318,7 @@ export function Services() {
         ),
       )}
       <div className="service-tip">
-        <Icon name="bot" size={24} />
+        <Icon name="message" size={24} />
         <span>
           <strong>{t('Нужна помощь?')}</strong>
           <p>{t('Спросите у Jana.')}</p>

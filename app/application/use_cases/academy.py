@@ -9,9 +9,7 @@ from app.domain.localization import course_content
 from app.domain.models import UserContext
 
 logger = logging.getLogger(__name__)
-COURSE_COLUMNS = (
-    "id,title,description,duration_minutes,category,audience,passing_score,translations"
-)
+COURSE_COLUMNS = "id,title,description,duration_minutes,category,audience,passing_score,translations,course_type,provider,external_url,owner_employee_id"
 ASSIGNMENT_COLUMNS = (
     "id,course_id,employee_id,assigned_by,status,progress_percent,score_percent,"
     "assigned_at,completed_at,attempt_count,material_completed_at,last_attempt_at,due_on,completed_lesson_ids"
@@ -103,6 +101,7 @@ def list_courses(actor: UserContext) -> list[dict]:
     return [
         {**course_content(course), "assignment": mapped.get(str(course["id"]))}
         for course in courses
+        if not course.get("owner_employee_id")
     ]
 
 
@@ -155,10 +154,26 @@ def course_details(actor: UserContext, course_id: UUID) -> dict:
         or []
     )
     assignment = assignments[0] if assignments else None
-    if assignment is None and actor.role not in ("manager", "director", "hr_admin"):
+    if rows[0].get("owner_employee_id") and assignment is None:
+        if actor.role not in ("manager", "director", "hr_admin") or not team_courses(
+            actor, None, course_id
+        ):
+            raise ApplicationError(status_code=404, detail="Course not found")
+    if (
+        assignment is None
+        and actor.role not in ("manager", "director", "hr_admin")
+        and rows[0].get("course_type") != "external"
+    ):
         raise ApplicationError(status_code=403, detail="Course is not assigned to you")
     course = course_content(rows[0])
-    if not course["active"] and assignment is None:
+    if (
+        not course["active"]
+        and assignment is None
+        and not (
+            actor.role in ("manager", "director", "hr_admin")
+            and team_courses(actor, None, course_id)
+        )
+    ):
         raise ApplicationError(status_code=404, detail="Course not found")
     # Allowlist: future private answer explanations must not accidentally leak.
     quiz = [
@@ -274,13 +289,45 @@ def assign_course(
 
 
 def update_progress(actor: UserContext, course_id: UUID, progress: int) -> dict:
-    return execute_command(
+    if progress == 100:
+        rows = (
+            execute_query(
+                data_gateway()
+                .table("courses")
+                .select("course_type")
+                .eq("id", str(course_id))
+                .limit(1)
+            )
+            or []
+        )
+        if not rows or rows[0].get("course_type") != "external":
+            raise ApplicationError(
+                422, "Internal courses are completed by passing the quiz"
+            )
+    result = execute_command(
         "update_academy_progress",
         {
             "p_actor_id": actor.id,
             "p_course_id": str(course_id),
             "p_progress_percent": progress,
         },
+    )
+    if result.get("status") == "completed":
+        try:
+            execute_query(
+                data_gateway().rpc(
+                    "advance_learning_tracks", {"p_employee_id": actor.id}
+                )
+            )
+        except ApplicationError:
+            logger.warning("Next learning step deferred to workflow worker")
+    return result
+
+
+def enroll_external_course(actor: UserContext, course_id: UUID) -> dict:
+    return execute_command(
+        "enroll_external_course",
+        {"p_actor_id": actor.id, "p_course_id": str(course_id)},
     )
 
 

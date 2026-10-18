@@ -2108,11 +2108,65 @@ body[data-density='compact'] .support-notification {
 .academy-score-label {
   display: none;
 }
+.external-course {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.external-course p {
+  margin: 0;
+}
+.external-course > .btn {
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}
+.external-progress-form {
+  display: grid;
+  gap: 16px;
+  max-width: 440px;
+}
+.external-progress-form input[type='number'] {
+  max-width: 140px;
+}
+.external-completion {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+}
+.external-completion input {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
 @media (max-width: 1180px) {
   .academy-score-label {
     display: inline;
     font-size: 12px;
     color: var(--muted);
     margin-right: 8px;
+  }
+}
+
+.personal-course-form {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.personal-course-form .field {
+  min-width: 0;
+}
+.personal-course-form .input {
+  width: 100%;
+  min-width: 0;
+}
+.personal-course-dates {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+@media (max-width: 480px) {
+  .personal-course-dates {
+    grid-template-columns: 1fr;
   }
 }

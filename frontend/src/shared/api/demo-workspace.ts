@@ -11,6 +11,8 @@ const mutations = new Set([
   'assignEmployeeRole',
   'assignCourse',
   'updateCourseProgress',
+  'enrollExternalCourse',
+  'createPersonalCourse',
   'completeCourse',
 ]);
 let pending: Promise<unknown> = Promise.resolve();

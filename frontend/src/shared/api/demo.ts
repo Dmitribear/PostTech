@@ -12,6 +12,7 @@ import type {
   CourseAssignment,
   CourseAttempt,
   CourseDetail,
+  PersonalCourseInput,
   EmployeeProfile,
   HrApi,
   HrRequest,
@@ -166,6 +167,30 @@ function courseData(): (CourseDetail & {
       correctAnswers: { 'team-1': 1 },
     },
   ];
+  courses.push(
+    ...[
+      {
+        id: uuid(105),
+        title: 'Excel для работы',
+        external_url: 'https://start.practicum.yandex/excel-for-work/',
+      },
+      {
+        id: uuid(106),
+        title: 'Критическое мышление',
+        external_url: 'https://practicum.yandex.ru/thinking/',
+      },
+    ].map((course) => ({
+      ...course,
+      course_type: 'external' as const,
+      provider: 'Яндекс Практикум',
+      category: 'Повышение квалификации',
+      description: 'Программа и условия доступа — на площадке курса.',
+      duration_minutes: 0,
+      material_markdown: '',
+      quiz: [],
+      correctAnswers: {},
+    })),
+  );
   return courses.map((course) => ({
     ...course,
     active: true,
@@ -175,6 +200,8 @@ function courseData(): (CourseDetail & {
 }
 
 export interface DemoSnapshot {
+  courses?: ReturnType<typeof courseData>;
+  personalCourseInputs?: [string, PersonalCourseInput][];
   employees: EmployeeProfile[];
   assignments: CourseAssignment[];
   requests: HrRequest[];
@@ -189,6 +216,7 @@ export class DemoApi implements HrApi {
   readonly mode = 'demo' as const;
   private readonly employees = profiles();
   private actor: EmployeeProfile;
+  private readonly personalCourseInputs = new Map<string, PersonalCourseInput>();
   private readonly courses = courseData();
   private readonly assignments: CourseAssignment[] = [];
   private readonly requests: HrRequest[] = [];
@@ -207,6 +235,8 @@ export class DemoApi implements HrApi {
 
   snapshot(): DemoSnapshot {
     return copy({
+      courses: this.courses,
+      personalCourseInputs: [...this.personalCourseInputs],
       employees: this.employees,
       assignments: this.assignments,
       requests: this.requests,
@@ -231,6 +261,10 @@ export class DemoApi implements HrApi {
     ] as const) {
       (this[key] as unknown[]).splice(0, this[key].length, ...state[key]);
     }
+    this.courses.splice(0, this.courses.length, ...(state.courses || courseData()));
+    this.personalCourseInputs.clear();
+    for (const [key, value] of state.personalCourseInputs || [])
+      this.personalCourseInputs.set(key, value);
     this.idempotency.clear();
     for (const [key, value] of state.idempotency) this.idempotency.set(key, value);
     this.quizKeys.clear();
@@ -768,20 +802,36 @@ export class DemoApi implements HrApi {
     return copy(notification);
   }
   async getCourses(): Promise<Course[]> {
-    return this.courses.map(({ id, title, description, duration_minutes }) => ({
-      id,
-      title,
-      description,
-      duration_minutes,
-      category: 'Корпоративные сервисы',
-      audience: 'Все сотрудники',
-      passing_score: 80,
-      assignment: copy(
-        this.assignments.find(
-          (item) => item.course_id === id && item.employee_id === this.actor.id,
-        ) ?? null,
-      ),
-    }));
+    return this.courses
+      .filter((course) => !course.owner_employee_id)
+      .map(
+        ({
+          id,
+          title,
+          description,
+          duration_minutes,
+          course_type,
+          provider,
+          external_url,
+          category,
+        }) => ({
+          id,
+          title,
+          description,
+          duration_minutes,
+          course_type,
+          provider,
+          external_url,
+          category: category || 'Корпоративные сервисы',
+          audience: 'Все сотрудники',
+          passing_score: 80,
+          assignment: copy(
+            this.assignments.find(
+              (item) => item.course_id === id && item.employee_id === this.actor.id,
+            ) ?? null,
+          ),
+        }),
+      );
   }
   async getMyCourses(): Promise<AssignedCourse[]> {
     return this.assignments
@@ -791,6 +841,10 @@ export class DemoApi implements HrApi {
         return {
           ...copy(item),
           course: {
+            owner_employee_id: course.owner_employee_id,
+            course_type: course.course_type,
+            provider: course.provider,
+            external_url: course.external_url,
             id: course.id,
             title: course.title,
             description: course.description,
@@ -805,8 +859,20 @@ export class DemoApi implements HrApi {
       this.assignments.find(
         (item) => item.course_id === id && item.employee_id === this.actor.id,
       ) ?? null;
-    if (!assignment && this.actor.role === 'worker')
+    if (!assignment && this.actor.role === 'worker' && source.course_type !== 'external')
       throw new ApiError(403, 'Course is not assigned to you');
+    if (
+      source.owner_employee_id &&
+      source.owner_employee_id !== this.actor.id &&
+      this.actor.role !== 'hr_admin' &&
+      !(
+        this.actor.role !== 'worker' &&
+        this.employees.some(
+          (person) => person.id === source.owner_employee_id && person.manager_id === this.actor.id,
+        )
+      )
+    )
+      throw new ApiError(404, 'Course not found');
     const { correctAnswers: _correctAnswers, ...course } = source;
     return copy({
       ...course,
@@ -816,7 +882,11 @@ export class DemoApi implements HrApi {
       assignment,
     });
   }
-  async assignCourse(employeeId: string, courseId: string): Promise<CourseAssignment> {
+  async assignCourse(
+    employeeId: string,
+    courseId: string,
+    dueOn?: string,
+  ): Promise<CourseAssignment> {
     if (
       this.actor.role === 'worker' ||
       (['manager', 'director'].includes(this.actor.role) &&
@@ -826,7 +896,9 @@ export class DemoApi implements HrApi {
     )
       throw new ApiError(403);
     await this.getEmployee(employeeId);
-    this.findCourse(courseId);
+    const target = this.findCourse(courseId);
+    if (target.owner_employee_id && target.owner_employee_id !== employeeId)
+      throw new ApiError(403);
     const existing = this.assignments.find(
       (item) => item.employee_id === employeeId && item.course_id === courseId,
     );
@@ -837,6 +909,7 @@ export class DemoApi implements HrApi {
       employee_id: employeeId,
       assigned_by: this.actor.id,
       assigned_at: now(),
+      due_on: dueOn || null,
       status: 'not_started',
       progress_percent: 0,
       score_percent: null,
@@ -853,13 +926,106 @@ export class DemoApi implements HrApi {
     );
     return copy(assignment);
   }
+  async createPersonalCourse(input: PersonalCourseInput): Promise<CourseAssignment> {
+    const previous = this.personalCourseInputs.get(input.id);
+    const existing = this.courses.find((course) => course.id === input.id);
+    if (existing) {
+      if (
+        existing.owner_employee_id !== this.actor.id ||
+        JSON.stringify(previous) !== JSON.stringify(input)
+      )
+        throw new ApiError(409, 'Operation key already used');
+      return copy(this.findAssignment(input.id));
+    }
+    const url = new URL(input.external_url);
+    if (
+      url.protocol !== 'https:' ||
+      url.username ||
+      url.password ||
+      !input.title.trim() ||
+      !input.provider.trim() ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(input.due_on) ||
+      !Number.isInteger(input.progress_percent) ||
+      input.progress_percent < 0 ||
+      input.progress_percent > 100
+    )
+      throw new ApiError(422);
+    this.courses.push({
+      id: input.id,
+      title: input.title.trim(),
+      provider: input.provider.trim(),
+      external_url: input.external_url,
+      owner_employee_id: this.actor.id,
+      course_type: 'external',
+      description: '',
+      duration_minutes: 0,
+      material_markdown: '',
+      quiz: [],
+      correctAnswers: {},
+      active: true,
+      created_at: now(),
+      assignment: null,
+    });
+    this.personalCourseInputs.set(input.id, copy(input));
+    const assignment = await this.enrollExternalCourse(input.id);
+    this.assignments.find((item) => item.id === assignment.id)!.due_on = input.due_on;
+    return this.updateCourseProgress(input.id, input.progress_percent);
+  }
+  async enrollExternalCourse(id: string): Promise<CourseAssignment> {
+    const course = this.findCourse(id);
+    if (course.owner_employee_id && course.owner_employee_id !== this.actor.id)
+      throw new ApiError(403);
+    if (course.course_type !== 'external' || !course.active) throw new ApiError(404);
+    const existing = this.assignments.find(
+      (a) => a.course_id === id && a.employee_id === this.actor.id,
+    );
+    if (existing) return copy(existing);
+    const assignment: CourseAssignment = {
+      id: crypto.randomUUID(),
+      course_id: id,
+      employee_id: this.actor.id,
+      assigned_by: this.actor.id,
+      assigned_at: now(),
+      status: 'not_started',
+      progress_percent: 0,
+      score_percent: null,
+      completed_at: null,
+    };
+    this.assignments.push(assignment);
+    return copy(assignment);
+  }
   async updateCourseProgress(id: string, percent: number): Promise<CourseAssignment> {
     const assignment = this.findAssignment(id);
     if (assignment.status === 'completed') return copy(assignment);
-    if (!Number.isInteger(percent) || percent < 0 || percent > 99)
+    const external = this.findCourse(id).course_type === 'external';
+    if (!Number.isInteger(percent) || percent < 0 || percent > (external ? 100 : 99))
       throw new ApiError(422, 'Прогресс должен быть от 0 до 99.');
     assignment.progress_percent = Math.max(assignment.progress_percent, percent);
     assignment.status = assignment.progress_percent ? 'in_progress' : 'not_started';
+    if (external) {
+      if (assignment.progress_percent === 100) {
+        assignment.status = 'completed';
+        assignment.completed_at = now();
+        this.notify(
+          'Курс отмечен пройденным',
+          this.findCourse(id).title,
+          'course_completed',
+          null,
+          this.actor.id,
+          id,
+        );
+        if (this.actor.manager_id)
+          this.notify(
+            'Сотрудник отметил завершение курса',
+            `${this.actor.full_name} · ${this.findCourse(id).title}`,
+            'team_course_completed',
+            null,
+            this.actor.manager_id,
+            id,
+          );
+      }
+      return copy(assignment);
+    }
     if (assignment.progress_percent >= 90) assignment.material_completed_at ??= now();
     return copy(assignment);
   }
@@ -953,7 +1119,8 @@ export class DemoApi implements HrApi {
             (!filters.course_id || filters.course_id === a.course_id),
         )
         .map((a) => {
-          const { id, title, description, duration_minutes } = this.findCourse(a.course_id);
+          const { id, title, description, duration_minutes, course_type, provider, external_url } =
+            this.findCourse(a.course_id);
           const person = team.find((p) => p.id === a.employee_id)!;
           return {
             ...a,
@@ -964,6 +1131,9 @@ export class DemoApi implements HrApi {
               job_title: person.job_title,
             },
             course: {
+              course_type,
+              provider,
+              external_url,
               id,
               title,
               description,

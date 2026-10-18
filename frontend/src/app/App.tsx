@@ -651,7 +651,7 @@ function Shell() {
             aria-expanded={janaOpen}
             aria-controls="jana-floating-chat"
           >
-            <Icon name={janaOpen ? 'x' : 'bot'} size={25} />
+            <Icon name={janaOpen ? 'x' : 'message'} size={25} />
           </button>
         </>
       )}

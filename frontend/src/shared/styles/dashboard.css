@@ -53,9 +53,16 @@
 .desk-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-  grid-template-areas: 'requests calendar' 'learning help';
+  grid-template-areas: 'main calendar' 'help help';
   gap: 18px;
   align-items: start;
+}
+.desk-main-column {
+  grid-area: main;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 .desk-requests {
   grid-area: requests;
@@ -106,13 +113,20 @@
 }
 .desk-calendar-day {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-width: 0;
   min-height: 44px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
   font-size: 13px;
+  cursor: pointer;
 }
-.desk-calendar-day span {
+.desk-calendar-number {
   display: grid;
   place-items: center;
   width: 32px;
@@ -125,14 +139,117 @@
 .desk-calendar-day.outside {
   color: #8993a2;
 }
-.desk-calendar-day:hover span {
+.desk-calendar-day.has-leave .desk-calendar-number {
+  background: #e5f3eb;
+  color: #006d39;
+}
+.desk-calendar-day.has-pending .desk-calendar-number {
+  box-shadow: inset 0 0 0 1px #c6913b;
+  color: #835a1c;
+}
+.desk-calendar-day:hover .desk-calendar-number {
   background: #edf5f0;
   color: #006d39;
 }
-.desk-calendar-day[aria-current='date'] span {
+.desk-calendar-day[aria-current='date'] .desk-calendar-number {
   background: #008344;
   color: white;
   font-weight: 600;
+}
+.desk-calendar-markers {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  min-height: 6px;
+  margin-top: 2px;
+}
+.calendar-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.calendar-dot.leave {
+  background: #008344;
+}
+.calendar-dot.pending {
+  border: 1px solid #a77729;
+}
+.calendar-dot.course {
+  background: #3977bd;
+}
+.desk-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding-top: 12px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--secondary);
+  font-size: 11px;
+}
+.desk-calendar-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.desk-day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.desk-day-event {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+.desk-day-event > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--primary);
+}
+.desk-day-event > div {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.desk-day-event h3 {
+  font-size: 15px;
+  line-height: 1.5;
+}
+.desk-day-event p {
+  margin: 4px 0 8px;
+  color: var(--secondary);
+  line-height: 1.5;
+}
+.desk-day-event p.desk-day-overdue {
+  color: #996523;
+}
+.desk-day-event .text-link {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 4px;
+}
+.desk-day-event .text-link svg {
+  flex-shrink: 0;
+}
+.desk-day-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding-top: 20px;
+}
+.desk-day-actions .text-link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
 }
 .desk-calendar-day:focus-visible {
   outline: 2px solid #008344;
@@ -254,6 +371,14 @@
   align-items: center;
   gap: 14px;
 }
+.desk-help > div {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
 .desk-help strong {
   font-size: 14px;
 }
@@ -348,7 +473,7 @@
   }
   .desk-grid {
     grid-template-columns: 1fr;
-    grid-template-areas: 'requests' 'calendar' 'learning' 'help';
+    grid-template-areas: 'main' 'calendar' 'help';
     gap: 16px;
   }
   .desk-grid .card {

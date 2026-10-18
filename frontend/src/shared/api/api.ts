@@ -8,6 +8,7 @@
   CourseAssignment,
   CourseAttempt,
   CourseDetail,
+  PersonalCourseInput,
   EmployeeProfile,
   HrApi,
   HrRequest,
@@ -775,6 +776,13 @@ export class LiveApi implements HrApi {
   }
   getCourse(id: string): Promise<CourseDetail> {
     return this.send(`/academy/courses/${encodeURIComponent(id)}`);
+  }
+
+  createPersonalCourse(input: PersonalCourseInput): Promise<CourseAssignment> {
+    return this.send('/academy/personal-courses', { method: 'POST', body: JSON.stringify(input) });
+  }
+  enrollExternalCourse(id: string): Promise<CourseAssignment> {
+    return this.send(`/academy/courses/${encodeURIComponent(id)}/enroll`, { method: 'POST' });
   }
   assignCourse(employeeId: string, courseId: string, dueOn?: string): Promise<CourseAssignment> {
     return this.send('/academy/assignments', {

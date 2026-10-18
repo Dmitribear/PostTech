@@ -3,6 +3,7 @@ import { Deadline } from '@/features/deadline';
 import type { TeamCourseAssignment } from '@/shared/api/contracts';
 import { formatDate } from '@/shared/lib/format';
 import { t, tx } from '@/shared/lib/i18n';
+import { watchVisible } from '@/shared/lib/live-refresh';
 import '@/shared/styles/support.css';
 import { Avatar, EmptyState, ErrorState, Icon, LoadingState, StatusBadge } from '@/shared/ui/index';
 import { ListPager, useListPage } from '@/shared/ui/molecules/ListPager';
@@ -31,26 +32,26 @@ export function TeamLearning({
   const [status, setStatus] = useState('all');
   useEffect(() => {
     if (!allowed) return;
-    let active = true;
     setLoading(true);
     setError(null);
-    api
-      .getTeamCourses({
-        ...(employeeId ? { employee_id: employeeId } : {}),
-        ...(courseId ? { course_id: courseId } : {}),
-      })
-      .then((value) => {
-        if (active) setRows(value);
-      })
-      .catch((err) => {
-        if (active) setError(err);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+    let loaded = false;
+    return watchVisible(async (signal) => {
+      try {
+        const value = await api.getTeamCourses({
+          ...(employeeId ? { employee_id: employeeId } : {}),
+          ...(courseId ? { course_id: courseId } : {}),
+        });
+        if (!signal.aborted) {
+          setRows(value);
+          setError(null);
+          loaded = true;
+        }
+      } catch (err) {
+        if (!signal.aborted && !loaded) setError(err);
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+    });
   }, [api, allowed, employeeId, courseId, refreshKey, retry]);
   const visible = rows.filter(
     (row) =>
@@ -198,7 +199,9 @@ export function TeamLearning({
                 <div>
                   <strong>{row.employee.full_name}</strong>
                   <small>{tx(row.employee.department)}</small>
-                  <Link to={`/academy?tab=team&course=${encodeURIComponent(row.course_id)}`}>
+                  <Link
+                    to={`/academy?tab=team&course=${encodeURIComponent(row.course_id)}&employee=${encodeURIComponent(row.employee_id)}`}
+                  >
                     {tx(row.course?.title || 'Курс недоступен')}
                   </Link>
                 </div>
@@ -220,8 +223,18 @@ export function TeamLearning({
                 </div>
               </div>
               <div className="academy-team-score">
-                <span className="academy-score-label">{t('Результат теста')}</span>
-                <strong>{tx(row.score_percent == null ? '—' : `${row.score_percent}%`)}</strong>
+                <span className="academy-score-label">
+                  {t(
+                    row.course?.course_type === 'external'
+                      ? 'Отмечено сотрудником'
+                      : 'Результат теста',
+                  )}
+                </span>
+                <strong>
+                  {row.course?.course_type === 'external'
+                    ? row.course.provider
+                    : tx(row.score_percent == null ? '—' : `${row.score_percent}%`)}
+                </strong>
                 <Deadline id={row.id} due={row.due_on} status={row.status} editable />
                 <details className="academy-assignment-details">
                   <summary>{t('Подробности')}</summary>
@@ -230,16 +243,19 @@ export function TeamLearning({
                       <dt>{t('Назначен')}</dt>
                       <dd>{formatDate(row.assigned_at)}</dd>
                     </div>
-                    <div>
-                      <dt>{t('Попытки')}</dt>
-                      <dd>{row.attempt_count ?? '—'}</dd>
-                    </div>
-                    {row.course?.passing_score != null && (
+                    {row.course?.course_type !== 'external' && (
                       <div>
-                        <dt>{t('Для зачёта')}</dt>
-                        <dd>{row.course.passing_score}%</dd>
+                        <dt>{t('Попытки')}</dt>
+                        <dd>{row.attempt_count ?? '—'}</dd>
                       </div>
                     )}
+                    {row.course?.course_type !== 'external' &&
+                      row.course?.passing_score != null && (
+                        <div>
+                          <dt>{t('Для зачёта')}</dt>
+                          <dd>{row.course.passing_score}%</dd>
+                        </div>
+                      )}
                     {row.last_attempt_at && (
                       <div>
                         <dt>{t('Последняя попытка')}</dt>

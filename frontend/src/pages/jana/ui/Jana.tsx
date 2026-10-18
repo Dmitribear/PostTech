@@ -169,7 +169,7 @@ export default function Jana({
           <div className="support-chat-top">
             <div className="support-chat-identity">
               <span className="support-jana-icon">
-                <Icon name="bot" size={21} />
+                <Icon name="message" size={21} />
               </span>
               <div>
                 <h2>Jana</h2>
@@ -206,7 +206,7 @@ export default function Jana({
           {!messages.length && !busy ? (
             <div className="support-chat-welcome">
               <div className="support-jana-icon">
-                <Icon name="sparkles" size={31} />
+                <Icon name="message" size={31} />
               </div>
               <h2>{t('Чем помочь?')}</h2>
               <p>{t('Отпуск, аванс или правила компании — спросите Jana.')}</p>
@@ -252,7 +252,7 @@ export default function Jana({
                     <Avatar name={profile.full_name} size={29} />
                   ) : (
                     <span className="support-jana-icon">
-                      <Icon name="bot" size={18} />
+                      <Icon name="message" size={18} />
                     </span>
                   )}
                   <div className="support-message-bubble">
@@ -352,7 +352,7 @@ export default function Jana({
                 busy && (
                   <div className="support-message">
                     <span className="support-jana-icon">
-                      <Icon name="bot" size={18} />
+                      <Icon name="message" size={18} />
                     </span>
                     <span className="support-chat-typing" role="status">
                       {t('Ищу ответ в базе знаний…')}
