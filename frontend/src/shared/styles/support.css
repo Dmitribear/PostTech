@@ -306,6 +306,7 @@
 }
 .support-reader-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
   color: #748097;
@@ -354,6 +355,24 @@
 }
 .support-material ul {
   padding-left: 22px;
+}
+.lesson-reader > h2 {
+  margin: 24px 0 12px;
+  font-size: 18px;
+  line-height: 1.45;
+}
+.lesson-reader > .support-material {
+  border-top: 0;
+  padding-top: 0;
+}
+.lesson-reader > .support-material > :last-child {
+  margin-bottom: 0;
+}
+.lesson-reader > .btn {
+  margin-top: 20px;
+}
+.lesson-reader > .muted {
+  margin: 16px 0 0;
 }
 .support-reader-actions {
   display: flex;

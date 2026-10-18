@@ -197,6 +197,10 @@
   font: inherit;
   font-size: 13px;
 }
+.req-search input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
 .req-search input::placeholder {
   color: #748097;
 }

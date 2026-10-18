@@ -3,11 +3,13 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { Icon } from '../atoms/Icon';
 export function Modal({
   title,
+  subtitle,
   onClose,
   children,
   wide = false,
 }: {
   title: string;
+  subtitle?: ReactNode;
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;
@@ -39,8 +41,11 @@ export function Modal({
       }}
     >
       <div className="modal-inner">
-        <div className="modal-heading">
-          <h2>{tx(title)}</h2>
+        <div className={`modal-heading ${subtitle ? 'modal-heading-detailed' : ''}`}>
+          <div className="modal-heading-copy">
+            <h2>{tx(title)}</h2>
+            {subtitle && <div className="modal-subtitle">{tx(subtitle)}</div>}
+          </div>
           <button className="icon-btn" aria-label={t('Закрыть')} onClick={onClose}>
             <Icon name="x" />
           </button>

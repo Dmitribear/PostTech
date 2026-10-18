@@ -217,22 +217,29 @@
   width: 100%;
   min-height: 44px;
   padding: 11px 14px;
-  border-radius: 5px;
+  border-radius: 4px;
   font-size: 14px;
   line-height: 20px;
   font-weight: 550;
   cursor: pointer;
+  box-shadow: none;
+  text-shadow: none;
   transition:
     background 0.15s,
     border-color 0.15s;
 }
 .onboarding-primary {
-  border: 1px solid #008f43;
+  border: 1px solid var(--primary);
   color: #fff;
-  background: linear-gradient(180deg, #00a450, #008f43);
+  background: var(--primary);
 }
 .onboarding-primary:hover:not(:disabled) {
-  background: #008640;
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+.onboarding-primary:active:not(:disabled) {
+  background: var(--green-dark);
+  border-color: var(--green-dark);
 }
 .onboarding-primary .spinner {
   width: 15px;
